@@ -61,6 +61,8 @@ export interface ProjectMeta {
   plugin: typeof PLUGIN_ID;
   /** 자유로운 추가 메타데이터 (작가가 원하는 키-값). */
   customMetadata?: Record<string, string>;
+  /** Concept Wizard 가 진행 중일 때 sessionId 를 박아 둔다. 재진입 시 복구용. */
+  pendingWizard?: { sessionId: string };
 }
 
 // ---- Binder 트리 ----
@@ -202,6 +204,10 @@ export function isProjectMeta(v: unknown): v is ProjectMeta {
     return false;
   }
   if (v.plugin !== PLUGIN_ID) return false;
+  if (v.pendingWizard !== undefined) {
+    if (!isStringRecord(v.pendingWizard)) return false;
+    if (typeof v.pendingWizard.sessionId !== "string") return false;
+  }
   return true;
 }
 
@@ -247,4 +253,120 @@ export function isSceneFrontmatter(v: unknown): v is SceneFrontmatter {
     typeof v.word_count === "number" &&
     typeof v.updated === "string"
   );
+}
+
+// ---- Concept Wizard Draft Session (Phase G) ----
+//
+// 책 한 권의 컨셉/시놉시스/12-30장 목차를 작가와 AI 가 다턴으로 짜는 5단계
+// 마법사의 in-flight 상태. 단계별 결과물은 모두 한 세션 객체에 누적된다.
+// 영구 저장은 P3-T9 에서 도입 — 그 전까지는 sessionStorage 만 거친다.
+
+export const CONCEPT_DRAFT_SCHEMA = "ai-manuscript-studio.concept-draft.v1";
+
+export type ConceptDraftStage =
+  | "seed"
+  | "concept"
+  | "synopsis"
+  | "outline"
+  | "done";
+
+/** 작품의 톤 — 장르(Genre)와 별개. UI 라디오에서 골라 잡는다. */
+export type ConceptTone = "novel" | "essay" | "nonfiction" | "screenplay";
+
+export interface ConceptMessage {
+  role: "user" | "assistant";
+  content: string;
+  /** ISO 8601. */
+  at: string;
+}
+
+export interface OutlineChapter {
+  /** "ch-01" 등 안정 id (mergeChapters / splitChapter 가 새 번호 부여). */
+  id: string;
+  title: string;
+  /** 한 단락 일세. */
+  summary: string;
+}
+
+export interface ConceptDraftSession {
+  schema: typeof CONCEPT_DRAFT_SCHEMA;
+  id: string;
+  seed: string;
+  tone: ConceptTone;
+  /** 기존 Genre 재사용. */
+  genre: Genre;
+  /** 옵시디언 노트 [[wiki-link]] 또는 경로. */
+  attachedNotes: string[];
+  conversation: ConceptMessage[];
+  conceptParagraph: string;
+  synopsis: string;
+  outline: OutlineChapter[];
+  stage: ConceptDraftStage;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function isConceptMessage(v: unknown): v is ConceptMessage {
+  if (!isStringRecord(v)) return false;
+  return (
+    (v.role === "user" || v.role === "assistant") &&
+    typeof v.content === "string" &&
+    typeof v.at === "string"
+  );
+}
+
+export function isOutlineChapter(v: unknown): v is OutlineChapter {
+  if (!isStringRecord(v)) return false;
+  return (
+    typeof v.id === "string" &&
+    typeof v.title === "string" &&
+    typeof v.summary === "string"
+  );
+}
+
+export function isConceptDraftSession(v: unknown): v is ConceptDraftSession {
+  if (!isStringRecord(v)) return false;
+  if (v.schema !== CONCEPT_DRAFT_SCHEMA) return false;
+  if (typeof v.id !== "string") return false;
+  if (typeof v.seed !== "string") return false;
+  const tone = v.tone;
+  if (
+    tone !== "novel" &&
+    tone !== "essay" &&
+    tone !== "nonfiction" &&
+    tone !== "screenplay"
+  ) {
+    return false;
+  }
+  if (typeof v.genre !== "string") return false;
+  if (
+    !Array.isArray(v.attachedNotes) ||
+    !v.attachedNotes.every((x) => typeof x === "string")
+  ) {
+    return false;
+  }
+  if (
+    !Array.isArray(v.conversation) ||
+    !v.conversation.every(isConceptMessage)
+  ) {
+    return false;
+  }
+  if (typeof v.conceptParagraph !== "string") return false;
+  if (typeof v.synopsis !== "string") return false;
+  if (!Array.isArray(v.outline) || !v.outline.every(isOutlineChapter)) {
+    return false;
+  }
+  const stage = v.stage;
+  if (
+    stage !== "seed" &&
+    stage !== "concept" &&
+    stage !== "synopsis" &&
+    stage !== "outline" &&
+    stage !== "done"
+  ) {
+    return false;
+  }
+  if (typeof v.createdAt !== "string") return false;
+  if (typeof v.updatedAt !== "string") return false;
+  return true;
 }
