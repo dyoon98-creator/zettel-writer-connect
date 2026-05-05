@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "lib": ["DOM", "ES2020"],
+    "rootDir": ".",
+    "noEmit": true,
+    "isolatedModules": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "obsidian": ["./tests/__mocks__/obsidian.ts"],
+      "@ai-manuscript-studio/core": ["../core/src/browser.ts"],
+      "@ai-manuscript-studio/core/browser": ["../core/src/browser.ts"],
+      "@ai-manuscript-studio/core/adapters": [
+        "../core/src/adapters/index.ts"
+      ]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

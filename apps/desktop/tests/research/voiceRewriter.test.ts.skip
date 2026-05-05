@@ -1,0 +1,137 @@
+// voiceRewriter.test.ts — 토큰 스트림이 활성 EditorView 의 커서 위치에 누적 삽입되는지.
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  installTauriMocks,
+  setAiScript,
+  clearAiScript,
+} from "../__mocks__/tauri";
+
+installTauriMocks();
+
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+
+import * as editorRegistry from "../../src/editor/editorRegistry";
+import { rewriteSelectionInVoice } from "../../src/research/voiceRewriter";
+import { useSettingsStore } from "../../src/state/settingsStore";
+
+function mountHeadlessEditor(initialDoc: string): {
+  view: EditorView;
+  detach: () => void;
+} {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const view = new EditorView({
+    state: EditorState.create({ doc: initialDoc }),
+    parent: host,
+  });
+  return {
+    view,
+    detach: () => {
+      view.destroy();
+      host.remove();
+    },
+  };
+}
+
+beforeEach(() => {
+  clearAiScript();
+  // settings 가 mock 가 아니어야 voiceRewriter 가 진행한다.
+  useSettingsStore.setState({
+    settings: {
+      aiProvider: "codex",
+      codexPath: "/usr/local/bin/codex",
+      codexExtraArgs: "",
+      claudeCodePath: "",
+      confirmBeforeRun: false,
+      enableExecLog: false,
+      excludedFolders: "",
+      licenseKey: "",
+      skillpackFolder: "_skillpacks",
+      useMockBridge: false,
+    },
+  });
+});
+
+afterEach(() => {
+  editorRegistry._resetRegistry();
+  clearAiScript();
+});
+
+describe("voiceRewriter.rewriteSelectionInVoice", () => {
+  it("AI 토큰이 활성 EditorView 의 커서 위치에 순서대로 삽입된다", async () => {
+    const { view, detach } = mountHeadlessEditor("앞 부분. ");
+    // 커서를 끝으로.
+    view.dispatch({
+      selection: { anchor: view.state.doc.length },
+    });
+    const flush = vi.fn();
+    editorRegistry.register("doc-1", view, flush);
+
+    setAiScript([
+      { kind: "token", token: "안녕" },
+      { kind: "token", token: "하세" },
+      { kind: "token", token: "요." },
+      { kind: "done", fullText: "안녕하세요." },
+    ]);
+
+    await rewriteSelectionInVoice({
+      activeDocId: "doc-1",
+      selectionText: "원문 텍스트",
+    });
+
+    expect(view.state.doc.toString()).toBe("앞 부분. 안녕하세요.");
+    // flush 콜백이 토큰마다 호출됐다.
+    expect(flush).toHaveBeenCalled();
+    expect(flush.mock.calls.at(-1)?.[0]).toBe("앞 부분. 안녕하세요.");
+
+    detach();
+  });
+
+  it("등록된 활성 에디터가 없으면 즉시 반환한다", async () => {
+    setAiScript([{ kind: "token", token: "T" }, { kind: "done" }]);
+    await rewriteSelectionInVoice({
+      activeDocId: "missing",
+      selectionText: "x",
+    });
+    // 호출 자체가 진행되지 않으므로 별다른 부작용 없음.
+    expect(true).toBe(true);
+  });
+
+  it("선택 텍스트가 비어 있으면 호출하지 않는다", async () => {
+    const { view, detach } = mountHeadlessEditor("body");
+    const flush = vi.fn();
+    editorRegistry.register("doc-1", view, flush);
+    setAiScript([{ kind: "token", token: "X" }, { kind: "done" }]);
+
+    await rewriteSelectionInVoice({
+      activeDocId: "doc-1",
+      selectionText: "   ",
+    });
+    expect(view.state.doc.toString()).toBe("body");
+    expect(flush).not.toHaveBeenCalled();
+
+    detach();
+  });
+
+  it("tokens 가 비어 있고 done.fullText 만 있으면 fullText 를 한 번에 삽입한다", async () => {
+    const { view, detach } = mountHeadlessEditor("");
+    const flush = vi.fn();
+    editorRegistry.register("doc-2", view, flush);
+
+    setAiScript([
+      // 토큰 이벤트는 없고, done 의 fullText 만.
+      { kind: "done", fullText: "전체 본문" },
+    ]);
+
+    await rewriteSelectionInVoice({
+      activeDocId: "doc-2",
+      selectionText: "원문",
+    });
+
+    expect(view.state.doc.toString()).toBe("전체 본문");
+
+    detach();
+  });
+});

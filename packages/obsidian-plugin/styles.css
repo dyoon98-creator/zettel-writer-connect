@@ -1,0 +1,190 @@
+/* AI 원고실 v2 — slim indexer styles */
+
+.ams-indexer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-3);
+  gap: var(--size-4-2);
+  overflow-y: auto;
+}
+
+.ams-indexer-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.ams-indexer-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2-2);
+}
+
+.ams-indexer-title {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+}
+
+.ams-new-project-btn {
+  font-size: var(--font-ui-smaller);
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ams-indexer-sub {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ams-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  padding: var(--size-4-4);
+  text-align: center;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.ams-empty-cta {
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.ams-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-2-2);
+  margin-top: var(--size-4-3);
+}
+
+.ams-mobile-banner {
+  background: var(--background-modifier-error-rgb, var(--background-modifier-border));
+  color: var(--text-on-accent);
+  padding: var(--size-4-3);
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+}
+
+/* ── Project card ──────────────────────────────── */
+
+.ams-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.ams-card {
+  background: var(--background-secondary);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.ams-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  flex-wrap: wrap;
+}
+
+.ams-card-title {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+.ams-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
+  background: var(--background-modifier-border);
+  color: var(--text-on-accent);
+  white-space: nowrap;
+}
+
+.ams-progress-text {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.ams-progress-bar {
+  height: 6px;
+  background: var(--background-modifier-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ams-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  transition: width 200ms ease;
+}
+
+.ams-card-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-3);
+}
+
+.ams-launch-btn {
+  width: 100%;
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+/* ── Scenes expand ─────────────────────────────── */
+
+.ams-scenes-toggle {
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-accent);
+  user-select: none;
+}
+
+.ams-scenes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  margin-top: var(--size-2-2);
+  padding-left: var(--size-4-2);
+}
+
+.ams-scene-link {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-normal);
+  cursor: pointer;
+  text-decoration: none;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ams-scene-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.ams-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-2-2);
+}

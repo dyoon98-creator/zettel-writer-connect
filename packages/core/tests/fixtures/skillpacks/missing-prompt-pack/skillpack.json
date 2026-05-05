@@ -1,0 +1,16 @@
+{
+  "id": "missing-prompt-pack",
+  "name": "Missing Prompt Pack",
+  "version": "1.0.0",
+  "vendor": "test-vendor",
+  "tier": "free",
+  "actions": [
+    {
+      "id": "missing.action",
+      "label": "사라진 프롬프트",
+      "status_show": [],
+      "prompt_file": "prompts/does-not-exist.md",
+      "save_to": "feedback"
+    }
+  ]
+}

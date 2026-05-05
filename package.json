@@ -1,0 +1,22 @@
+{
+  "name": "ai-manuscript-studio-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AI 원고실 v2 — pnpm monorepo. Hybrid Obsidian indexer + Tauri desktop app sharing a core library.",
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r exec tsc -noEmit"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "sample-pack",
+  "name": "Sample Free Pack",
+  "version": "1.0.0",
+  "vendor": "test-vendor",
+  "tier": "free",
+  "actions": [
+    {
+      "id": "sample.draft-help",
+      "label": "초안 도와주기",
+      "status_show": ["drafting", "feedback"],
+      "prompt_file": "prompts/draft-help.md",
+      "save_to": "feedback",
+      "section_anchor": "초안",
+      "placeholders": ["manuscript", "section"]
+    },
+    {
+      "id": "sample.title",
+      "label": "제목 후보",
+      "status_show": [],
+      "prompt_file": "prompts/title.md",
+      "save_to": "plan",
+      "requires_user_input": true,
+      "placeholders": ["title", "core_message", "user_input"]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AI 원고실",
+  "version": "0.0.1",
+  "identifier": "com.futurewave.ai-manuscript-studio",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "AI 원고실",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": true,
+        "resizable": true,
+        "fullscreen": false,
+        "dragDropEnabled": true,
+        "devtools": true
+      }
+    ],
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**/*"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "category": "Productivity",
+    "shortDescription": "AI 원고실 — Scrivener식 집필 환경",
+    "longDescription": "옵시디언 볼트의 출처 자료를 활용해 장편 원고를 집필하는 데스크톱 앱."
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["ai-manuscript-studio"]
+      }
+    }
+  }
+}

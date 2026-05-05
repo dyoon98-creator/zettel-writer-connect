@@ -1,0 +1,9 @@
+{
+  "id": "ai-manuscript-studio",
+  "name": "AI 원고실",
+  "version": "0.0.4",
+  "minAppVersion": "1.5.0",
+  "description": "원고 프로젝트 인덱서. 깊은 작업은 별도 데스크톱 앱(AI 원고실)에서 진행됩니다.",
+  "author": "futurewave",
+  "isDesktopOnly": true
+}

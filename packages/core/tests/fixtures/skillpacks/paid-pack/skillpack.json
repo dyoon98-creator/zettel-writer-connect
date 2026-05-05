@@ -1,0 +1,22 @@
+{
+  "id": "paid-pack",
+  "name": "Test Paid Pack",
+  "version": "0.1.0",
+  "vendor": "futurewave",
+  "tier": "paid",
+  "license": {
+    "type": "key",
+    "issuer": "futurewave",
+    "checksum": "6f75992d5cc126a11d10c83a5bfc294321537387a67595cbbfd0b38ca849aa01"
+  },
+  "actions": [
+    {
+      "id": "paid.x",
+      "label": "유료 액션 X",
+      "status_show": ["drafting"],
+      "prompt_file": "prompts/x.md",
+      "save_to": "feedback",
+      "placeholders": ["manuscript"]
+    }
+  ]
+}
