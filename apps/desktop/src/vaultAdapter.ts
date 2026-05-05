@@ -360,3 +360,74 @@ export async function fetchNotesForContext(
   const context = parts.join("\n");
   return { context, found, notFound };
 }
+
+// ---- 노트 자동완성 데이터 소스 ---------------------------------------------
+
+const NOTES_AUTOCOMPLETE_SKIP_DIRS = new Set([
+  ".obsidian",
+  ".git",
+  "node_modules",
+  "_attachments",
+  "_index",
+  "_skillpacks",
+  "_templates",
+  "4 Archive",
+  "3 Writing",
+]);
+
+/**
+ * vault 안의 모든 .md 파일 제목(확장자 제외)을 BFS 로 수집해 정렬 반환.
+ *
+ * 컨셉 마법사 노트 첨부 input 의 datalist 자동완성 데이터 소스.
+ *
+ * 우선순위 정렬:
+ *  1. `2 Permanent/` 직속 (영구노트 — 가장 자주 첨부됨)
+ *  2. `1 Literature/` 직속 (문헌노트)
+ *  3. 기타 위치
+ *
+ * @param max 최대 반환 개수 (기본 500). datalist 가 너무 커지지 않도록.
+ */
+export async function listVaultNotes(max = 500): Promise<string[]> {
+  if (!basePath) return [];
+  const permanent: string[] = [];
+  const literature: string[] = [];
+  const others: string[] = [];
+
+  async function walk(rel: string): Promise<void> {
+    if (permanent.length + literature.length + others.length >= max) return;
+    let entries;
+    try {
+      entries = await tauriVaultAdapter.listDir(rel);
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (permanent.length + literature.length + others.length >= max) return;
+      if (e.isDirectory) {
+        if (NOTES_AUTOCOMPLETE_SKIP_DIRS.has(e.name)) continue;
+        const child = rel ? `${rel}/${e.name}` : e.name;
+        await walk(child);
+      } else if (e.name.toLowerCase().endsWith(".md")) {
+        const title = e.name.slice(0, -3);
+        if (rel.startsWith("2 Permanent")) permanent.push(title);
+        else if (rel.startsWith("1 Literature")) literature.push(title);
+        else others.push(title);
+      }
+    }
+  }
+
+  await walk("");
+  const sorter = (a: string, b: string): number => a.localeCompare(b, "ko");
+  permanent.sort(sorter);
+  literature.sort(sorter);
+  others.sort(sorter);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of [...permanent, ...literature, ...others]) {
+    if (!seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out;
+}

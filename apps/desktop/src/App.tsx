@@ -216,6 +216,15 @@ export function App(): JSX.Element {
         <button
           type="button"
           className="app-topbar-btn"
+          data-testid="topbar-open-concept-wizard"
+          onClick={() => openConceptWizard()}
+          title="컨셉 마법사를 다시 열어 새 원고 시드를 짭니다"
+        >
+          컨셉 마법사
+        </button>
+        <button
+          type="button"
+          className="app-topbar-btn"
           onClick={openVoice}
           title="작가 본인의 글을 모아 AI 가 문체를 학습합니다"
         >

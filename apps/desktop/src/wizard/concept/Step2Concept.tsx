@@ -16,6 +16,7 @@ import {
   READY_TO_DISTILL_PATTERNS,
 } from "./conceptPrompts";
 import type { ChatMessage } from "../../ai/streamingChat";
+import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
 // ---- 타입 ------------------------------------------------------------------
 
@@ -104,6 +105,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
 
   const mainChat = useStreamingChat();
   const distillChat = useStreamingChat();
+
+  // 옵시디언 vault 노트 자동완성 데이터 (datalist).
+  const { notes: vaultNotes } = useVaultNoteSuggestions();
 
   const [draft, setDraft] = useState("");
   const [noteInput, setNoteInput] = useState("");
@@ -569,10 +573,12 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
               <input
                 type="text"
                 data-testid="concept-note-input"
-                placeholder="[[노트 제목]] 입력 후 Enter"
+                placeholder="[[노트 제목]] 입력 — 영구노트 자동완성"
                 value={noteInput}
                 onChange={(e) => setNoteInput(e.target.value)}
                 onKeyDown={handleNoteKeyDown}
+                list="vault-note-suggestions-step2"
+                autoComplete="off"
                 style={{
                   flex: 1,
                   padding: "4px 8px",
@@ -583,6 +589,11 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                   color: "var(--color-input-text, #eee)",
                 }}
               />
+              <datalist id="vault-note-suggestions-step2">
+                {vaultNotes.map((title) => (
+                  <option key={title} value={`[[${title}]]`} />
+                ))}
+              </datalist>
               <button
                 type="button"
                 data-testid="concept-note-add"

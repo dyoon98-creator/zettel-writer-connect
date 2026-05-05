@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  extractDisplayText,
   startStreamingChat,
   type StreamingChatOptions,
 } from "./streamingChat";
@@ -71,9 +72,19 @@ export function useStreamingChat(): UseStreamingChatResult {
       try {
         const handle = startStreamingChat({ ...opts, signal: ctrl.signal });
         for await (const tok of handle.tokens()) {
-          setBuffer((prev) => prev + tok);
+          // codex CLI JSONL 이벤트는 사용자에게 안 보이게 필터링.
+          // 의미 있는 텍스트(item.text 등)만 buffer 에 누적.
+          const display = extractDisplayText(tok);
+          if (display.length > 0) {
+            setBuffer((prev) => prev + display);
+          }
         }
         const result = await handle.done;
+        // streaming 중 buffer 가 비었을 수 있으니 (codex 가 last-message 파일에만
+        // 진짜 응답을 쓰는 경우) 최종 fullText 로 buffer 갱신.
+        if (result.fullText.trim().length > 0) {
+          setBuffer(result.fullText);
+        }
         return result.fullText;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

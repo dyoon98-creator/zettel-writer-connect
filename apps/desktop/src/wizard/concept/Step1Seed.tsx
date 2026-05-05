@@ -4,6 +4,7 @@
 import { useRef, useState } from "react";
 import type { ConceptTone, Genre } from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
+import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
 // ─── 타입 / 상수 ─────────────────────────────────────────────────────────────
 
@@ -193,6 +194,9 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
 
   const noteInputRef = useRef<HTMLInputElement>(null);
 
+  // 옵시디언 vault 의 노트 제목 자동완성.
+  const { notes: vaultNotes } = useVaultNoteSuggestions();
+
   // ── 톤 변경 → 장르 자동 추천 ──
   function handleToneChange(t: ConceptTone): void {
     setTone(t);
@@ -300,14 +304,21 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
             id="step1-note-input"
             type="text"
             data-testid="step1-note-input"
-            placeholder="[[노트 제목]] 또는 제목 직접 입력"
+            placeholder="[[노트 제목]] 또는 제목 직접 입력 — 영구노트 자동완성"
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
             onKeyDown={handleNoteKeyDown}
             style={noteInputStyle}
             aria-labelledby="step1-notes-label"
             aria-label="노트 링크 입력"
+            list="vault-note-suggestions"
+            autoComplete="off"
           />
+          <datalist id="vault-note-suggestions">
+            {vaultNotes.map((title) => (
+              <option key={title} value={`[[${title}]]`} />
+            ))}
+          </datalist>
           <button
             type="button"
             data-testid="step1-note-add-btn"

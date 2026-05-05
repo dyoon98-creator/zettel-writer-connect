@@ -133,3 +133,50 @@ export async function chatToFullText(
   const result = await handle.done;
   return result.fullText;
 }
+
+/**
+ * 한 줄(라인) 토큰을 사용자 표시용 텍스트로 변환.
+ *
+ * Codex CLI 는 stdout 에 JSONL 이벤트를 흘리므로 (`{"type":"thread.started"}`,
+ * `{"type":"item.completed","item":{"item_type":"agent_message","text":"..."}}` 등),
+ * raw 토큰을 그대로 화면에 누적하면 사용자에게는 디버그 로그처럼 보인다.
+ *
+ * 동작:
+ * - JSON 파싱 시도 → 의미 있는 text 필드 발견 시 그것 + "\n" 반환.
+ * - JSON 인데 텍스트 필드 없음 (이벤트 사이드카) → "" 반환 (skip).
+ * - JSON 이 아닌 일반 텍스트 → 원본 반환 (claude-code 등 다른 provider 호환).
+ */
+export function extractDisplayText(token: string): string {
+  const trimmed = token.trim();
+  if (trimmed.length === 0) return "";
+  if (trimmed[0] !== "{" && trimmed[0] !== "[") return token;
+
+  let v: unknown;
+  try {
+    v = JSON.parse(trimmed);
+  } catch {
+    return token;
+  }
+  if (!v || typeof v !== "object") return "";
+
+  const obj = v as Record<string, unknown>;
+
+  // codex JSONL: { type: "item.completed", item: { item_type: "agent_message", text: "..." } }
+  const item = obj.item as Record<string, unknown> | undefined;
+  if (item && typeof item.text === "string") {
+    return `${item.text}\n`;
+  }
+
+  // 다양한 fallback 키.
+  for (const key of ["text", "message", "output", "delta", "content"] as const) {
+    const val = obj[key];
+    if (typeof val === "string") return `${val}\n`;
+  }
+
+  // turn.message.text 같은 중첩.
+  const turn = obj.turn as Record<string, unknown> | undefined;
+  if (turn && typeof turn.message === "string") return `${turn.message}\n`;
+
+  // 아무것도 없으면 이벤트 사이드카로 간주, skip.
+  return "";
+}
