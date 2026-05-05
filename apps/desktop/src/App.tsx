@@ -12,6 +12,9 @@ import { useApplyThemeToDocument } from "./theme/themeStore";
 import { useGlobalShortcuts } from "./shortcuts";
 import { WizardOverlay } from "./wizard/WizardOverlay";
 import { useWizardStore } from "./wizard/wizardStore";
+import { ConceptWizard } from "./wizard/concept/ConceptWizard";
+import { ConceptResumeToast } from "./wizard/concept/ConceptResumeToast";
+import { useConceptWizardStore } from "./state/conceptWizardStore";
 import { SettingsPanel } from "./settings/SettingsPanel";
 import { useSettingsBootstrap } from "./state/settingsStore";
 import { useSkillpackStore } from "./state/skillpackStore";
@@ -27,6 +30,8 @@ export function App(): JSX.Element {
   const loadProject = useProjectStore((s) => s.loadProject);
   const startWizard = useWizardStore((s) => s.start);
   const wizardOpen = useWizardStore((s) => s.isOpen);
+  const openConceptWizard = useConceptWizardStore((s) => s.openEmpty);
+  const conceptWizardOpen = useConceptWizardStore((s) => s.isOpen);
 
   useApplyThemeToDocument();
   useGlobalShortcuts();
@@ -48,6 +53,7 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (isLoading) return; // 로드 결과 기다림.
     if (wizardOpen) return; // 이미 열려 있으면 양보.
+    if (conceptWizardOpen) return; // ConceptWizard 가 이미 열려 있으면 양보.
 
     let key: string | null = null;
     let reason = "";
@@ -88,6 +94,7 @@ export function App(): JSX.Element {
       const s = useProjectStore.getState();
       if (s.isLoading) return;
       if (useWizardStore.getState().isOpen) return;
+      if (useConceptWizardStore.getState().isOpen) return;
 
       let liveKey: string | null = null;
       if (!s.meta) {
@@ -102,7 +109,8 @@ export function App(): JSX.Element {
 
       autoWizardLastKeyRef.current = liveKey;
       if (liveKey === "__empty__") {
-        startWizard();
+        // 빈 상태 → ConceptWizard 로 진입 (새 원고 흐름).
+        useConceptWizardStore.getState().openEmpty();
       } else if (s.meta && s.projectFolder) {
         startWizard({
           targetProjectFolder: s.projectFolder,
@@ -112,7 +120,7 @@ export function App(): JSX.Element {
       }
     }, 400);
     return () => window.clearTimeout(t);
-  }, [meta, binder, projectFolder, isLoading, error, wizardOpen, startWizard]);
+  }, [meta, binder, projectFolder, isLoading, error, wizardOpen, conceptWizardOpen, startWizard]);
 
   const reloadSkillpacks = useSkillpackStore((s) => s.reload);
   // 프로젝트가 열린 직후 (vault 경로 설정됨) 스킬팩을 1회 로드.
@@ -196,12 +204,14 @@ export function App(): JSX.Element {
             type="button"
             className="app-empty-cta"
             data-testid="app-empty-new-manuscript"
-            onClick={() => startWizard()}
+            onClick={() => openConceptWizard()}
           >
             새 원고 만들기
           </button>
         </div>
         <WizardOverlay />
+        <ConceptWizard />
+        <ConceptResumeToast />
         <VoicePane />
       </div>
     );
@@ -222,6 +232,8 @@ export function App(): JSX.Element {
       </div>
       <ScrivenerLayout />
       <WizardOverlay />
+      <ConceptWizard />
+      <ConceptResumeToast />
       <VoicePane />
     </div>
   );

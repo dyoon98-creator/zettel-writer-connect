@@ -21,6 +21,19 @@ import {
   type Genre,
   type OutlineChapter,
 } from "@ai-manuscript-studio/core";
+import { saveSession } from "../wizard/concept/conceptSessionPersist";
+
+// ---- module-level debounce timer (autosave) --------------------------------
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleSave(session: ConceptDraftSession | null): void {
+  if (!session) return;
+  if (saveTimer !== undefined) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = undefined;
+    void saveSession(session);
+  }, 500);
+}
 
 export interface ConceptWizardStartInput {
   seed: string;
@@ -38,6 +51,10 @@ export interface ConceptWizardState {
   // ---- lifecycle ----
   start: (opts: ConceptWizardStartInput) => void;
   close: () => void;
+  /** vault 파일에서 복구한 세션으로 모달 열기. */
+  loadFromSession: (s: ConceptDraftSession) => void;
+  /** 빈 세션으로 모달만 열기 — Step1Seed 가 store.start 를 호출해 세션을 생성한다. */
+  openEmpty: () => void;
 
   // ---- conversation ----
   appendMessage: (role: "user" | "assistant", content: string) => void;
@@ -146,10 +163,22 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
           updatedAt: at,
         };
         set({ session, isOpen: true, pausedForBinder: false });
+        scheduleSave(session);
       },
 
       close() {
+        // 마지막 저장 — stage="done" 인 세션이 여기서 한 번 저장되고,
+        // listSessions() 가 done 을 제외하므로 다음 앱 시작에서 자동 정리됨.
+        scheduleSave(get().session);
         set({ session: null, isOpen: false, pausedForBinder: false });
+      },
+
+      loadFromSession(s) {
+        set({ session: s, isOpen: true, pausedForBinder: false });
+      },
+
+      openEmpty() {
+        set({ session: null, isOpen: true, pausedForBinder: false });
       },
 
       // -------- conversation --------
@@ -158,11 +187,9 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
         const cur = get().session;
         if (!cur) return;
         const msg: ConceptMessage = { role, content, at: nowIso() };
-        set({
-          session: patchSession(cur, {
-            conversation: [...cur.conversation, msg],
-          }),
-        });
+        const next = patchSession(cur, { conversation: [...cur.conversation, msg] });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       // -------- per-stage outputs --------
@@ -170,13 +197,17 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
       setConceptParagraph(text) {
         const cur = get().session;
         if (!cur) return;
-        set({ session: patchSession(cur, { conceptParagraph: text }) });
+        const next = patchSession(cur, { conceptParagraph: text });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       setSynopsis(text) {
         const cur = get().session;
         if (!cur) return;
-        set({ session: patchSession(cur, { synopsis: text }) });
+        const next = patchSession(cur, { synopsis: text });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       // -------- outline --------
@@ -184,16 +215,20 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
       setOutline(chs) {
         const cur = get().session;
         if (!cur) return;
-        set({ session: patchSession(cur, { outline: chs.slice() }) });
+        const next = patchSession(cur, { outline: chs.slice() });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       updateChapter(id, patch) {
         const cur = get().session;
         if (!cur) return;
-        const next = cur.outline.map((c) =>
+        const outline = cur.outline.map((c) =>
           c.id === id ? { ...c, ...patch } : c,
         );
-        set({ session: patchSession(cur, { outline: next }) });
+        const next = patchSession(cur, { outline });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       reorderChapters(orderedIds) {
@@ -212,7 +247,9 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
         for (const ch of cur.outline) {
           if (byId.has(ch.id)) reordered.push(ch);
         }
-        set({ session: patchSession(cur, { outline: reordered }) });
+        const next = patchSession(cur, { outline: reordered });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       mergeChapters(idA, idB) {
@@ -228,16 +265,18 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
           summary: `${a.summary}\n\n${b.summary}`,
         };
         // A 의 위치에 merged 박고 B 제거.
-        const next: OutlineChapter[] = [];
+        const outline: OutlineChapter[] = [];
         for (const c of cur.outline) {
           if (c.id === idA) {
-            next.push(merged);
+            outline.push(merged);
             continue;
           }
           if (c.id === idB) continue;
-          next.push(c);
+          outline.push(c);
         }
-        set({ session: patchSession(cur, { outline: next }) });
+        const next = patchSession(cur, { outline });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       splitChapter(id, into) {
@@ -259,27 +298,33 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
           return ch;
         });
 
-        const next = [
+        const outline = [
           ...cur.outline.slice(0, idx),
           ...newChapters,
           ...cur.outline.slice(idx + 1),
         ];
-        set({ session: patchSession(cur, { outline: next }) });
+        const next = patchSession(cur, { outline });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       removeChapter(id) {
         const cur = get().session;
         if (!cur) return;
-        const next = cur.outline.filter((c) => c.id !== id);
-        set({ session: patchSession(cur, { outline: next }) });
+        const outline = cur.outline.filter((c) => c.id !== id);
+        const next = patchSession(cur, { outline });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       // -------- stage --------
 
-      goStage(next) {
+      goStage(nextStage) {
         const cur = get().session;
         if (!cur) return;
-        set({ session: patchSession(cur, { stage: next }) });
+        const next = patchSession(cur, { stage: nextStage });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       // -------- attached notes --------
@@ -288,19 +333,21 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
         const cur = get().session;
         if (!cur) return;
         if (cur.attachedNotes.includes(link)) return;
-        set({
-          session: patchSession(cur, {
-            attachedNotes: [...cur.attachedNotes, link],
-          }),
+        const next = patchSession(cur, {
+          attachedNotes: [...cur.attachedNotes, link],
         });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       detachNote(link) {
         const cur = get().session;
         if (!cur) return;
-        const next = cur.attachedNotes.filter((x) => x !== link);
-        if (next.length === cur.attachedNotes.length) return;
-        set({ session: patchSession(cur, { attachedNotes: next }) });
+        const attachedNotes = cur.attachedNotes.filter((x) => x !== link);
+        if (attachedNotes.length === cur.attachedNotes.length) return;
+        const next = patchSession(cur, { attachedNotes });
+        set({ session: next });
+        scheduleSave(next);
       },
 
       // -------- pause/resume --------
