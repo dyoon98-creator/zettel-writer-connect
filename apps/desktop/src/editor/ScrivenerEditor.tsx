@@ -44,7 +44,9 @@ export function ScrivenerEditor(props: ScrivenerEditorProps): JSX.Element {
   const { theme, bodyFont } = useThemePreference();
   const dark = theme === "dark";
 
-  const [mode, setMode] = useState<"view" | "edit">("view");
+  // 기본 "edit" — 사용자가 폴더 / 다중 장면을 선택해 들어왔을 때 즉시 편집 가능해야
+  // "수정 안 됨" 으로 오인되지 않는다. 마크다운 read-mode 가 필요하면 toolbar 의 "보기" 토글.
+  const [mode, setMode] = useState<"view" | "edit">("edit");
 
   useEffect(() => {
     for (const d of documents) {

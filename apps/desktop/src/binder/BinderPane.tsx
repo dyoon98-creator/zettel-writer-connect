@@ -311,6 +311,16 @@ export function BinderPane(): JSX.Element {
     void (async () => {
       const u = await win.onDragDropEvent((event) => {
         const payload = event.payload;
+        // 진단용: native drag-drop 이벤트 도달 여부를 콘솔에서 확인.
+        // Cmd+Opt+I → Console 에서 "[BinderPane drag]" 로 grep.
+        // dragDropEnabled=false 이거나 옛 빌드의 .app 을 실행 중이면 이 로그가 0건.
+        // payload.position 의 단위는 *물리 픽셀* — Retina 면 dpr=2.
+        if (payload.type !== "over") {
+          // over 는 매 프레임 fire 되어 로그 폭주 — drop/enter/leave 만 기록.
+          // eslint-disable-next-line no-console
+          console.debug("[BinderPane drag]", payload);
+        }
+
         if (payload.type === "leave") {
           setExtDragOver(undefined);
           return;
@@ -345,6 +355,8 @@ export function BinderPane(): JSX.Element {
           setExtDragOver(targetId);
         } else if (payload.type === "drop") {
           setExtDragOver(undefined);
+          // eslint-disable-next-line no-console
+          console.info("[BinderPane drop]", { paths: payload.paths, targetId });
           void dropPathsAt(payload.paths, targetId);
         }
       });
@@ -352,6 +364,8 @@ export function BinderPane(): JSX.Element {
         u();
       } else {
         unlisten = u;
+        // eslint-disable-next-line no-console
+        console.debug("[BinderPane] drag-drop listener registered");
       }
     })();
 

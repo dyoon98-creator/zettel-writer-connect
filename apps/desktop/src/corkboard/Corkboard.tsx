@@ -6,7 +6,7 @@
 // - 카드 클릭 → 단일 선택
 // - 드래그-드롭으로 자식 순서 변경 (dnd-kit)
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   closestCenter,
   DndContext,
@@ -29,6 +29,8 @@ import type {
 } from "@ai-manuscript-studio/core";
 import { countChars } from "@ai-manuscript-studio/core";
 import { useProjectStore } from "../state/projectStore";
+import { BinderContextMenu } from "../binder/BinderContextMenu";
+import { addSceneInsideFolder } from "../binder/binderActions";
 
 export interface CorkboardProps {
   folder: BinderFolder;
@@ -40,7 +42,14 @@ export function Corkboard(props: CorkboardProps): JSX.Element {
   const { folder } = props;
   const moveNode = useProjectStore((s) => s.moveNode);
   const toggleSelection = useProjectStore((s) => s.toggleSelection);
+  const setViewMode = useProjectStore((s) => s.setViewMode);
   const meta = useProjectStore((s) => s.meta)!;
+
+  // 카드 클릭 = "이 장면을 편집". 코르크보드 모드를 자동으로 editor 로 전환해 RichEditor 노출.
+  const openSceneFromCard = (id: string): void => {
+    toggleSelection(id, "single");
+    setViewMode("editor");
+  };
 
   const order = folder.children;
 
@@ -135,20 +144,50 @@ export function Corkboard(props: CorkboardProps): JSX.Element {
 
   const anyFilterActive = labelFilter !== null || statusFilter !== null;
 
+  // 우클릭 → BinderContextMenu (이미 "↳ 이 폴더 안에 새 장면" 항목 보유).
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const onContextMenu = (e: ReactMouseEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  };
+
   if (order.length === 0) {
     return (
-      <div className="corkboard-empty">
-        <p className="pane-hint">
-          이 폴더는 비어 있습니다.
-          <br />
-          우클릭으로 첫 장면을 추가해보세요.
-        </p>
-      </div>
+      <>
+        <div className="corkboard-empty" onContextMenu={onContextMenu}>
+          <p className="pane-hint">
+            이 폴더는 비어 있습니다.
+            <br />
+            <button
+              type="button"
+              className="corkboard-flip-btn"
+              style={{ marginTop: 12 }}
+              onClick={() => void addSceneInsideFolder(folder.id)}
+              data-testid="corkboard-add-first-scene"
+            >
+              + 첫 장면 추가
+            </button>
+            <br />
+            <span style={{ opacity: 0.6 }}>
+              또는 빈 영역 우클릭으로 메뉴를 여세요.
+            </span>
+          </p>
+        </div>
+        {ctxMenu && (
+          <BinderContextMenu
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            nodeId={folder.id}
+            onClose={() => setCtxMenu(null)}
+          />
+        )}
+      </>
     );
   }
 
   return (
-    <div className="corkboard-root">
+    <div className="corkboard-root" onContextMenu={onContextMenu}>
       {/* Toolbar — flip 토글 + 라벨/상태 필터 */}
       <div className="corkboard-toolbar">
         <div className="corkboard-toolbar-section">
@@ -250,7 +289,7 @@ export function Corkboard(props: CorkboardProps): JSX.Element {
                   node={n}
                   side={side}
                   dimmed={!active}
-                  onClick={() => toggleSelection(n.id, "single")}
+                  onClick={() => openSceneFromCard(n.id)}
                   onFlip={() => flipOne(n.id)}
                 />
               );
@@ -258,6 +297,14 @@ export function Corkboard(props: CorkboardProps): JSX.Element {
           </div>
         </SortableContext>
       </DndContext>
+      {ctxMenu && (
+        <BinderContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          nodeId={folder.id}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   );
 }
