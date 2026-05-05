@@ -108,16 +108,9 @@ export function App(): JSX.Element {
       if (autoWizardLastKeyRef.current === liveKey) return;
 
       autoWizardLastKeyRef.current = liveKey;
-      if (liveKey === "__empty__") {
-        // 빈 상태 → ConceptWizard 로 진입 (새 원고 흐름).
-        useConceptWizardStore.getState().openEmpty();
-      } else if (s.meta && s.projectFolder) {
-        startWizard({
-          targetProjectFolder: s.projectFolder,
-          draftTitle: s.meta.title,
-          draftGenre: s.meta.genre,
-        });
-      }
+      // 빈 상태 또는 빈 프로젝트(옵시디언이 NewProjectModal 로 막 만든 빈 폴더 포함)
+      // 모두 새 ConceptWizard 흐름으로 진입.
+      useConceptWizardStore.getState().openEmpty();
     }, 400);
     return () => window.clearTimeout(t);
   }, [meta, binder, projectFolder, isLoading, error, wizardOpen, conceptWizardOpen, startWizard]);
