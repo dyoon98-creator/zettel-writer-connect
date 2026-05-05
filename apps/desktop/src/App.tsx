@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { findManuscriptRoot } from "@ai-manuscript-studio/core";
 import { onDeepLink, getInitialDeepLinks } from "./deepLink";
 import { ScrivenerLayout } from "./layout/ScrivenerLayout";
+import { ProjectSwitcher } from "./binder/ProjectSwitcher";
 import { useProjectStore } from "./state/projectStore";
 import { useApplyThemeToDocument } from "./theme/themeStore";
 import { useGlobalShortcuts } from "./shortcuts";
@@ -213,6 +214,7 @@ export function App(): JSX.Element {
   return (
     <div className="app-shell">
       <div className="app-topbar">
+        <ProjectSwitcher />
         <button
           type="button"
           className="app-topbar-btn"
