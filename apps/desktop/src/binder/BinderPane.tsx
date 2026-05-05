@@ -303,20 +303,50 @@ export function BinderPane(): JSX.Element {
 
   // Tauri webview native drag-drop 구독. dragDropEnabled=true 이면 HTML5 dataTransfer 이벤트는
   // 도착하지 않고 대신 webview 가 paths + position 을 emit 한다.
+  // payload.position 단위/origin 은 플랫폼별로 다르다 — macOS 에서는 window *outer*
+  // top-left (title bar 포함) 기준 physical pixels 인 케이스가 있어 단순 dpr 나누기만으로는
+  // viewport 좌표와 어긋난다 (사용자가 hover 한 노드보다 *아래* 노드가 hit 되는 회귀).
+  // 따라서 webview innerPosition / outerPosition 의 차로 title-bar offset 을 동적으로 보정.
   useEffect(() => {
     const win = getCurrentWebviewWindow();
     let unlisten: (() => void) | null = null;
     let mounted = true;
+    // dpr + title bar offset (CSS px) — drag 시작 시 한 번 측정해 캐시.
+    let dpr = window.devicePixelRatio || 1;
+    let titleBarOffsetCss = 0;
+    let geomReady = false;
+
+    const refreshGeom = async (): Promise<void> => {
+      try {
+        const scale = await win.scaleFactor();
+        const inner = await win.innerPosition();
+        const outer = await win.outerPosition();
+        dpr = scale || 1;
+        // physical → CSS px. inner.y - outer.y 가 title bar 높이 (physical).
+        titleBarOffsetCss = (inner.y - outer.y) / dpr;
+        geomReady = true;
+        // eslint-disable-next-line no-console
+        console.debug("[BinderPane geom]", { dpr, titleBarOffsetCss });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[BinderPane geom] fail, using fallback", e);
+        dpr = window.devicePixelRatio || 1;
+        titleBarOffsetCss = 0;
+        geomReady = true;
+      }
+    };
+    void refreshGeom();
+
+    const toCssCoords = (p: { x: number; y: number }): { x: number; y: number } => {
+      // Tauri payload.position 이 outer-frame top-left 기준이라 가정하고
+      // 우선 dpr 로 CSS px 변환 후 title bar offset 을 *빼* viewport 좌표로 맞춘다.
+      return { x: p.x / dpr, y: p.y / dpr - titleBarOffsetCss };
+    };
 
     void (async () => {
       const u = await win.onDragDropEvent((event) => {
         const payload = event.payload;
-        // 진단용: native drag-drop 이벤트 도달 여부를 콘솔에서 확인.
-        // Cmd+Opt+I → Console 에서 "[BinderPane drag]" 로 grep.
-        // dragDropEnabled=false 이거나 옛 빌드의 .app 을 실행 중이면 이 로그가 0건.
-        // payload.position 의 단위는 *물리 픽셀* — Retina 면 dpr=2.
         if (payload.type !== "over") {
-          // over 는 매 프레임 fire 되어 로그 폭주 — drop/enter/leave 만 기록.
           // eslint-disable-next-line no-console
           console.debug("[BinderPane drag]", payload);
         }
@@ -325,12 +355,15 @@ export function BinderPane(): JSX.Element {
           setExtDragOver(undefined);
           return;
         }
-        // position 은 device pixels — CSS px 로 변환.
-        const dpr = window.devicePixelRatio || 1;
-        const cssX = payload.position.x / dpr;
-        const cssY = payload.position.y / dpr;
 
-        // BinderPane 컨테이너 영역 안에 들어왔는지 검사. 다른 패널 영역에 떨어진 drop 무시.
+        // enter 시 한번 더 geom 갱신 — 윈도우 이동/리사이즈 후 정확도 유지.
+        if (payload.type === "enter" && !geomReady) {
+          // 비동기지만 fire-and-forget — 다음 over/drop 이벤트부터 반영.
+          void refreshGeom();
+        }
+
+        const css = toCssCoords(payload.position);
+
         const container = containerRef.current;
         if (!container) {
           if (payload.type === "drop") setExtDragOver(undefined);
@@ -338,16 +371,16 @@ export function BinderPane(): JSX.Element {
         }
         const rect = container.getBoundingClientRect();
         const inside =
-          cssX >= rect.left &&
-          cssX <= rect.right &&
-          cssY >= rect.top &&
-          cssY <= rect.bottom;
+          css.x >= rect.left &&
+          css.x <= rect.right &&
+          css.y >= rect.top &&
+          css.y <= rect.bottom;
         if (!inside) {
           if (payload.type === "drop") setExtDragOver(undefined);
           return;
         }
 
-        const stack = document.elementsFromPoint(cssX, cssY) as HTMLElement[];
+        const stack = document.elementsFromPoint(css.x, css.y) as HTMLElement[];
         const row = stack.find((el) => el.classList?.contains("binder-row"));
         const targetId = row?.getAttribute("data-node-id") ?? null;
 
@@ -356,7 +389,14 @@ export function BinderPane(): JSX.Element {
         } else if (payload.type === "drop") {
           setExtDragOver(undefined);
           // eslint-disable-next-line no-console
-          console.info("[BinderPane drop]", { paths: payload.paths, targetId });
+          console.info("[BinderPane drop]", {
+            paths: payload.paths,
+            position: payload.position,
+            css,
+            titleBarOffsetCss,
+            dpr,
+            targetId,
+          });
           void dropPathsAt(payload.paths, targetId);
         }
       });

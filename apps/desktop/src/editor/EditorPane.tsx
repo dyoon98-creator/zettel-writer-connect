@@ -8,7 +8,8 @@
 // 외부 파일 드롭은 BinderPane(트리)에서만 처리. EditorPane 영역에서는 첨부 노드가
 // 선택됐을 때 그 파일을 표시만 한다 (스크리브너의 Research 폴더 패턴).
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { marked } from "marked";
 import type { BinderDocument, BinderNode } from "@ai-manuscript-studio/core";
 import { useProjectStore } from "../state/projectStore";
 import { descendantDocuments, findBinderNode } from "../state/binderQueries";
@@ -18,6 +19,16 @@ import { ScrivenerEditor } from "./ScrivenerEditor";
 import { DocumentViewer } from "./DocumentViewer";
 import { Corkboard } from "../corkboard/Corkboard";
 import { tauriNoticeAdapter } from "../noticeAdapter";
+
+function renderMarkdown(src: string): string {
+  try {
+    return marked.parse(src) as string;
+  } catch {
+    return src.replace(/[<>&]/g, (c) =>
+      c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;",
+    );
+  }
+}
 
 const ATTACHMENT_KEY = "attachment";
 const ATTACHMENT_NAME_KEY = "attachment_name";
@@ -102,31 +113,17 @@ export function EditorPane(): JSX.Element {
     tauriNoticeAdapter.info("첨부를 해제했습니다. (파일은 디스크에 남음)");
   };
 
-  // shortcut 노드 — folder 든 document 든 linkedFile 이 있으면 그 외부 파일을 RichEditor 로
-  // 표시한다 (Scrivener "folder-with-text"). 자식은 binder 트리에 그대로 남아 사이드바에서 접근 가능.
+  // shortcut 노드 — 드롭한 외부 문서는 *내장 뷰어* (read-only markdown render) 로 보여준다.
+  // 원본은 옵시디언 등 외부 도구로 편집하고, 앱은 reference view 역할만.
+  // 사용자가 본문을 직접 편집하고 싶으면 toolbar 의 "편집" 토글로 RichEditor 활성.
   if (singleShortcut) {
-    const cache = sceneCache[singleShortcut.id];
     return (
-      <>
-        <EditorTabBar nodes={selectedNodes} />
-        <div className="pane-body editor-pane-body editor-pane-body--flush">
-          {!cache ? (
-            <p className="pane-hint" style={{ padding: 16 }}>
-              연결된 파일을 불러오는 중…
-            </p>
-          ) : (
-            <RichEditor
-              docId={singleShortcut.id}
-              body={cache.body}
-              draft={cache.draft}
-              onChange={(next) => setSceneDraft(singleShortcut.id, next)}
-              onSave={() => void saveScene(singleShortcut.id)}
-              dark={dark}
-              bodyFont={bodyFont}
-            />
-          )}
-        </div>
-      </>
+      <ShortcutViewer
+        node={singleShortcut}
+        dark={dark}
+        bodyFont={bodyFont}
+        nodes={selectedNodes}
+      />
     );
   }
 
@@ -222,6 +219,83 @@ export function EditorPane(): JSX.Element {
           <div className="pane-empty">
             <p className="pane-hint">바인더에서 장면을 선택해주세요.</p>
           </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+interface ShortcutViewerProps {
+  node: BinderNode;
+  dark: boolean;
+  bodyFont: "serif" | "sans";
+  nodes: BinderNode[];
+}
+
+function ShortcutViewer(props: ShortcutViewerProps): JSX.Element {
+  const { node, dark, bodyFont, nodes } = props;
+  const sceneCache = useProjectStore((s) => s.sceneCache);
+  const setSceneDraft = useProjectStore((s) => s.setSceneDraft);
+  const saveScene = useProjectStore((s) => s.saveScene);
+  const cache = sceneCache[node.id];
+  const [mode, setMode] = useState<"view" | "edit">("view");
+  const linkedPath = node.linkedFile?.absolutePath ?? "";
+  const fileName = linkedPath.split("/").pop() ?? linkedPath;
+
+  return (
+    <>
+      <EditorTabBar nodes={nodes} />
+      <div className="pane-body editor-pane-body editor-pane-body--flush">
+        <div className="scrivener-toolbar">
+          <span className="scrivener-toolbar-label" title={linkedPath}>
+            🔗 {fileName}
+          </span>
+          <div className="scrivener-mode-toggle">
+            <button
+              type="button"
+              className={mode === "view" ? "scrivener-mode-btn--active" : ""}
+              onClick={() => setMode("view")}
+            >
+              보기
+            </button>
+            <button
+              type="button"
+              className={mode === "edit" ? "scrivener-mode-btn--active" : ""}
+              onClick={() => setMode("edit")}
+              title="원본 파일을 직접 수정 (write-through)"
+            >
+              편집
+            </button>
+          </div>
+        </div>
+        {!cache ? (
+          <p className="pane-hint" style={{ padding: 16 }}>
+            연결된 파일을 불러오는 중…
+          </p>
+        ) : mode === "view" ? (
+          <div
+            className={
+              "scrivener-readonly scrivener-readonly--md" +
+              (dark ? " rich-editor-host--dark" : " rich-editor-host--light") +
+              (bodyFont === "serif"
+                ? " rich-editor-host--serif"
+                : " rich-editor-host--sans")
+            }
+            style={{ padding: 16, overflowY: "auto" }}
+            dangerouslySetInnerHTML={{
+              __html: renderMarkdown(cache.draft ?? cache.body),
+            }}
+          />
+        ) : (
+          <RichEditor
+            docId={node.id}
+            body={cache.body}
+            draft={cache.draft}
+            onChange={(next) => setSceneDraft(node.id, next)}
+            onSave={() => void saveScene(node.id)}
+            dark={dark}
+            bodyFont={bodyFont}
+          />
         )}
       </div>
     </>
