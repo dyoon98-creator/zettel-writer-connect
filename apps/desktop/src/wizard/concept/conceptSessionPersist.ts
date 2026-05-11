@@ -7,6 +7,7 @@ import {
   CONCEPT_DRAFT_SCHEMA,
   type ConceptDraftSession,
   type ConceptDraftStage,
+  type TreatmentCard,
 } from "@ai-manuscript-studio/core";
 import { tauriVaultAdapter } from "../../vaultAdapter";
 import { getVaultBasePath } from "../../vaultAdapter";
@@ -18,9 +19,12 @@ export const SESSION_DIR = ".ai-manuscript-studio/wizard-sessions";
 // ─── 타입 가드 ────────────────────────────────────────────────────────────────
 
 const VALID_STAGES: ReadonlySet<ConceptDraftStage> = new Set<ConceptDraftStage>([
+  "seed",
+  "memo",
   "concept",
   "synopsis",
-  "outline",
+  "treatment",
+  "outline", // legacy — 옛 세션 호환.
   "done",
 ]);
 
@@ -43,6 +47,49 @@ function sessionJsonPath(id: string): string {
 
 function sessionMdPath(id: string): string {
   return `${SESSION_DIR}/${id}.md`;
+}
+
+/**
+ * v1 (outline 만 가진) 세션을 v2 (treatment 카드 보드) 로 lift.
+ *
+ * 정책:
+ *  - treatment 가 이미 있거나 outline 이 없으면 그대로 반환.
+ *  - 그 외엔 outline 챕터를 TreatmentCard 로 변환:
+ *      · 첫 카드 role="intro"
+ *      · 마지막 카드 role="conclusion"
+ *      · 그 사이는 모두 role="explain" (안전한 기본값)
+ *  - stage 가 옛 "outline" 이면 "treatment" 로 갱신.
+ */
+export function migrateSession(s: ConceptDraftSession): ConceptDraftSession {
+  // 이미 v2 형식 (treatment 가 있으면 손대지 않음).
+  if (s.treatment && s.treatment.length > 0) {
+    if (s.stage === "outline") {
+      return { ...s, stage: "treatment" };
+    }
+    return s;
+  }
+
+  // 옛 outline 만 있는 경우 lift.
+  if (s.outline.length > 0) {
+    const lastIdx = s.outline.length - 1;
+    const treatment: TreatmentCard[] = s.outline.map((ch, i) => ({
+      id: `tc-${String(i + 1).padStart(2, "0")}`,
+      title: ch.title,
+      role: i === 0 ? "intro" : i === lastIdx ? "conclusion" : "explain",
+      summary: ch.summary,
+    }));
+    return {
+      ...s,
+      treatment,
+      stage: s.stage === "outline" ? "treatment" : s.stage,
+    };
+  }
+
+  // outline 도 비어 있고 treatment 도 없으면 stage 만 정리.
+  if (s.stage === "outline") {
+    return { ...s, stage: "treatment" };
+  }
+  return s;
 }
 
 function sessionToMarkdown(s: ConceptDraftSession): string {
@@ -128,7 +175,8 @@ export async function listSessions(): Promise<ConceptDraftSession[]> {
         continue;
       }
       if (parsed.stage === "done") continue;
-      results.push(parsed);
+      // v2 — 옛 세션이면 즉시 lift. 이어하기 시 통합된 흐름으로 진입.
+      results.push(migrateSession(parsed));
     } catch (e) {
       console.warn("[conceptSessionPersist] failed to parse session:", rel, e);
     }

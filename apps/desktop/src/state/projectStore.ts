@@ -11,6 +11,7 @@
 import { create } from "zustand";
 import {
   BinderIO,
+  ProjectV2Manager,
   isProjectMeta,
   isBinderTree,
   migrateBinderOnDisk,
@@ -32,9 +33,76 @@ import {
   copyExternalFile,
 } from "../vaultAdapter";
 import { tauriNoticeAdapter } from "../noticeAdapter";
+import { createFrontmatterAdapter } from "../frontmatterAdapter";
 import { findBinderNode } from "./binderQueries";
 import { runResearchMigrationIfNeeded } from "../research/researchMigration";
 import { useResearchStore } from "./researchStore";
+
+// ─── concept-summary 자동 등록 헬퍼 ──────────────────────────────────────────
+//
+// 옛 프로젝트(v1 컨셉 마법사로 시드)는 트리트먼트 카드별 폴더만 있고 컨셉 서머리
+// 노드가 없다. 사용자가 손으로 concept-summary.md 파일을 옮긴 경우에도 binder 등록은
+// 안 되어 있어 BinderPane 에 안 보인다. loadProject 시 idempotent 하게 1회 등록.
+
+function anyBinderNode(
+  tree: BinderTree,
+  pred: (n: BinderNode) => boolean,
+): boolean {
+  function walk(nodes: BinderNode[]): boolean {
+    for (const n of nodes) {
+      if (pred(n)) return true;
+      if (n.type === "folder" && walk(n.children)) return true;
+    }
+    return false;
+  }
+  return walk(tree.root);
+}
+
+async function ensureConceptSummaryNode(
+  tree: BinderTree,
+  projectFolder: string,
+): Promise<BinderTree> {
+  const summaryFile = "concept-summary.md";
+  try {
+    const exists = await tauriVaultAdapter.fileExists(
+      `${projectFolder}/${summaryFile}`,
+    );
+    if (!exists) return tree;
+  } catch {
+    return tree;
+  }
+
+  const alreadyRegistered = anyBinderNode(
+    tree,
+    (n) =>
+      (n.type === "document" && (n as BinderDocument).file === summaryFile) ||
+      n.customMetadata?.ams_node_role === "concept-summary",
+  );
+  if (alreadyRegistered) return tree;
+
+  const root = findManuscriptRoot(tree);
+  const rootId = root?.id ?? null;
+
+  try {
+    const manager = new ProjectV2Manager({
+      vault: tauriVaultAdapter,
+      notice: tauriNoticeAdapter,
+      frontmatter: createFrontmatterAdapter(tauriVaultAdapter),
+    });
+    await manager.addLinkedDocument(projectFolder, rootId, {
+      title: "컨셉 (기획 단계 요약)",
+      file: summaryFile,
+      synopsis: "",
+      customMetadata: { ams_node_role: "concept-summary" },
+    });
+    tauriNoticeAdapter.info("컨셉 노트를 binder 에 등록했습니다.");
+    return await BinderIO.read(tauriVaultAdapter, projectFolder);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("[projectStore] concept-summary 자동 등록 실패:", e);
+    return tree;
+  }
+}
 
 export type ViewMode = "editor" | "corkboard";
 
@@ -248,6 +316,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         const msg = e instanceof Error ? e.message : String(e);
         tauriNoticeAdapter.warn(`단일 루트 마이그레이션 건너뜀: ${msg}`);
       }
+
+      // 옛 프로젝트 호환 — concept-summary.md 가 디스크에 있는데 binder 에 안 박혀
+      // 있으면 1회 자동 등록. idempotent.
+      finalBinder = await ensureConceptSummaryNode(finalBinder, folder);
 
       // 첫 진입 UX — manuscript-root 는 자동 expand. 그 외 1단계 자식 폴더도 expand.
       const initialExpanded = new Set<string>();

@@ -15,10 +15,34 @@ export const SYNOPSIS_SYSTEM_PROMPT = `당신은 책의 시놉시스를 짓는 �
 export function buildSynopsisUserPrompt(opts: {
   conceptParagraph: string;
   refineHint?: string;
+  /** v2 — 의식의 흐름 메모에서 추출된 분석 요약 (선택). 시놉시스의 정서적 무게를 잡는 데 쓰임. */
+  memoAnalysis?: {
+    emotionAxis: string;
+    strongSentences: string[];
+    recurringThoughts: string[];
+  };
 }): string {
   const lines: string[] = [];
   lines.push("## 컨셉 단락");
   lines.push(opts.conceptParagraph);
+  if (opts.memoAnalysis) {
+    const m = opts.memoAnalysis;
+    const hasAny =
+      m.emotionAxis.trim() ||
+      m.strongSentences.length > 0 ||
+      m.recurringThoughts.length > 0;
+    if (hasAny) {
+      lines.push("");
+      lines.push("## 작가의 무의식 단서 (메모 분석)");
+      if (m.emotionAxis.trim()) lines.push(`- 감정의 축: ${m.emotionAxis.trim()}`);
+      for (const s of m.strongSentences.slice(0, 5)) {
+        lines.push(`- 힘 있는 문장: "${s}"`);
+      }
+      for (const t of m.recurringThoughts.slice(0, 3)) {
+        lines.push(`- 반복되는 생각: ${t}`);
+      }
+    }
+  }
   if (opts.refineHint && opts.refineHint.trim()) {
     lines.push("");
     lines.push("## 추가 지시");

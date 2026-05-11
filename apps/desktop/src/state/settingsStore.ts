@@ -12,8 +12,6 @@ import { useEffect } from "react";
 
 export type AIProvider = "codex" | "claude-code" | "mock";
 
-export type ResearchPanePosition = "left-of-editor" | "right-of-editor";
-
 export interface AppSettings {
   aiProvider: AIProvider;
   codexPath: string;
@@ -25,8 +23,6 @@ export interface AppSettings {
   licenseKey: string;
   skillpackFolder: string;
   useMockBridge: boolean;
-  /** 리서치 패널을 편집기 좌/우 어디에 둘지. */
-  researchPanePosition: ResearchPanePosition;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -40,7 +36,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   licenseKey: "",
   skillpackFolder: "_skillpacks",
   useMockBridge: false,
-  researchPanePosition: "left-of-editor",
 };
 
 export interface SettingsStoreState {

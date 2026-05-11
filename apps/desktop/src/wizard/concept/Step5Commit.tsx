@@ -1,31 +1,113 @@
-// Step5Commit.tsx — Concept Wizard 5단계: 결과 요약 + 옵시디언 binder 주입.
+// Step5Commit.tsx — Concept Wizard 6단계: 결과 요약 + 옵시디언 binder 주입.
 //
-// 사용자가 컨셉/시놉시스/목차를 확인하고 제목을 편집한 뒤
-// "프로젝트 생성" 버튼을 눌러 볼트에 새 프로젝트를 저장한다.
+// 사용자가 컨셉/메모/시놉시스/트리트먼트를 확인하고 제목을 편집한 뒤
+// "프로젝트 생성"을 누르면 vault 에 시드하고 즉시 기획 인터뷰로 진입한다.
 
 import { useState, useMemo } from "react";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useProjectStore } from "../../state/projectStore";
+import { useWizardStore } from "../wizardStore";
 import { tauriVaultAdapter, getVaultBasePath } from "../../vaultAdapter";
 import { tauriNoticeAdapter } from "../../noticeAdapter";
 import { createFrontmatterAdapter } from "../../frontmatterAdapter";
 import { seedFromConceptDraft } from "./conceptSeed";
 import { slugify, todayDateStamp } from "@ai-manuscript-studio/core";
+import { TREATMENT_ROLE_LABELS } from "./treatmentPrompts";
 
 interface Step5CommitProps {
   onBack?: () => void;
   onComplete?: () => void;
 }
 
-function deriveInitialTitle(session: NonNullable<ReturnType<typeof useConceptWizardStore.getState>["session"]>): string {
-  // synopsis 첫 줄 또는 seed 첫 12자
+// ─── 스타일 토큰 (다른 Step 들과 동일) ──────────────────────────────────────
+
+const ACCENT = "#1f7a4a";
+const ACCENT_HOVER = "#165f38";
+const BORDER = "#e0dcd4";
+const TEXT = "#2b2620";
+const TEXT_MUTED = "#786f63";
+const BG_CARD = "#fafafa";
+const RADIUS = 6;
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase" as const,
+  color: TEXT_MUTED,
+  marginBottom: 6,
+};
+
+const cardStyle: React.CSSProperties = {
+  background: BG_CARD,
+  border: `1px solid ${BORDER}`,
+  borderRadius: RADIUS,
+  padding: "10px 12px",
+  fontSize: 13,
+  color: TEXT,
+  lineHeight: 1.6,
+  whiteSpace: "pre-wrap" as const,
+};
+
+const titleInputStyle: React.CSSProperties = {
+  width: "100%",
+  border: `1px solid ${BORDER}`,
+  borderRadius: RADIUS,
+  padding: "9px 12px",
+  fontSize: 14,
+  color: TEXT,
+  outline: "none",
+  fontFamily: "inherit",
+  boxSizing: "border-box" as const,
+  background: "#ffffff",
+};
+
+const btnBase: React.CSSProperties = {
+  padding: "9px 20px",
+  borderRadius: RADIUS,
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
+  border: "none",
+  transition: "background 0.15s",
+};
+
+const btnPrimary: React.CSSProperties = {
+  ...btnBase,
+  background: ACCENT_HOVER,
+  color: "#fff",
+};
+
+const btnPrimaryDisabled: React.CSSProperties = {
+  ...btnPrimary,
+  background: "#b0c8bb",
+  cursor: "not-allowed",
+};
+
+const btnSecondary: React.CSSProperties = {
+  ...btnBase,
+  background: "transparent",
+  color: TEXT_MUTED,
+  border: `1px solid ${BORDER}`,
+};
+
+const errorBannerStyle: React.CSSProperties = {
+  background: "#fff0f0",
+  border: "1px solid #f5a0a0",
+  borderRadius: RADIUS,
+  padding: "10px 12px",
+  fontSize: 13,
+  color: "#b00020",
+};
+
+function deriveInitialTitle(
+  session: NonNullable<ReturnType<typeof useConceptWizardStore.getState>["session"]>,
+): string {
   if (session.synopsis) {
     const firstLine = session.synopsis.split(/\n/)[0].trim();
     if (firstLine) return firstLine.slice(0, 60);
   }
-  if (session.seed) {
-    return session.seed.split(/\n/)[0].trim().slice(0, 60);
-  }
+  if (session.seed) return session.seed.split(/\n/)[0].trim().slice(0, 60);
   return "";
 }
 
@@ -44,15 +126,15 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
   const [title, setTitle] = useState(initialTitle);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   const slugPreview = useMemo(() => deriveSlugPreview(title.trim()), [title]);
   const vaultPath = getVaultBasePath();
 
   const canSubmit = title.trim().length > 0 && !isLoading && session !== null;
 
-  function toggleChapter(id: string): void {
-    setExpandedChapters((prev) => {
+  function toggleItem(id: string): void {
+    setExpandedItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -74,7 +156,21 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
       });
       await loadProject(result.vaultPath, result.projectSlug);
       closeWizard();
-      tauriNoticeAdapter.info("프로젝트가 생성됐습니다.");
+      tauriNoticeAdapter.info(
+        "프로젝트가 생성됐습니다. 기획 인터뷰를 이어 시작합니다.",
+      );
+
+      // v2 — 컨셉 마법사 종료 직후 기획 인터뷰로 자연스럽게 이어진다.
+      const projectFolder = useProjectStore.getState().projectFolder;
+      const meta = useProjectStore.getState().meta;
+      if (meta && projectFolder) {
+        useWizardStore.getState().start({
+          draftTitle: meta.title,
+          draftGenre: meta.genre,
+          targetProjectFolder: projectFolder,
+        });
+      }
+
       onComplete?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -85,98 +181,275 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
 
   if (!session) {
     return (
-      <div data-testid="step5-no-session" className="flex items-center justify-center h-full text-sm text-gray-500">
+      <div
+        data-testid="step5-no-session"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          fontSize: 13,
+          color: TEXT_MUTED,
+          padding: 32,
+        }}
+      >
         세션 정보가 없습니다.
       </div>
     );
   }
 
   return (
-    <div data-testid="step5-commit" className="flex flex-col h-full overflow-hidden">
+    <div
+      data-testid="step5-commit"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+        background: "#ffffff",
+        color: TEXT,
+        fontFamily:
+          '"Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif',
+      }}
+    >
       {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 0,
+          padding: "24px 28px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
         {/* 제목 입력 */}
         <section>
-          <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">
-            프로젝트 제목
-          </label>
+          <p style={sectionTitleStyle}>프로젝트 제목</p>
           <input
             data-testid="step5-title-input"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="제목을 입력하세요"
-            className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={titleInputStyle}
           />
         </section>
 
-        {/* 컨셉 단락 */}
         {session.conceptParagraph && (
           <section>
-            <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">컨셉</p>
-            <div
-              data-testid="step5-concept"
-              className="rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-300 whitespace-pre-wrap"
-            >
+            <p style={sectionTitleStyle}>컨셉</p>
+            <div style={cardStyle} data-testid="step5-concept">
               {session.conceptParagraph}
             </div>
           </section>
         )}
 
-        {/* 시놉시스 */}
         {session.synopsis && (
           <section>
-            <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">시놉시스</p>
-            <div
-              data-testid="step5-synopsis"
-              className="rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-300 whitespace-pre-wrap"
-            >
+            <p style={sectionTitleStyle}>시놉시스</p>
+            <div style={cardStyle} data-testid="step5-synopsis">
               {session.synopsis}
             </div>
           </section>
         )}
 
-        {/* 목차 미리보기 */}
-        {session.outline.length > 0 && (
+        {/* 트리트먼트 (v2 우선) 또는 legacy outline */}
+        {session.treatment && session.treatment.length > 0 ? (
           <section>
-            <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">
-              목차 ({session.outline.length}장)
+            <p style={sectionTitleStyle}>
+              트리트먼트 ({session.treatment.length}장)
             </p>
-            <ol data-testid="step5-outline" className="space-y-1">
-              {session.outline.map((chap, i) => (
-                <li key={chap.id} className="rounded-md border border-gray-700 bg-gray-800">
-                  <button
-                    type="button"
-                    data-testid={`step5-chapter-toggle-${chap.id}`}
-                    onClick={() => toggleChapter(chap.id)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 rounded-md"
+            <ol
+              data-testid="step5-treatment"
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              {session.treatment.map((card, i) => {
+                const open = expandedItems.has(card.id);
+                return (
+                  <li
+                    key={card.id}
+                    style={{
+                      border: `1px solid ${BORDER}`,
+                      borderRadius: RADIUS,
+                      background: BG_CARD,
+                    }}
                   >
-                    <span>
-                      <span className="text-gray-500 mr-2">{i + 1}.</span>
-                      {chap.title}
-                    </span>
-                    <span className="text-gray-500 text-xs">{expandedChapters.has(chap.id) ? "▲" : "▼"}</span>
-                  </button>
-                  {expandedChapters.has(chap.id) && (
-                    <div className="px-3 pb-2 text-xs text-gray-400 whitespace-pre-wrap">
-                      {chap.summary}
-                    </div>
-                  )}
-                </li>
-              ))}
+                    <button
+                      type="button"
+                      data-testid={`step5-card-toggle-${card.id}`}
+                      onClick={() => toggleItem(card.id)}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        padding: "8px 12px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: TEXT,
+                        textAlign: "left" as const,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <span>
+                        <span style={{ color: TEXT_MUTED, marginRight: 8 }}>
+                          {i + 1}.
+                        </span>
+                        <span
+                          style={{
+                            color: ACCENT,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            marginRight: 8,
+                          }}
+                        >
+                          [{TREATMENT_ROLE_LABELS[card.role]}]
+                        </span>
+                        {card.title}
+                      </span>
+                      <span style={{ color: TEXT_MUTED, fontSize: 11 }}>
+                        {open ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    {open && (
+                      <div
+                        style={{
+                          padding: "0 12px 10px",
+                          fontSize: 12,
+                          color: TEXT_MUTED,
+                          whiteSpace: "pre-wrap" as const,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {card.summary}
+                        {card.keySentence && (
+                          <div style={{ marginTop: 6, color: ACCENT }}>
+                            ▸ {card.keySentence}
+                          </div>
+                        )}
+                        {card.readerEmotion && (
+                          <div style={{ marginTop: 4, color: "#a86d1f" }}>
+                            감정: {card.readerEmotion}
+                          </div>
+                        )}
+                        {card.note && (
+                          <div style={{ marginTop: 4 }}>
+                            메모: {card.note}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           </section>
-        )}
+        ) : session.outline.length > 0 ? (
+          <section>
+            <p style={sectionTitleStyle}>
+              목차 ({session.outline.length}장)
+            </p>
+            <ol
+              data-testid="step5-outline"
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              {session.outline.map((chap, i) => {
+                const open = expandedItems.has(chap.id);
+                return (
+                  <li
+                    key={chap.id}
+                    style={{
+                      border: `1px solid ${BORDER}`,
+                      borderRadius: RADIUS,
+                      background: BG_CARD,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleItem(chap.id)}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: TEXT,
+                        textAlign: "left" as const,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <span>
+                        <span style={{ color: TEXT_MUTED, marginRight: 8 }}>
+                          {i + 1}.
+                        </span>
+                        {chap.title}
+                      </span>
+                      <span style={{ color: TEXT_MUTED, fontSize: 11 }}>
+                        {open ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    {open && (
+                      <div
+                        style={{
+                          padding: "0 12px 10px",
+                          fontSize: 12,
+                          color: TEXT_MUTED,
+                          whiteSpace: "pre-wrap" as const,
+                        }}
+                      >
+                        {chap.summary}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ) : null}
 
-        {/* 첨부 노트 */}
         {session.attachedNotes.length > 0 && (
           <section>
-            <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">참고 노트</p>
-            <div className="flex flex-wrap gap-2" data-testid="step5-attached-notes">
+            <p style={sectionTitleStyle}>참고 노트</p>
+            <div
+              style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+              data-testid="step5-attached-notes"
+            >
               {session.attachedNotes.map((note) => (
                 <span
                   key={note}
-                  className="inline-flex items-center rounded-full bg-blue-900 border border-blue-700 px-2 py-0.5 text-xs text-blue-300"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "var(--color-status-bg, #efeae0)",
+                    border: `1px solid ${BORDER}`,
+                    fontSize: 12,
+                    color: TEXT_MUTED,
+                  }}
                 >
                   {note}
                 </span>
@@ -185,50 +458,66 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
           </section>
         )}
 
-        {/* 저장 위치 미리보기 */}
         {vaultPath && (
           <section>
-            <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">저장 위치</p>
+            <p style={sectionTitleStyle}>저장 위치</p>
             <div
               data-testid="step5-path-preview"
-              className="rounded-md bg-gray-900 border border-gray-700 px-3 py-2 text-xs text-gray-400 font-mono break-all"
+              style={{
+                background: "#f7f5f2",
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS,
+                padding: "8px 12px",
+                fontSize: 12,
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                color: TEXT_MUTED,
+                wordBreak: "break-all" as const,
+              }}
             >
-              {vaultPath}/3 Writing/<span className="text-blue-400">{slugPreview}</span>/
+              {vaultPath}/3 Writing/<span style={{ color: ACCENT }}>{slugPreview}</span>/
             </div>
           </section>
         )}
 
-        {/* 에러 배너 */}
         {error && (
-          <div
-            data-testid="step5-error"
-            className="rounded-md bg-red-900 border border-red-700 px-3 py-2 text-sm text-red-300"
-          >
-            <p className="font-semibold mb-1">생성 실패</p>
-            <p className="text-xs">{error}</p>
+          <div style={errorBannerStyle} data-testid="step5-error" role="alert">
+            <p style={{ fontWeight: 600, margin: 0, marginBottom: 4 }}>생성 실패</p>
+            <p style={{ margin: 0, fontSize: 12 }}>{error}</p>
           </div>
         )}
       </div>
 
-      {/* 액션 버튼 */}
-      <div className="shrink-0 flex justify-between items-center px-6 py-4 border-t border-gray-700">
+      {/* 액션 바 */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "14px 28px",
+          borderTop: `1px solid ${BORDER}`,
+          background: "#faf9f7",
+        }}
+      >
         <button
           type="button"
           data-testid="step5-back"
           onClick={() => onBack?.()}
-          className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+          style={btnSecondary}
         >
           이전
         </button>
-
-        <div className="flex gap-2">
+        <div style={{ display: "flex", gap: 8 }}>
           {error && (
             <button
               type="button"
               data-testid="step5-retry"
-              onClick={() => { setError(null); void handleCreate(); }}
+              onClick={() => {
+                setError(null);
+                void handleCreate();
+              }}
               disabled={!canSubmit}
-              className="px-4 py-2 rounded-md bg-gray-700 text-sm text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={canSubmit ? btnSecondary : { ...btnSecondary, opacity: 0.5, cursor: "not-allowed" }}
             >
               재시도
             </button>
@@ -238,9 +527,10 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
             data-testid="step5-submit"
             onClick={() => void handleCreate()}
             disabled={!canSubmit}
-            className="px-5 py-2 rounded-md bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={canSubmit ? btnPrimary : btnPrimaryDisabled}
+            aria-disabled={!canSubmit}
           >
-            {isLoading ? "생성 중…" : "프로젝트 생성"}
+            {isLoading ? "생성 중…" : "프로젝트 생성 + 기획 인터뷰 시작"}
           </button>
         </div>
       </div>

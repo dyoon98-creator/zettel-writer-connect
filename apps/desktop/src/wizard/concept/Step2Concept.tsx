@@ -16,6 +16,7 @@ import {
   READY_TO_DISTILL_PATTERNS,
 } from "./conceptPrompts";
 import type { ChatMessage } from "../../ai/streamingChat";
+import type { ConceptDraftSession } from "@ai-manuscript-studio/core";
 import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
 // ---- 타입 ------------------------------------------------------------------
@@ -23,6 +24,48 @@ import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 interface Step2ConceptProps {
   onAdvance?: () => void;
   onBack?: () => void;
+}
+
+/**
+ * Step2 의 첫 user 메시지를 만든다.
+ * - 메모 단계가 비어 있으면 시드만 반환 (옛 동작).
+ * - 메모 분석이 있고 사용자가 ✓ 체크한 항목이 있으면 그 항목들을 시드 뒤에 붙여
+ *   AI 가 작가의 무의식 단서를 알고 첫 응답을 만들게 한다.
+ */
+function buildFirstUserMessage(session: ConceptDraftSession): string {
+  const seed = session.seed.trim();
+  const memo = session.memo;
+  if (!memo?.analysis) return seed;
+
+  const selected = new Set(memo.selected ?? []);
+  const a = memo.analysis;
+  const chosen: string[] = [];
+
+  // ✓ 체크된 항목만 첫 메시지에 묻어 보낸다.
+  if (selected.has("emotionAxis:0") && a.emotionAxis.trim()) {
+    chosen.push(`- 감정의 축: ${a.emotionAxis.trim()}`);
+  }
+  a.recurringThoughts.forEach((t, i) => {
+    if (selected.has(`recurring:${i}`)) chosen.push(`- 반복되는 생각: ${t}`);
+  });
+  a.hiddenThemes.forEach((t, i) => {
+    if (selected.has(`hiddenThemes:${i}`)) chosen.push(`- 숨은 주제: ${t}`);
+  });
+  a.strongSentences.forEach((t, i) => {
+    if (selected.has(`strongSentences:${i}`)) chosen.push(`- 힘 있는 문장: "${t}"`);
+  });
+  a.developmentDirections.forEach((t, i) => {
+    if (selected.has(`directions:${i}`)) chosen.push(`- 발전 방향: ${t}`);
+  });
+
+  if (chosen.length === 0) return seed;
+
+  return [
+    seed,
+    "",
+    "(아래는 내 메모를 미리 정리해 둔 단서들이다 — 이 단서를 우선 반영해 컨셉을 정리해 줘.)",
+    ...chosen,
+  ].join("\n");
 }
 
 // ---- 서브 컴포넌트 ----------------------------------------------------------
@@ -64,10 +107,10 @@ function NoteChip({
         gap: 4,
         padding: "2px 8px",
         borderRadius: 4,
-        background: "var(--color-chip-bg, #2a2a2a)",
+        background: "var(--color-status-bg, #efeae0)",
         fontSize: 12,
-        color: "var(--color-chip-text, #ccc)",
-        border: "1px solid var(--color-chip-border, #444)",
+        color: "var(--color-text, #2b2620)",
+        border: "1px solid var(--color-border, #e0dcd4)",
       }}
       data-testid="concept-note-chip"
     >
@@ -172,11 +215,11 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
 
     firstCallRef.current = true;
 
-    const seed = session.seed;
-    appendMessage("user", seed);
+    // 첫 user 메시지 — 시드 + (있다면) 메모 분석에서 선택된 단서들을 함께 전달.
+    const seedPlusMemo = buildFirstUserMessage(session);
+    appendMessage("user", seedPlusMemo);
 
-    // 시드를 포함한 첫 messages 배열 직접 구성 (store 갱신이 비동기이므로).
-    const firstMessages: ChatMessage[] = [{ role: "user", content: seed }];
+    const firstMessages: ChatMessage[] = [{ role: "user", content: seedPlusMemo }];
 
     void (async () => {
       try {
@@ -344,7 +387,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             display: "flex",
             flexDirection: "column",
             width: "70%",
-            borderRight: "1px solid var(--color-border, #333)",
+            borderRight: "1px solid var(--color-border, #e0dcd4)",
             overflow: "hidden",
           }}
         >
@@ -382,7 +425,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
           {/* 입력 영역 */}
           <div
             style={{
-              borderTop: "1px solid var(--color-border, #333)",
+              borderTop: "1px solid var(--color-border, #e0dcd4)",
               padding: "8px 12px",
               display: "flex",
               flexDirection: "column",
@@ -403,15 +446,15 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 padding: "8px",
                 fontSize: 14,
                 boxSizing: "border-box",
-                background: "var(--color-input-bg, #1e1e1e)",
-                color: "var(--color-input-text, #eee)",
-                border: "1px solid var(--color-border, #444)",
+                background: "var(--color-bg-pane, #ffffff)",
+                color: "var(--color-text, #2b2620)",
+                border: "1px solid var(--color-border, #e0dcd4)",
                 borderRadius: 4,
               }}
             />
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <span
-                style={{ fontSize: 12, color: "var(--color-hint, #888)", alignSelf: "center" }}
+                style={{ fontSize: 12, color: "var(--color-text-muted, #786f63)", alignSelf: "center" }}
               >
                 {isStreaming ? "AI가 답변 중… (Esc 로 중단)" : "Cmd/Ctrl + Enter 로 전송"}
               </span>
@@ -426,7 +469,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                   border: "none",
                   cursor: isStreaming || !draft.trim() ? "not-allowed" : "pointer",
                   fontSize: 13,
-                  background: "var(--color-btn-primary, #4a9eff)",
+                  background: "#1f7a4a",
                   color: "#fff",
                   opacity: isStreaming || !draft.trim() ? 0.5 : 1,
                 }}
@@ -452,7 +495,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
               flex: 1,
               overflowY: "auto",
               padding: "12px 14px",
-              borderBottom: "1px solid var(--color-border, #333)",
+              borderBottom: "1px solid var(--color-border, #e0dcd4)",
             }}
           >
             <div
@@ -461,7 +504,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 fontWeight: 600,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "var(--color-label, #888)",
+                color: "var(--color-text-muted, #786f63)",
                 marginBottom: 8,
               }}
             >
@@ -473,8 +516,8 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 fontSize: 14,
                 lineHeight: 1.65,
                 color: conceptParagraph
-                  ? "var(--color-text, #ddd)"
-                  : "var(--color-placeholder, #555)",
+                  ? "var(--color-text, #2b2620)"
+                  : "var(--color-text-muted, #786f63)",
                 whiteSpace: "pre-wrap",
                 minHeight: 60,
               }}
@@ -489,7 +532,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 style={{
                   fontSize: 14,
                   lineHeight: 1.65,
-                  color: "var(--color-text, #ddd)",
+                  color: "var(--color-text, #2b2620)",
                   whiteSpace: "pre-wrap",
                   marginTop: 4,
                 }}
@@ -501,7 +544,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
           </div>
 
           {/* "정리해 보기" 버튼 */}
-          <div style={{ padding: "8px 14px", borderBottom: "1px solid var(--color-border, #333)" }}>
+          <div style={{ padding: "8px 14px", borderBottom: "1px solid var(--color-border, #e0dcd4)" }}>
             <button
               type="button"
               data-testid="concept-distill-btn"
@@ -513,11 +556,11 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 borderRadius: 4,
                 border: readyHint
                   ? "1px solid #c8a800"
-                  : "1px solid var(--color-border, #555)",
+                  : "1px solid var(--color-border, #e0dcd4)",
                 background: readyHint
                   ? "rgba(200, 168, 0, 0.12)"
-                  : "var(--color-btn-secondary, #2a2a2a)",
-                color: readyHint ? "#c8a800" : "var(--color-text, #ccc)",
+                  : "var(--color-bg-pane-alt, #f4f1ec)",
+                color: readyHint ? "#c8a800" : "var(--color-text, #2b2620)",
                 cursor:
                   distillChat.isStreaming || conversation.length === 0
                     ? "not-allowed"
@@ -539,7 +582,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 fontWeight: 600,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "var(--color-label, #888)",
+                color: "var(--color-text-muted, #786f63)",
                 marginBottom: 6,
               }}
             >
@@ -547,7 +590,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             </div>
 
             {attachedNotes.length === 0 && (
-              <div style={{ fontSize: 12, color: "var(--color-placeholder, #555)", marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted, #786f63)", marginBottom: 6 }}>
                 연결된 노트 없음
               </div>
             )}
@@ -584,9 +627,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                   padding: "4px 8px",
                   fontSize: 12,
                   borderRadius: 4,
-                  border: "1px solid var(--color-border, #444)",
-                  background: "var(--color-input-bg, #1e1e1e)",
-                  color: "var(--color-input-text, #eee)",
+                  border: "1px solid var(--color-border, #e0dcd4)",
+                  background: "var(--color-bg-pane, #ffffff)",
+                  color: "var(--color-text, #2b2620)",
                 }}
               />
               <datalist id="vault-note-suggestions-step2">
@@ -603,9 +646,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                   padding: "4px 10px",
                   fontSize: 12,
                   borderRadius: 4,
-                  border: "1px solid var(--color-border, #555)",
-                  background: "var(--color-btn-secondary, #2a2a2a)",
-                  color: "var(--color-text, #ccc)",
+                  border: "1px solid var(--color-border, #e0dcd4)",
+                  background: "var(--color-bg-pane-alt, #f4f1ec)",
+                  color: "var(--color-text, #2b2620)",
                   cursor: noteInput.trim() ? "pointer" : "not-allowed",
                   opacity: noteInput.trim() ? 1 : 0.5,
                 }}
@@ -620,7 +663,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
       {/* 하단 액션 */}
       <div
         style={{
-          borderTop: "1px solid var(--color-border, #333)",
+          borderTop: "1px solid var(--color-border, #e0dcd4)",
           padding: "10px 16px",
           display: "flex",
           justifyContent: "flex-end",
@@ -635,9 +678,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             style={{
               padding: "7px 20px",
               borderRadius: 4,
-              border: "1px solid var(--color-border, #555)",
+              border: "1px solid var(--color-border, #e0dcd4)",
               background: "transparent",
-              color: "var(--color-text, #ccc)",
+              color: "var(--color-text, #2b2620)",
               cursor: "pointer",
               fontSize: 13,
             }}
@@ -655,9 +698,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             borderRadius: 4,
             border: "none",
             background: conceptParagraph.trim()
-              ? "var(--color-btn-primary, #4a9eff)"
-              : "var(--color-btn-disabled, #2a2a2a)",
-            color: conceptParagraph.trim() ? "#fff" : "var(--color-placeholder, #555)",
+              ? "#1f7a4a"
+              : "var(--color-border, #e0dcd4)",
+            color: conceptParagraph.trim() ? "#fff" : "var(--color-text-muted, #786f63)",
             cursor: conceptParagraph.trim() ? "pointer" : "not-allowed",
             fontSize: 13,
           }}

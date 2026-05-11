@@ -13,14 +13,12 @@ import { ProjectStatus, STATUS_LABEL_KO } from "@ai-manuscript-studio/core";
 import type { BinderNode } from "@ai-manuscript-studio/core";
 
 import { useProjectStore } from "../state/projectStore";
-import { useSettingsStore } from "../state/settingsStore";
 import { findBinderNode } from "../state/binderQueries";
 import { BinderPane } from "../binder/BinderPane";
 import { EditorPane } from "../editor/EditorPane";
 import { InspectorPane } from "../inspector/InspectorPane";
 import { SettingsPopover } from "../theme/SettingsPopover";
 import { useWizardStore } from "../wizard/wizardStore";
-import { ResearchPane } from "../research/ResearchPane";
 import { PlanningResultModal } from "../wizard/PlanningResultModal";
 
 const ALL_STATUSES: ProjectStatus[] = [
@@ -227,61 +225,25 @@ export function ScrivenerLayout(): JSX.Element {
 }
 
 /**
- * Binder | Research | Editor | Inspector  (researchPanePosition === "left-of-editor")
- * Binder | Editor | Research | Inspector  (researchPanePosition === "right-of-editor")
- *
- * 두 모드 모두 4 컬럼. 칼럼 width 는 사용자가 splitter 핸들로 자유롭게 드래그.
- * autoSaveId 를 모드별로 분리해 위치 전환해도 각자의 마지막 폭이 유지된다.
+ * Binder | Editor | Inspector — 3-pane Scrivener-style 레이아웃.
+ * 리서치는 인스펙터 패널의 "리서치" 탭으로 통합돼 별도 컬럼이 없다.
  */
 function ManuscriptPanes(): JSX.Element {
-  const position = useSettingsStore((s) => s.settings.researchPanePosition);
-
-  if (position === "right-of-editor") {
-    return (
-      <PanelGroup
-        direction="horizontal"
-        className="panes"
-        autoSaveId="ams-panes-research-right"
-      >
-        <Panel defaultSize={18} minSize={12} className="pane">
-          <BinderPane />
-        </Panel>
-        <PanelResizeHandle className="resize-handle" />
-        <Panel defaultSize={36} minSize={25} className="pane">
-          <EditorPane />
-        </Panel>
-        <PanelResizeHandle className="resize-handle" />
-        <Panel defaultSize={28} minSize={18} className="pane">
-          <ResearchPane />
-        </Panel>
-        <PanelResizeHandle className="resize-handle" />
-        <Panel defaultSize={18} minSize={12} className="pane">
-          <InspectorPane />
-        </Panel>
-      </PanelGroup>
-    );
-  }
-
-  // 기본: 편집기 왼쪽.
   return (
     <PanelGroup
       direction="horizontal"
       className="panes"
-      autoSaveId="ams-panes-research-left"
+      autoSaveId="ams-panes-3col"
     >
-      <Panel defaultSize={18} minSize={12} className="pane">
+      <Panel defaultSize={20} minSize={12} className="pane">
         <BinderPane />
       </Panel>
       <PanelResizeHandle className="resize-handle" />
-      <Panel defaultSize={28} minSize={18} className="pane">
-        <ResearchPane />
-      </Panel>
-      <PanelResizeHandle className="resize-handle" />
-      <Panel defaultSize={36} minSize={25} className="pane">
+      <Panel defaultSize={56} minSize={30} className="pane">
         <EditorPane />
       </Panel>
       <PanelResizeHandle className="resize-handle" />
-      <Panel defaultSize={18} minSize={12} className="pane">
+      <Panel defaultSize={24} minSize={16} className="pane">
         <InspectorPane />
       </Panel>
     </PanelGroup>

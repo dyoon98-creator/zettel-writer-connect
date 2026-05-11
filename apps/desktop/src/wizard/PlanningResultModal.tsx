@@ -23,16 +23,19 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
   const loadProject = useProjectStore((s) => s.loadProject);
 
   const [body, setBody] = useState<string | null>(null);
+  const [conceptBody, setConceptBody] = useState<string | null>(null);
+  const [tab, setTab] = useState<"planning" | "concept">("planning");
   const [parsed, setParsed] = useState<WizardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     if (!projectFolder) return;
-    const path = `${projectFolder}/planning.md`;
+
     void (async () => {
+      // planning.md (기획 인터뷰 결과)
       try {
-        const text = await tauriVaultAdapter.readFile(path);
+        const text = await tauriVaultAdapter.readFile(`${projectFolder}/planning.md`);
         setBody(text);
         const p = PlanningMdWriter.parse(text);
         setParsed(p);
@@ -45,6 +48,18 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
         setError(
           `planning.md 를 읽지 못했습니다: ${e instanceof Error ? e.message : String(e)}`,
         );
+      }
+
+      // concept-summary.md (컨셉 마법사 결과 — 기획 인터뷰가 planning.md 를 덮어써도 보존됨)
+      try {
+        const csText = await tauriVaultAdapter.readFile(
+          `${projectFolder}/concept-summary.md`,
+        );
+        setConceptBody(csText);
+        // concept-summary 가 있는 프로젝트는 그 탭을 기본으로 열어둔다 — 사용자가 찾던 화면.
+        setTab("concept");
+      } catch {
+        // 옛 프로젝트는 concept-summary.md 가 없을 수 있음 — silent.
       }
     })();
   }, [projectFolder]);
@@ -120,9 +135,60 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: 12,
+            gap: 12,
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 18 }}>기획 인터뷰 결과</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>기획 결과</h2>
+            {conceptBody && (
+              <div
+                role="tablist"
+                style={{
+                  display: "inline-flex",
+                  marginLeft: 12,
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 6,
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "concept"}
+                  onClick={() => setTab("concept")}
+                  style={{
+                    padding: "4px 12px",
+                    fontSize: 12,
+                    background:
+                      tab === "concept" ? "#1f7a4a" : "transparent",
+                    color: tab === "concept" ? "#fff" : "var(--color-text)",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  컨셉 마법사
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "planning"}
+                  onClick={() => setTab("planning")}
+                  style={{
+                    padding: "4px 12px",
+                    fontSize: 12,
+                    background:
+                      tab === "planning" ? "#1f7a4a" : "transparent",
+                    color: tab === "planning" ? "#fff" : "var(--color-text)",
+                    border: "none",
+                    cursor: "pointer",
+                    borderLeft: "1px solid var(--color-border)",
+                  }}
+                >
+                  기획 인터뷰
+                </button>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -133,13 +199,38 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
           </button>
         </header>
 
-        {!body && !error && (
+        {!body && !conceptBody && !error && (
           <div style={{ padding: "32px 0", textAlign: "center", color: "#888" }}>
-            planning.md 를 읽는 중…
+            기획 결과를 읽는 중…
           </div>
         )}
 
-        {error && (
+        {/* 컨셉 마법사 결과 탭 — concept-summary.md 가 있을 때만 노출 */}
+        {tab === "concept" && conceptBody && (
+          <>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+              컨셉 마법사 결과 (concept-summary.md)
+            </div>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                background: "var(--color-bg-input, #fafafa)",
+                padding: 12,
+                borderRadius: 8,
+                border: "1px solid var(--color-border)",
+                maxHeight: "70vh",
+                overflowY: "auto",
+                fontSize: 13,
+                fontFamily: "inherit",
+                lineHeight: 1.6,
+              }}
+            >
+              {conceptBody}
+            </pre>
+          </>
+        )}
+
+        {tab === "planning" && error && (
           <div
             style={{
               background: "#fee",
@@ -154,7 +245,7 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
           </div>
         )}
 
-        {parsed && (
+        {tab === "planning" && parsed && (
           <div
             style={{
               background: "var(--color-bg-input, #fafafa)",
@@ -224,7 +315,7 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
           </div>
         )}
 
-        {body && (
+        {tab === "planning" && body && (
           <>
             <div style={{ fontWeight: 600, marginBottom: 6 }}>planning.md 본문</div>
             <pre

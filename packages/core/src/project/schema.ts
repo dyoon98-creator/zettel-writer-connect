@@ -263,11 +263,16 @@ export function isSceneFrontmatter(v: unknown): v is SceneFrontmatter {
 
 export const CONCEPT_DRAFT_SCHEMA = "ai-manuscript-studio.concept-draft.v1";
 
+// v2 — memo (의식의 흐름) + treatment (역할별 카드 보드) 단계가 추가됐다.
+// 디스크 호환을 위해 옛 stage 값("outline") 도 union 에 남겨두고, 마이그레이션 시
+// loadFromSession 단에서 treatment 로 lift 한다.
 export type ConceptDraftStage =
   | "seed"
+  | "memo"
   | "concept"
   | "synopsis"
-  | "outline"
+  | "treatment"
+  | "outline" // legacy — 옛 세션 파일이 가질 수 있음. 새 세션은 "treatment" 사용.
   | "done";
 
 /** 작품의 톤 — 장르(Genre)와 별개. UI 라디오에서 골라 잡는다. */
@@ -288,6 +293,47 @@ export interface OutlineChapter {
   summary: string;
 }
 
+/** 의식의 흐름 메모를 AI 가 5축으로 분해한 결과. 모든 배열은 길이 무관. */
+export interface MemoAnalysis {
+  recurringThoughts: string[];
+  emotionAxis: string;
+  hiddenThemes: string[];
+  strongSentences: string[];
+  /** 글로 발전 가능한 방향 — 정확히 3개를 권장하지만 강제하진 않는다. */
+  developmentDirections: string[];
+}
+
+export interface ConceptMemo {
+  raw: string;
+  analysis?: MemoAnalysis;
+  /** 사용자가 ✓ 체크한 항목들의 "축:인덱스" 또는 "축:문자열" 식별자. concept 단계 prefill 용. */
+  selected?: string[];
+}
+
+/** 트리트먼트 카드 한 장의 역할. */
+export type TreatmentCardRole =
+  | "intro"
+  | "problem"
+  | "case"
+  | "explain"
+  | "pivot"
+  | "conclusion";
+
+export interface TreatmentCard {
+  /** "tc-<n>" 안정 id. */
+  id: string;
+  title: string;
+  role: TreatmentCardRole;
+  /** 본 카드의 내용 요약 (1~3문장). */
+  summary: string;
+  /** 카드에서 가장 힘 있는 한 문장 (선택). */
+  keySentence?: string;
+  /** 카드 끝에서 독자가 느꼈으면 하는 감정 (선택). */
+  readerEmotion?: string;
+  /** 작가 메모 (선택). */
+  note?: string;
+}
+
 export interface ConceptDraftSession {
   schema: typeof CONCEPT_DRAFT_SCHEMA;
   id: string;
@@ -300,7 +346,12 @@ export interface ConceptDraftSession {
   conversation: ConceptMessage[];
   conceptParagraph: string;
   synopsis: string;
+  /** v1 호환 — 옛 세션이 outline 만 가진 경우 유지. 신규 작성은 treatment 사용. */
   outline: OutlineChapter[];
+  /** v2 — 의식의 흐름 메모 + AI 분석. */
+  memo?: ConceptMemo;
+  /** v2 — 역할별 카드 배열. binder 시드의 1차 소스. */
+  treatment?: TreatmentCard[];
   stage: ConceptDraftStage;
   createdAt: string;
   updatedAt: string;
@@ -322,6 +373,57 @@ export function isOutlineChapter(v: unknown): v is OutlineChapter {
     typeof v.title === "string" &&
     typeof v.summary === "string"
   );
+}
+
+const TREATMENT_ROLES: readonly TreatmentCardRole[] = [
+  "intro",
+  "problem",
+  "case",
+  "explain",
+  "pivot",
+  "conclusion",
+];
+
+export function isTreatmentCardRole(v: unknown): v is TreatmentCardRole {
+  return typeof v === "string" && (TREATMENT_ROLES as readonly string[]).includes(v);
+}
+
+export function isTreatmentCard(v: unknown): v is TreatmentCard {
+  if (!isStringRecord(v)) return false;
+  if (typeof v.id !== "string") return false;
+  if (typeof v.title !== "string") return false;
+  if (!isTreatmentCardRole(v.role)) return false;
+  if (typeof v.summary !== "string") return false;
+  if (v.keySentence !== undefined && typeof v.keySentence !== "string") return false;
+  if (v.readerEmotion !== undefined && typeof v.readerEmotion !== "string") return false;
+  if (v.note !== undefined && typeof v.note !== "string") return false;
+  return true;
+}
+
+export function isMemoAnalysis(v: unknown): v is MemoAnalysis {
+  if (!isStringRecord(v)) return false;
+  const strArr = (x: unknown): boolean =>
+    Array.isArray(x) && x.every((s) => typeof s === "string");
+  return (
+    strArr(v.recurringThoughts) &&
+    typeof v.emotionAxis === "string" &&
+    strArr(v.hiddenThemes) &&
+    strArr(v.strongSentences) &&
+    strArr(v.developmentDirections)
+  );
+}
+
+export function isConceptMemo(v: unknown): v is ConceptMemo {
+  if (!isStringRecord(v)) return false;
+  if (typeof v.raw !== "string") return false;
+  if (v.analysis !== undefined && !isMemoAnalysis(v.analysis)) return false;
+  if (
+    v.selected !== undefined &&
+    (!Array.isArray(v.selected) || !v.selected.every((s) => typeof s === "string"))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function isConceptDraftSession(v: unknown): v is ConceptDraftSession {
@@ -356,11 +458,21 @@ export function isConceptDraftSession(v: unknown): v is ConceptDraftSession {
   if (!Array.isArray(v.outline) || !v.outline.every(isOutlineChapter)) {
     return false;
   }
+  // v2 — memo / treatment 는 optional. 있으면 형태 확인.
+  if (v.memo !== undefined && !isConceptMemo(v.memo)) return false;
+  if (
+    v.treatment !== undefined &&
+    (!Array.isArray(v.treatment) || !v.treatment.every(isTreatmentCard))
+  ) {
+    return false;
+  }
   const stage = v.stage;
   if (
     stage !== "seed" &&
+    stage !== "memo" &&
     stage !== "concept" &&
     stage !== "synopsis" &&
+    stage !== "treatment" &&
     stage !== "outline" &&
     stage !== "done"
   ) {

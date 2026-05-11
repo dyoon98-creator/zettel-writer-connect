@@ -449,6 +449,45 @@ export class ProjectV2Manager {
     return total;
   }
 
+  /**
+   * 이미 디스크에 존재하는 .md 파일을 가리키는 document 노드만 binder 에 추가한다.
+   * addScene 과 달리 .md 본문을 만들지 않는다 — 호출자가 직접 writeFile 로 작성한 뒤
+   * binder 트리에만 등록하고 싶을 때 사용한다.
+   *
+   * 사용 예: 컨셉 마법사가 `concept-summary.md` 를 직접 작성한 뒤 manuscript-root 아래에
+   * 이 노드 한 개만 등록.
+   */
+  async addLinkedDocument(
+    projectFolder: string,
+    parentBinderId: string | null,
+    input: {
+      title: string;
+      /** projectFolder 기준 상대 경로. 예: "concept-summary.md" */
+      file: string;
+      id?: string;
+      label?: string;
+      status?: string;
+      synopsis?: string;
+      customMetadata?: Record<string, string>;
+    },
+  ): Promise<BinderDocument> {
+    const meta = await ProjectMetaIO.read(this.deps.vault, projectFolder);
+    const tree = await BinderIO.read(this.deps.vault, projectFolder);
+    const id = input.id ?? BinderIO.assignNewId();
+    const node = BinderIO.newDocument({
+      id,
+      title: input.title,
+      file: input.file,
+      label: input.label ?? this.defaultLabelId(meta),
+      status: input.status ?? this.defaultStatusId(meta),
+      synopsis: input.synopsis,
+      customMetadata: input.customMetadata,
+    });
+    const next = BinderIO.addNode(tree, parentBinderId, node);
+    await BinderIO.write(this.deps.vault, projectFolder, next);
+    return node;
+  }
+
   // ---- helpers ----
 
   private defaultStatusId(meta: ProjectMeta): string {

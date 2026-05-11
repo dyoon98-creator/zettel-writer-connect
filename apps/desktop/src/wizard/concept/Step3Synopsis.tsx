@@ -214,6 +214,13 @@ export function Step3Synopsis({
               role: "user",
               content: buildSynopsisUserPrompt({
                 conceptParagraph: session.conceptParagraph,
+                memoAnalysis: session.memo?.analysis
+                  ? {
+                      emotionAxis: session.memo.analysis.emotionAxis,
+                      strongSentences: session.memo.analysis.strongSentences,
+                      recurringThoughts: session.memo.analysis.recurringThoughts,
+                    }
+                  : undefined,
               }),
             },
           ],
@@ -260,6 +267,13 @@ export function Step3Synopsis({
             content: buildSynopsisUserPrompt({
               conceptParagraph: session.conceptParagraph,
               refineHint: refineHint,
+              memoAnalysis: session.memo?.analysis
+                ? {
+                    emotionAxis: session.memo.analysis.emotionAxis,
+                    strongSentences: session.memo.analysis.strongSentences,
+                    recurringThoughts: session.memo.analysis.recurringThoughts,
+                  }
+                : undefined,
             }),
           },
         ],
@@ -274,7 +288,8 @@ export function Step3Synopsis({
   }
 
   function handleNext(): void {
-    goStage("outline");
+    // v2 — outline 대신 treatment 카드 보드로.
+    goStage("treatment");
     onAdvance?.();
   }
 

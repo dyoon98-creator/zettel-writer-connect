@@ -16,10 +16,14 @@ import {
   CONCEPT_DRAFT_SCHEMA,
   type ConceptDraftSession,
   type ConceptDraftStage,
+  type ConceptMemo,
   type ConceptMessage,
   type ConceptTone,
   type Genre,
+  type MemoAnalysis,
   type OutlineChapter,
+  type TreatmentCard,
+  type TreatmentCardRole,
 } from "@ai-manuscript-studio/core";
 import { saveSession } from "../wizard/concept/conceptSessionPersist";
 
@@ -63,7 +67,7 @@ export interface ConceptWizardState {
   setConceptParagraph: (text: string) => void;
   setSynopsis: (text: string) => void;
 
-  // ---- outline 조작 ----
+  // ---- outline 조작 (legacy — 신규 작성은 treatment 사용) ----
   setOutline: (chs: OutlineChapter[]) => void;
   updateChapter: (
     id: string,
@@ -76,6 +80,18 @@ export interface ConceptWizardState {
     into: { title: string; summary: string }[],
   ) => void;
   removeChapter: (id: string) => void;
+
+  // ---- v2: memo (의식의 흐름) ----
+  setMemoRaw: (text: string) => void;
+  setMemoAnalysis: (analysis: MemoAnalysis | undefined) => void;
+  setMemoSelected: (ids: string[]) => void;
+
+  // ---- v2: treatment cards ----
+  setTreatment: (cards: TreatmentCard[]) => void;
+  addTreatmentCard: (role: TreatmentCardRole, atIndex?: number) => string;
+  updateTreatmentCard: (id: string, patch: Partial<Omit<TreatmentCard, "id">>) => void;
+  removeTreatmentCard: (id: string) => void;
+  reorderTreatmentCards: (orderedIds: string[]) => void;
 
   // ---- stage 전이 ----
   goStage: (next: ConceptDraftStage) => void;
@@ -106,6 +122,23 @@ function newSessionId(): string {
 /** "ch-01", "ch-12" 형식. 1부터. zero-pad 2자리. */
 function chapterIdFor(n: number): string {
   return `ch-${String(n).padStart(2, "0")}`;
+}
+
+/** "tc-01" 트리트먼트 카드 id. */
+function treatmentCardIdFor(n: number): string {
+  return `tc-${String(n).padStart(2, "0")}`;
+}
+
+function nextTreatmentCardNumber(cards: TreatmentCard[]): number {
+  let max = 0;
+  for (const c of cards) {
+    const m = /^tc-(\d+)$/.exec(c.id);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  return max + 1;
 }
 
 /** 현재 outline 의 가장 높은 ch- 번호를 찾아 다음 번호 반환. */
@@ -157,8 +190,9 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
           conceptParagraph: "",
           synopsis: "",
           outline: [],
-          // T1 명세: start 직후 stage="concept" 로 즉시 진입.
-          stage: "concept",
+          // v2: start 직후 의식의 흐름 메모 단계로 진입.
+          // (스킵 가능 — Step2Memo 에서 빈 채로 "다음" 누르면 concept 로.)
+          stage: "memo",
           createdAt: at,
           updatedAt: at,
         };
@@ -313,6 +347,115 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
         if (!cur) return;
         const outline = cur.outline.filter((c) => c.id !== id);
         const next = patchSession(cur, { outline });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      // -------- memo (v2) --------
+
+      setMemoRaw(text) {
+        const cur = get().session;
+        if (!cur) return;
+        const memo: ConceptMemo = { ...(cur.memo ?? { raw: "" }), raw: text };
+        const next = patchSession(cur, { memo });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      setMemoAnalysis(analysis) {
+        const cur = get().session;
+        if (!cur) return;
+        const memo: ConceptMemo = {
+          ...(cur.memo ?? { raw: "" }),
+          analysis,
+        };
+        const next = patchSession(cur, { memo });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      setMemoSelected(ids) {
+        const cur = get().session;
+        if (!cur) return;
+        const memo: ConceptMemo = {
+          ...(cur.memo ?? { raw: "" }),
+          selected: ids.slice(),
+        };
+        const next = patchSession(cur, { memo });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      // -------- treatment (v2) --------
+
+      setTreatment(cards) {
+        const cur = get().session;
+        if (!cur) return;
+        const next = patchSession(cur, { treatment: cards.slice() });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      addTreatmentCard(role, atIndex) {
+        const cur = get().session;
+        if (!cur) return "";
+        const cards = cur.treatment ?? [];
+        const id = treatmentCardIdFor(nextTreatmentCardNumber(cards));
+        const card: TreatmentCard = {
+          id,
+          title: "(제목 없음)",
+          role,
+          summary: "",
+        };
+        const idx = typeof atIndex === "number" ? atIndex : cards.length;
+        const nextCards = [
+          ...cards.slice(0, idx),
+          card,
+          ...cards.slice(idx),
+        ];
+        const next = patchSession(cur, { treatment: nextCards });
+        set({ session: next });
+        scheduleSave(next);
+        return id;
+      },
+
+      updateTreatmentCard(id, patch) {
+        const cur = get().session;
+        if (!cur) return;
+        const cards = cur.treatment ?? [];
+        const nextCards = cards.map((c) => (c.id === id ? { ...c, ...patch } : c));
+        const next = patchSession(cur, { treatment: nextCards });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      removeTreatmentCard(id) {
+        const cur = get().session;
+        if (!cur) return;
+        const cards = cur.treatment ?? [];
+        const nextCards = cards.filter((c) => c.id !== id);
+        const next = patchSession(cur, { treatment: nextCards });
+        set({ session: next });
+        scheduleSave(next);
+      },
+
+      reorderTreatmentCards(orderedIds) {
+        const cur = get().session;
+        if (!cur) return;
+        const cards = cur.treatment ?? [];
+        const byId = new Map(cards.map((c) => [c.id, c]));
+        const reordered: TreatmentCard[] = [];
+        for (const id of orderedIds) {
+          const c = byId.get(id);
+          if (c) {
+            reordered.push(c);
+            byId.delete(id);
+          }
+        }
+        for (const c of cards) {
+          if (byId.has(c.id)) reordered.push(c);
+        }
+        const next = patchSession(cur, { treatment: reordered });
         set({ session: next });
         scheduleSave(next);
       },

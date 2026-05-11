@@ -12,11 +12,15 @@ import { SourceNotesPane } from "./SourceNotesPane";
 import { ActionPanel } from "./ActionPanel";
 import { SnapshotsPanel } from "./SnapshotsPanel";
 import { ContinuityPanel } from "./ContinuityPanel";
+import { ResearchPane } from "../research/ResearchPane";
+
+type InspectorTab = "meta" | "research";
 
 export function InspectorPane(): JSX.Element {
   const meta = useProjectStore((s) => s.meta);
   const binder = useProjectStore((s) => s.binder);
   const selectedIds = useProjectStore((s) => s.selectedNodeIds);
+  const [tab, setTab] = useState<InspectorTab>("meta");
 
   if (!meta || !binder) {
     return (
@@ -35,9 +39,38 @@ export function InspectorPane(): JSX.Element {
   return (
     <>
       <div className="pane-header">인스펙터</div>
-      <div className="pane-body inspector-body">
-        {node ? <NodeInspector node={node} /> : <ProjectInspector />}
+      <div className="inspector-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "meta"}
+          className={
+            "inspector-tab" + (tab === "meta" ? " inspector-tab--active" : "")
+          }
+          onClick={() => setTab("meta")}
+        >
+          메타
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "research"}
+          className={
+            "inspector-tab" +
+            (tab === "research" ? " inspector-tab--active" : "")
+          }
+          onClick={() => setTab("research")}
+        >
+          리서치
+        </button>
       </div>
+      {tab === "meta" ? (
+        <div className="pane-body inspector-body">
+          {node ? <NodeInspector node={node} /> : <ProjectInspector />}
+        </div>
+      ) : (
+        <ResearchPane />
+      )}
     </>
   );
 }

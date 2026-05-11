@@ -80,8 +80,18 @@ interface SessionToastProps {
   onDismiss: () => void;
 }
 
+const STAGE_LABEL_KO: Record<string, string> = {
+  seed: "시드 입력 중",
+  memo: "메모 정리 중",
+  concept: "컨셉 다듬는 중",
+  synopsis: "시놉시스 작성 중",
+  treatment: "트리트먼트 작성 중",
+  outline: "목차 작성 중", // legacy
+};
+
 function SessionToast({ session, onResume, onDismiss }: SessionToastProps): JSX.Element {
   const seedPreview = session.seed.slice(0, 60) + (session.seed.length > 60 ? "…" : "");
+  const stageLabel = STAGE_LABEL_KO[session.stage] ?? session.stage;
   return (
     <div
       style={TOAST_STYLE}
@@ -89,7 +99,7 @@ function SessionToast({ session, onResume, onDismiss }: SessionToastProps): JSX.
       aria-live="polite"
       data-testid="concept-resume-toast"
     >
-      <div>이전 마법사를 이어서 진행하시겠습니까?</div>
+      <div>이전 마법사를 이어서 진행하시겠습니까? <span style={{ color: "#1f7a4a", fontWeight: 600 }}>({stageLabel})</span></div>
       <div style={SEED_PREVIEW_STYLE} title={session.seed}>{seedPreview}</div>
       <div style={ACTIONS_STYLE}>
         <button

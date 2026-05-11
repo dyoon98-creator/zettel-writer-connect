@@ -1,11 +1,12 @@
-// ResearchPane.tsx — 좌측 칼럼 하단 패널.
+// ResearchPane.tsx — 인스펙터 패널의 "리서치" 탭 콘텐츠.
 //
 // 구성:
-//   1. 헤더 — "리서치"
-//   2. 입력 영역 — prompt + 자료 유형 + 미리 첨부 링크 + "리서치 시작"
+//   1. 입력 영역 — prompt + 자료 유형 + 미리 첨부 링크 + "리서치 시작"
 //      (실행 중이면 진행 시간 표시 + 입력 disabled)
-//   3. 목록 — 최신순 ResearchItem (제목 / 일시 / 삭제 hover)
-//   4. 선택 시 ResearchItemView 로 본문 + 리라이트 버튼
+//   2. 목록 — 최신순 ResearchItem (제목 / 일시 / 삭제 hover)
+//   3. 선택 시 ResearchItemView 로 본문 + 리라이트 버튼
+//
+// 외곽 헤더는 InspectorPane 의 탭 스트립이 대신한다.
 
 import { useEffect, useState } from "react";
 
@@ -15,7 +16,6 @@ import {
 } from "./researchRunner";
 import { useResearchStore } from "../state/researchStore";
 import { useProjectStore } from "../state/projectStore";
-import { useSettingsStore } from "../state/settingsStore";
 import { tauriNoticeAdapter } from "../noticeAdapter";
 import { ResearchItemView } from "./ResearchItemView";
 
@@ -30,9 +30,6 @@ export function ResearchPane(): JSX.Element {
   const runResearch = useResearchStore((s) => s.runResearch);
   const selectResearch = useResearchStore((s) => s.selectResearch);
   const deleteResearch = useResearchStore((s) => s.deleteResearch);
-
-  const position = useSettingsStore((s) => s.settings.researchPanePosition);
-  const updateSettings = useSettingsStore((s) => s.update);
 
   const [prompt, setPrompt] = useState("");
   const [sourceKind, setSourceKind] = useState<ResearchSourceKind>("general");
@@ -92,37 +89,15 @@ export function ResearchPane(): JSX.Element {
 
   return (
     <div className="research-pane">
-      <div className="pane-header research-pane-header">
-        <span>리서치</span>
-        <div className="research-pane-header-actions">
-          <button
-            type="button"
-            className="research-pane-dock-btn"
-            onClick={() =>
-              void updateSettings({
-                researchPanePosition:
-                  position === "left-of-editor"
-                    ? "right-of-editor"
-                    : "left-of-editor",
-              })
-            }
-            title={
-              position === "left-of-editor"
-                ? "편집기 오른쪽으로 이동"
-                : "편집기 왼쪽으로 이동"
-            }
-          >
-            {position === "left-of-editor" ? "→" : "←"}
-          </button>
-          <button
-            type="button"
-            className="research-pane-collapse-btn"
-            onClick={() => setInputCollapsed((v) => !v)}
-            title={inputCollapsed ? "리서치 입력 펼치기" : "리서치 입력 접기"}
-          >
-            {inputCollapsed ? "+ 새 리서치" : "− 입력 접기"}
-          </button>
-        </div>
+      <div className="research-pane-toolbar">
+        <button
+          type="button"
+          className="research-pane-collapse-btn"
+          onClick={() => setInputCollapsed((v) => !v)}
+          title={inputCollapsed ? "리서치 입력 펼치기" : "리서치 입력 접기"}
+        >
+          {inputCollapsed ? "+ 새 리서치" : "− 입력 접기"}
+        </button>
       </div>
 
       {!inputCollapsed && (

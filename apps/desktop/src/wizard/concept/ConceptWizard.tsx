@@ -13,9 +13,10 @@
 import { useEffect } from "react";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { Step1Seed } from "./Step1Seed";
+import { Step2Memo } from "./Step2Memo";
 import { Step2Concept } from "./Step2Concept";
 import { Step3Synopsis } from "./Step3Synopsis";
-import { Step4Outline } from "./Step4Outline";
+import { Step5Treatment } from "./Step5Treatment";
 import { Step5Commit } from "./Step5Commit";
 
 // ─── 스타일 상수 ──────────────────────────────────────────────────────────────
@@ -92,14 +93,18 @@ const CANCEL_BTN_STYLE: React.CSSProperties = {
 
 // ─── 진행 도트 ────────────────────────────────────────────────────────────────
 
+// v2 — 6단계: 시드 → 메모 → 컨셉 → 시놉시스 → 트리트먼트 → 원고로(commit)
 const STAGE_LABELS: Record<string, number> = {
-  // session === null → Step1
   seed: 1,
-  concept: 2,
-  synopsis: 3,
-  outline: 4,
-  done: 5,
+  memo: 2,
+  concept: 3,
+  synopsis: 4,
+  treatment: 5,
+  outline: 5, // legacy 별칭 — 같은 칸을 비춤.
+  done: 6,
 };
+
+const TOTAL_STEPS = 6;
 
 function stepNumber(sessionStage: string | null): number {
   if (!sessionStage) return 1;
@@ -108,8 +113,8 @@ function stepNumber(sessionStage: string | null): number {
 
 function ProgressDots({ current }: { current: number }): JSX.Element {
   return (
-    <div style={PROGRESS_STYLE} aria-label={`${current}/5단계`}>
-      {[1, 2, 3, 4, 5].map((n) => (
+    <div style={PROGRESS_STYLE} aria-label={`${current}/${TOTAL_STEPS}단계`}>
+      {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
         <div
           key={n}
           style={{
@@ -122,10 +127,8 @@ function ProgressDots({ current }: { current: number }): JSX.Element {
           aria-hidden="true"
         />
       ))}
-      <span
-        style={{ fontSize: 12, color: "#786f63", marginLeft: 4 }}
-      >
-        {current}/5
+      <span style={{ fontSize: 12, color: "#786f63", marginLeft: 4 }}>
+        {current}/{TOTAL_STEPS}
       </span>
     </div>
   );
@@ -182,38 +185,40 @@ export function ConceptWizard(): JSX.Element | null {
   const current = stepNumber(stage);
 
   function renderStep(): JSX.Element {
-    // session === null → Step1Seed (store.start 가 session 생성)
+    // session === null → Step1Seed (store.start 가 session 을 생성하며 stage="memo" 로 진입)
     if (!session) {
-      return (
-        <Step1Seed
-          onAdvance={() => {
-            // session.stage 는 store.start 가 "concept" 으로 설정 — 자동 전이.
-          }}
-        />
-      );
+      return <Step1Seed />;
     }
 
     switch (session.stage) {
+      case "memo":
+        return (
+          <Step2Memo
+            onAdvance={() => goStage("concept")}
+            onBack={() => {
+              // seed 로 복귀하려면 session 을 초기화해야 하므로 일단 no-op.
+            }}
+          />
+        );
       case "concept":
         return (
           <Step2Concept
             onAdvance={() => goStage("synopsis")}
-            onBack={() => {
-              // Step1로 복귀: session 을 null 로 초기화할 수 없으므로
-              // 사용자가 시드를 다시 입력하는 UX 는 scope 밖. goStage "concept" 유지.
-            }}
+            onBack={() => goStage("memo")}
           />
         );
       case "synopsis":
         return (
           <Step3Synopsis
-            onAdvance={() => goStage("outline")}
+            onAdvance={() => goStage("treatment")}
             onBack={() => goStage("concept")}
           />
         );
+      // v1 호환 — 옛 세션이 outline 단계에 멈춰 있을 수 있음. treatment 와 같은 화면.
       case "outline":
+      case "treatment":
         return (
-          <Step4Outline
+          <Step5Treatment
             onAdvance={() => goStage("done")}
             onBack={() => goStage("synopsis")}
           />
@@ -222,7 +227,7 @@ export function ConceptWizard(): JSX.Element | null {
         return (
           <Step5Commit
             onComplete={() => close()}
-            onBack={() => goStage("outline")}
+            onBack={() => goStage("treatment")}
           />
         );
       default:
