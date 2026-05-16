@@ -1,13 +1,40 @@
-// ManuscriptStudioView.tsx — Scrivener-style 작업실 view 의 옵시디언 호스트.
+// ManuscriptStudioView.tsx — 옵시디언 WorkspaceLeaf 안에서 작업실 React tree
+// (apps/desktop 출신 App.tsx) 를 마운트한다.
 //
-// 옵시디언 WorkspaceLeaf 안에 React tree 를 마운트한다. 실제 UI 컴포넌트
-// (BinderPane / InspectorPane / 에디터 등) 는 Phase 3 에서 이식되며, 지금은
-// "어떤 프로젝트가 열렸는지" 를 표시하는 골격만 둔다.
+// mount 시:
+//   1. initStudioContext(plugin) — adapters/* 가 plugin 인스턴스를 찾을 수 있게
+//   2. App tree 마운트 — 내부에서 useSettingsBootstrap, deep-link 등을 setup
+//   3. projectStore.loadProject(vaultPath, projectFolder) — view state 로 받은
+//      프로젝트를 자동 로드
+//
+// unmount 시: React unmount + disposeStudioContext.
 
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type AIManuscriptStudioPlugin from "../main";
+import { initStudioContext, disposeStudioContext } from "./context";
+
+// App tree 자체는 lazy require 로 mount 시점에 평가. test/non-Electron 환경에서
+// React tree 의 무거운 transitive deps 가 즉시 로드되지 않게 한다.
+function lazyLoadStudioRoot(): React.ComponentType<{ projectFolder?: string }> {
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const { App } = require("./App") as typeof import("./App");
+  const { useProjectStore } = require("./state/projectStore") as typeof import("./state/projectStore");
+  /* eslint-enable @typescript-eslint/no-require-imports */
+
+  return function StudioRoot({ projectFolder }: { projectFolder?: string }) {
+    const loadProject = useProjectStore((s) => s.loadProject);
+    React.useEffect(() => {
+      if (!projectFolder) return;
+      // projectFolder 는 vault-relative ("3 Writing/<slug>"). loadProject 는
+      // (vaultPath, projectSlug) 시그니처지만 slug 자리에 그대로 넣어도 hash 만
+      // 만들어지므로 정상 동작.
+      void loadProject("", projectFolder);
+    }, [projectFolder, loadProject]);
+    return <App />;
+  };
+}
 
 export const MANUSCRIPT_STUDIO_VIEW_TYPE = "manuscript-studio-view";
 
@@ -53,6 +80,7 @@ export class ManuscriptStudioView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
+    initStudioContext(this.plugin);
     this.containerEl.children[1].empty();
     const host = this.containerEl.children[1].createDiv({
       cls: "manuscript-studio-root",
@@ -64,59 +92,12 @@ export class ManuscriptStudioView extends ItemView {
   async onClose(): Promise<void> {
     this.root?.unmount();
     this.root = null;
+    disposeStudioContext();
   }
 
   private render(): void {
     if (!this.root) return;
-    this.root.render(
-      <StudioShell
-        projectFolder={this.state.projectFolder}
-        pluginVersion={this.plugin.manifest.version}
-      />,
-    );
+    const StudioRoot = lazyLoadStudioRoot();
+    this.root.render(<StudioRoot projectFolder={this.state.projectFolder} />);
   }
-}
-
-interface StudioShellProps {
-  projectFolder?: string;
-  pluginVersion: string;
-}
-
-function StudioShell({
-  projectFolder,
-  pluginVersion,
-}: StudioShellProps): React.ReactElement {
-  return (
-    <div
-      style={{
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        fontFamily: "var(--font-interface)",
-      }}
-    >
-      <h2 style={{ margin: 0 }}>AI 원고실</h2>
-      <p style={{ margin: 0, color: "var(--text-muted)" }}>
-        통합 모드 v{pluginVersion} — 작업실 view 골격이 마운트되었습니다.
-      </p>
-      <div
-        style={{
-          padding: "12px 16px",
-          background: "var(--background-secondary)",
-          border: "1px solid var(--background-modifier-border)",
-          borderRadius: "6px",
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 프로젝트</div>
-        <div style={{ fontFamily: "var(--font-monospace)", fontSize: "0.9em" }}>
-          {projectFolder ?? "(미지정 — 인덱서에서 카드를 클릭하세요)"}
-        </div>
-      </div>
-      <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.85em" }}>
-        Phase 1 골격. 실제 binder / 에디터 / inspector / 마법사 UI 는 Phase 3 에서
-        이식 예정입니다.
-      </p>
-    </div>
-  );
 }
