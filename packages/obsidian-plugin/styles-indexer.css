@@ -41,21 +41,64 @@
   /* 옵시디언 default hover 도 무력화. studio 측 :hover 만 활성화. */
   background: transparent;
 }
-/* 단, 각 class 가 padding/배경/색을 명시한 곳에서는 다시 재현되도록 specificity
-   을 한 단계 더 살린다. 아래 selector 는 class-스코프 rule 의 우선순위 회복. */
+/* 명시 class 의 배경/색/패딩을 specificity 한 단계 올려 reset 보다 우선.
+   .manuscript-studio-root .foo (0,2,0) > .manuscript-studio-root button (0,1,1). */
+
+/* primary CTA — 갈색 강조 배경 + 흰 글자 */
 .manuscript-studio-root .header-new-manuscript-btn,
-.manuscript-studio-root .header-interview-btn,
-.manuscript-studio-root .app-topbar-btn,
-.manuscript-studio-root .ams-launch-btn,
-.manuscript-studio-root .header-icon-btn,
-.manuscript-studio-root .settings-toggle,
 .manuscript-studio-root .app-empty-cta {
-  padding: 6px 12px;
-  border-radius: var(--radius, 6px);
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
 }
+.manuscript-studio-root .app-empty-cta {
+  padding: 8px 22px;
+  font-size: 14px;
+}
+
+/* secondary outline button */
+.manuscript-studio-root .header-interview-btn,
+.manuscript-studio-root .app-topbar-btn {
+  background: var(--color-bg-pane, #fff);
+  color: var(--color-text, #2b2620);
+  border: 1px solid var(--color-border, #e0dcd4);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.manuscript-studio-root .header-interview-btn:hover,
+.manuscript-studio-root .app-topbar-btn:hover {
+  background: var(--color-row-hover, #f4f1ec);
+}
+
+/* indexer 카드의 launch 버튼 */
+.manuscript-studio-root .ams-launch-btn {
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+
+/* 둥근 icon-only 버튼 (⚙ 등) */
 .manuscript-studio-root .header-icon-btn,
 .manuscript-studio-root .settings-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color-text-muted, #786f63);
   padding: 0;
+}
+.manuscript-studio-root .header-icon-btn:hover,
+.manuscript-studio-root .settings-toggle:hover {
+  background: var(--color-row-hover, #f4f1ec);
+  color: var(--color-text, #2b2620);
 }
 
 .ams-indexer {
