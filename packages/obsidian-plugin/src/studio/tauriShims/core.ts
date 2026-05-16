@@ -22,22 +22,72 @@ function absToRel(p: string): string {
   return p; // 이미 relative
 }
 
-const VOICE_FOLDER_DEFAULT = "_attachments/voice";
+const VOICE_FOLDER_DEFAULT_REL = "_attachments/voice";
 
-function getVoiceFolderRel(): string {
-  // app 영역에 사용자 지정이 있으면 사용. 없으면 default.
-  // 간단히 voice_path/voice_folder_info 에서만 쓰므로 default 사용.
-  return VOICE_FOLDER_DEFAULT;
+/** AppSettings.voiceFolder 절대 경로를 읽음 (없거나 빈 문자열이면 null). */
+async function readVoiceFolderAbs(): Promise<string | null> {
+  const plugin = getStudioPlugin();
+  const store = new ObsidianAppSettingsStore(plugin);
+  const settings = await store.load();
+  const v = (settings.voiceFolder ?? "").trim();
+  return v ? v : null;
 }
 
-async function ensureVoiceFolder(): Promise<string> {
+interface VoiceLoc {
+  /** 절대 경로 (Finder/Explorer 열기, 외부 파일 읽기용) */
+  abs: string;
+  /** vault 안의 상대 경로 (vault.adapter.* 호출 용). 외부 폴더면 null */
+  rel: string | null;
+  /** 외부 (vault 바깥) 여부 */
+  isExternal: boolean;
+  /** default 폴더 사용 여부 (사용자가 안 지정) */
+  isDefault: boolean;
+}
+
+async function resolveVoiceLoc(): Promise<VoiceLoc> {
   const plugin = getStudioPlugin();
-  const rel = getVoiceFolderRel();
-  const exists = await plugin.vaultAdapter.fileExists(rel);
-  if (!exists) {
-    await plugin.vaultAdapter.ensureDir(rel);
+  const base = plugin.vaultAdapter.getBasePath();
+  const override = await readVoiceFolderAbs();
+  if (override) {
+    // vault 안인지 확인
+    if (base && override.startsWith(base + "/")) {
+      const rel = override.slice(base.length + 1);
+      return { abs: override, rel, isExternal: false, isDefault: false };
+    }
+    if (base && override === base) {
+      return { abs: override, rel: "", isExternal: false, isDefault: false };
+    }
+    return { abs: override, rel: null, isExternal: true, isDefault: false };
   }
-  return rel;
+  const rel = VOICE_FOLDER_DEFAULT_REL;
+  return {
+    abs: base ? `${base}/${rel}` : rel,
+    rel,
+    isExternal: false,
+    isDefault: true,
+  };
+}
+
+async function ensureVoiceFolder(): Promise<VoiceLoc> {
+  const loc = await resolveVoiceLoc();
+  const plugin = getStudioPlugin();
+  if (loc.rel !== null) {
+    const exists = await plugin.vaultAdapter.fileExists(loc.rel);
+    if (!exists) await plugin.vaultAdapter.ensureDir(loc.rel);
+  } else {
+    // 외부 폴더 — Node fs 로 직접 mkdir
+    const fs =
+      electronRequire<typeof import("node:fs")>("node:fs") ??
+      electronRequire<typeof import("fs")>("fs");
+    if (fs) {
+      try {
+        fs.mkdirSync(loc.abs, { recursive: true });
+      } catch {
+        /* race */
+      }
+    }
+  }
+  return loc;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,42 +178,71 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
 
     // ---- Voice ----
     case "voice_path": {
-      const base = va.getBasePath();
-      return `${base}/${getVoiceFolderRel()}` as unknown as T;
+      const loc = await resolveVoiceLoc();
+      return loc.abs as unknown as T;
     }
     case "voice_folder_info": {
-      const rel = await ensureVoiceFolder();
-      const base = va.getBasePath();
+      const loc = await ensureVoiceFolder();
       return {
-        path: `${base}/${rel}`,
-        is_default: true,
-        is_external: false,
+        path: loc.abs,
+        is_default: loc.isDefault,
+        is_external: loc.isExternal,
       } as unknown as T;
     }
-    case "voice_set_folder":
-    case "voice_reset_folder": {
-      // 옵시디언 환경에서는 vault 내 폴더만 사용 (외부 폴더 지정 미지원).
-      const rel = await ensureVoiceFolder();
-      const base = va.getBasePath();
+    case "voice_set_folder": {
+      // 사용자가 지정한 폴더로 변경. abs path 받아 AppSettings.voiceFolder 갱신.
+      const newPath = String(a.path);
+      const store = new ObsidianAppSettingsStore(plugin);
+      const settings = await store.load();
+      await store.save({ ...settings, voiceFolder: newPath });
+      const loc = await ensureVoiceFolder();
       return {
-        path: `${base}/${rel}`,
-        is_default: true,
-        is_external: false,
+        path: loc.abs,
+        is_default: loc.isDefault,
+        is_external: loc.isExternal,
+      } as unknown as T;
+    }
+    case "voice_reset_folder": {
+      // default 로 되돌리기 — voiceFolder 를 빈 문자열로 저장.
+      const store = new ObsidianAppSettingsStore(plugin);
+      const settings = await store.load();
+      await store.save({ ...settings, voiceFolder: "" });
+      const loc = await ensureVoiceFolder();
+      return {
+        path: loc.abs,
+        is_default: loc.isDefault,
+        is_external: loc.isExternal,
       } as unknown as T;
     }
     case "voice_list_files": {
-      const rel = await ensureVoiceFolder();
-      const entries = await va.listDir(rel);
-      const base = va.getBasePath();
-      return entries
-        .filter((e) => !e.isDirectory)
-        .map((e) => ({
-          name: e.name,
-          abs_path: `${base}/${rel}/${e.name}`,
-        })) as unknown as T;
+      const loc = await ensureVoiceFolder();
+      if (loc.rel !== null) {
+        const entries = await va.listDir(loc.rel);
+        return entries
+          .filter((e) => !e.isDirectory)
+          .map((e) => ({
+            name: e.name,
+            abs_path: `${loc.abs}/${e.name}`,
+          })) as unknown as T;
+      }
+      // 외부 폴더 — Node fs 로 readdir
+      const fs =
+        electronRequire<typeof import("node:fs")>("node:fs") ??
+        electronRequire<typeof import("fs")>("fs");
+      if (!fs) return [] as unknown as T;
+      try {
+        const names = fs.readdirSync(loc.abs, { withFileTypes: true });
+        return names
+          .filter((d) => d.isFile())
+          .map((d) => ({
+            name: d.name,
+            abs_path: `${loc.abs}/${d.name}`,
+          })) as unknown as T;
+      } catch {
+        return [] as unknown as T;
+      }
     }
     case "voice_read_file": {
-      // abs_path 가 vault 안에 있으면 vault.readFile, 아니면 Node fs.
       const abs = String(a.path);
       const base = va.getBasePath();
       if (base && abs.startsWith(base + "/")) {
@@ -177,24 +256,57 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
       return (await fs.readFile(abs, "utf8")) as unknown as T;
     }
     case "voice_write_file": {
-      const rel = await ensureVoiceFolder();
-      const target = `${rel}/${String(a.name)}`;
-      await va.writeFile(target, String(a.content));
-      const base = va.getBasePath();
-      return `${base}/${target}` as unknown as T;
+      const loc = await ensureVoiceFolder();
+      const name = String(a.name);
+      if (name.includes("/") || name.includes("..")) {
+        throw new Error(`voice 파일 이름이 안전하지 않습니다: ${name}`);
+      }
+      if (loc.rel !== null) {
+        const target = `${loc.rel}/${name}`;
+        await va.writeFile(target, String(a.content));
+        return `${loc.abs}/${name}` as unknown as T;
+      }
+      // 외부 폴더 — Node fs 로 write
+      const fs =
+        electronRequire<typeof import("node:fs/promises")>(
+          "node:fs/promises",
+        ) ?? electronRequire<typeof import("fs/promises")>("fs/promises");
+      if (!fs) throw new Error("외부 폴더 쓰기 미지원 (Node fs 없음).");
+      await fs.writeFile(`${loc.abs}/${name}`, String(a.content), "utf8");
+      return `${loc.abs}/${name}` as unknown as T;
     }
     case "voice_delete_file": {
-      const helper = new ObsidianVoiceFs(plugin.app, {
-        voiceFolderRelative: getVoiceFolderRel(),
-      });
-      await helper.deleteFile(String(a.name));
+      const loc = await ensureVoiceFolder();
+      const name = String(a.name);
+      if (name.includes("/") || name.includes("..")) {
+        throw new Error(`voice 파일 이름이 안전하지 않습니다: ${name}`);
+      }
+      if (loc.rel !== null) {
+        const target = `${loc.rel}/${name}`;
+        const exists = await va.fileExists(target);
+        if (exists) await va.deleteFile(target);
+        return undefined as unknown as T;
+      }
+      const fs =
+        electronRequire<typeof import("node:fs/promises")>(
+          "node:fs/promises",
+        ) ?? electronRequire<typeof import("fs/promises")>("fs/promises");
+      if (!fs) return undefined as unknown as T;
+      try {
+        await fs.unlink(`${loc.abs}/${name}`);
+      } catch {
+        /* not exists */
+      }
       return undefined as unknown as T;
     }
     case "voice_open_folder": {
-      const helper = new ObsidianVoiceFs(plugin.app, {
-        voiceFolderRelative: getVoiceFolderRel(),
-      });
-      await helper.openFolder();
+      const loc = await ensureVoiceFolder();
+      const shell = electronRequire<{
+        shell: { openPath: (p: string) => Promise<string> };
+      }>("electron")?.shell;
+      if (!shell)
+        throw new Error("Electron shell 에 접근할 수 없습니다 (모바일 환경?).");
+      await shell.openPath(loc.abs);
       return undefined as unknown as T;
     }
 

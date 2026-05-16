@@ -22,6 +22,12 @@ export interface AppSettings {
   licenseKey: string;
   skillpackFolder: string;
   useMockBridge: boolean;
+  /**
+   * 사용자가 지정한 voice (내 문체 학습) 폴더의 절대 경로. 빈 문자열이면
+   * default = `<vault>/_attachments/voice`. vault 안의 폴더든 외부든 절대
+   * 경로로 보관 (옛 Tauri settings.json 의 `voiceFolder` 와 동일 시맨틱).
+   */
+  voiceFolder: string;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -35,6 +41,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   licenseKey: "",
   skillpackFolder: "_skillpacks",
   useMockBridge: false,
+  voiceFolder: "",
 };
 
 export class ObsidianAppSettingsStore {

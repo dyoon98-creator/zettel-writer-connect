@@ -14,7 +14,62 @@ import {
   type AIProvider,
 } from "../../adapters/appSettings";
 import { findBinary } from "../../adapters/findBinary";
+import { electronRequire } from "../../adapters/electronBridge";
 import { getStudioPlugin } from "../context";
+
+/**
+ * 첫 load 시 옛 Tauri 데스크톱 앱의 settings.json 에서 voiceFolder /
+ * codexPath 등 사용자 데이터를 1회 흡수한다. 이미 plugin data.json 에
+ * 값이 있으면 덮어쓰지 않는다 (사용자가 옵시디언에서 새로 설정한 값을
+ * 보호).
+ */
+async function migrateFromLegacyDesktopSettings(
+  current: AppSettings,
+): Promise<AppSettings> {
+  const fs =
+    electronRequire<typeof import("node:fs")>("node:fs") ??
+    electronRequire<typeof import("fs")>("fs");
+  const proc = electronRequire<{ env: Record<string, string | undefined> }>(
+    "process",
+  );
+  if (!fs || !proc) return current;
+  const home = proc.env.HOME;
+  if (!home) return current;
+  const legacyPath = `${home}/Library/Application Support/ai-manuscript-studio/settings.json`;
+  try {
+    if (!fs.statSync(legacyPath).isFile()) return current;
+    const raw = fs.readFileSync(legacyPath, "utf8");
+    const legacy = JSON.parse(raw) as Record<string, unknown>;
+    const next = { ...current };
+    if (!current.voiceFolder.trim() && typeof legacy.voiceFolder === "string") {
+      next.voiceFolder = legacy.voiceFolder;
+    }
+    if (!current.codexPath.trim() && typeof legacy.codexPath === "string") {
+      next.codexPath = legacy.codexPath;
+    }
+    if (
+      !current.claudeCodePath.trim() &&
+      typeof legacy.claudeCodePath === "string"
+    ) {
+      next.claudeCodePath = legacy.claudeCodePath;
+    }
+    if (
+      !current.codexExtraArgs &&
+      typeof legacy.codexExtraArgs === "string"
+    ) {
+      next.codexExtraArgs = legacy.codexExtraArgs;
+    }
+    if (
+      typeof legacy.excludedFolders === "string" &&
+      current.excludedFolders === DEFAULT_APP_SETTINGS.excludedFolders
+    ) {
+      next.excludedFolders = legacy.excludedFolders;
+    }
+    return next;
+  } catch {
+    return current;
+  }
+}
 
 export type { AIProvider, AppSettings };
 export const DEFAULT_SETTINGS: AppSettings = DEFAULT_APP_SETTINGS;
@@ -49,10 +104,21 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
   async load() {
     try {
       const remote = await getStore().load();
-      const merged: AppSettings = { ...DEFAULT_SETTINGS, ...remote };
+      let merged: AppSettings = { ...DEFAULT_SETTINGS, ...remote };
+
+      // 옛 Tauri 데스크톱 앱의 settings.json 에서 사용자 데이터 1회 흡수
+      // (voice 폴더, CLI 경로 등). 이미 plugin data.json 에 값이 있으면 보존.
+      const migrated = await migrateFromLegacyDesktopSettings(merged);
+      const didMigrate =
+        migrated.voiceFolder !== merged.voiceFolder ||
+        migrated.codexPath !== merged.codexPath ||
+        migrated.claudeCodePath !== merged.claudeCodePath ||
+        migrated.codexExtraArgs !== merged.codexExtraArgs ||
+        migrated.excludedFolders !== merged.excludedFolders;
+      merged = migrated;
 
       // 처음 시작 시 path 가 비어 있으면 PATH 에서 자동 탐지.
-      let autoFilled = false;
+      let autoFilled = didMigrate;
       if (!merged.codexPath.trim()) {
         try {
           const found = await findBinary("codex");
