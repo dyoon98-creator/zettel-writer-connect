@@ -35,8 +35,16 @@ export interface SelectionPopoverProps {
   /** 선택 영역의 절대 오프셋. replaceRange 에 사용. */
   selectionRange: { from: number; to: number } | null;
   /** 선택 영역의 화면 좌표.
-   *  y = 선택 top, bottomY = 선택 bottom. 위쪽 공간이 부족할 때 아래쪽으로 뒤집기 위해 둘 다 보유. */
-  anchor: { x: number; y: number; bottomY: number } | null;
+   *  y = 선택 top, bottomY = 선택 bottom. 위쪽 공간이 부족할 때 아래쪽으로 뒤집기 위해 둘 다 보유.
+   *  editorLeft/editorRight = editor DOM 의 viewport 기준 좌/우 edge. popover 가
+   *  옵시디언 inspector pane 으로 넘어가지 않도록 clamp 기준. */
+  anchor: {
+    x: number;
+    y: number;
+    bottomY: number;
+    editorLeft: number;
+    editorRight: number;
+  } | null;
   /** popover 가 닫혀야 할 때 (ESC, 모달 종료 후) 호출. */
   onClose: () => void;
 }
@@ -142,7 +150,13 @@ export function SelectionPopover(props: SelectionPopoverProps): JSX.Element | nu
 }
 
 interface PopoverTriggerProps {
-  anchor: { x: number; y: number; bottomY: number };
+  anchor: {
+    x: number;
+    y: number;
+    bottomY: number;
+    editorLeft: number;
+    editorRight: number;
+  };
   onActivate: () => void;
 }
 
@@ -152,11 +166,18 @@ function PopoverTrigger({ anchor, onActivate }: PopoverTriggerProps): JSX.Elemen
   // selection 의 우상단 외곽에 작게 띄움. 위쪽 공간이 부족하면 아래쪽으로.
   const above = anchor.y >= 40;
   const top = above ? Math.max(8, anchor.y - 32) : Math.min(window.innerHeight - 32, anchor.bottomY + 8);
+  // trigger 의 width ~ 56px (sparkle icon + "AI" text + padding). 옵시디언
+  // inspector 영역으로 넘어가지 않도록 editor pane 의 right edge - 60 으로 clamp.
+  const TRIGGER_WIDTH = 60;
+  const leftMin = Math.max(8, anchor.editorLeft);
+  const leftMax = Math.max(leftMin, anchor.editorRight - TRIGGER_WIDTH);
+  const desiredLeft = anchor.x;
+  const left = Math.max(leftMin, Math.min(leftMax, desiredLeft));
   const style: React.CSSProperties = {
     position: "fixed",
-    left: Math.max(8, Math.min(window.innerWidth - 40, anchor.x)),
+    left,
     top,
-    zIndex: 100,
+    zIndex: 1000,
   };
   return (
     <button
@@ -199,7 +220,13 @@ function SparklesIcon(): JSX.Element {
 }
 
 interface PopoverShellProps {
-  anchor: { x: number; y: number; bottomY: number };
+  anchor: {
+    x: number;
+    y: number;
+    bottomY: number;
+    editorLeft: number;
+    editorRight: number;
+  };
   selection: string;
   onAction: (action: SelectionActionDef) => void;
 }
@@ -213,10 +240,17 @@ function PopoverShell({ anchor, selection, onAction }: PopoverShellProps): JSX.E
     availableBelow >= availableAbove ? "below" : "above";
   const maxHeight = Math.max(160, placement === "below" ? availableBelow : availableAbove);
 
+  // popover 메뉴 width ~ 280px. editor pane 의 right 안에 들어오도록 clamp.
+  const POPOVER_WIDTH = 280;
+  const leftMin = Math.max(8, anchor.editorLeft);
+  const leftMax = Math.max(leftMin, anchor.editorRight - POPOVER_WIDTH);
+  const desiredLeft = anchor.x;
+  const left = Math.max(leftMin, Math.min(leftMax, desiredLeft));
+
   const style: React.CSSProperties = {
     position: "fixed",
-    left: Math.max(8, Math.min(window.innerWidth - 280, anchor.x)),
-    zIndex: 100,
+    left,
+    zIndex: 1000,
     maxHeight: `${maxHeight}px`,
     ...(placement === "above"
       ? { top: Math.max(8, anchor.y - 8), transform: "translateY(-100%)" }

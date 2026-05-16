@@ -69,7 +69,13 @@ export function RichEditor(props: RichEditorProps): JSX.Element {
   const [selectionPopover, setSelectionPopover] = useState<{
     text: string;
     range: { from: number; to: number };
-    anchor: { x: number; y: number; bottomY: number };
+    anchor: {
+      x: number;
+      y: number;
+      bottomY: number;
+      editorLeft: number;
+      editorRight: number;
+    };
   } | null>(null);
 
   const editor = useEditor(
@@ -155,10 +161,21 @@ export function RichEditor(props: RichEditorProps): JSX.Element {
       const anchorC = editor.view.coordsAtPos(sel.anchor);
       const top = Math.min(head.top, anchorC.top);
       const bottom = Math.max(head.bottom, anchorC.bottom);
+      // editor DOM 의 viewport 기준 right edge — popover 가 옵시디언 inspector
+      // 영역으로 넘어가지 않도록 clamp 기준으로 SelectionPopover 에 전달.
+      const editorRect = editor.view.dom.getBoundingClientRect();
+      const editorRight = editorRect.right;
+      const editorLeft = editorRect.left;
       setSelectionPopover({
         text,
         range: { from: sel.from, to: sel.to },
-        anchor: { x: head.right, y: top, bottomY: bottom },
+        anchor: {
+          x: head.right,
+          y: top,
+          bottomY: bottom,
+          editorLeft,
+          editorRight,
+        },
       });
     } catch {
       /* layout 미완성 — 무시 */
