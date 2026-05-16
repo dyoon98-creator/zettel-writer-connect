@@ -152,9 +152,10 @@
   display: flex !important;
   align-items: flex-start !important;
   gap: 10px !important;
-  padding: 8px 10px !important;
+  padding: 10px 12px !important;
   background: transparent !important;
   border: none !important;
+  border-bottom: 1px solid transparent !important;
   border-radius: 6px !important;
   cursor: pointer;
   text-align: left !important;
@@ -162,6 +163,12 @@
   font-size: 13px !important;
   line-height: 1.4 !important;
   width: 100%;
+  min-height: 52px !important;
+  /* row 간 시각 분리 — hover 시 다음 row 와 겹쳐 보이지 않게 약한 separator */
+  position: relative;
+}
+.selection-popover-btn + .selection-popover-btn {
+  border-top: 1px solid var(--color-border, #e0dcd4) !important;
 }
 .selection-popover-btn:hover {
   background: var(--color-row-hover, #f4f1ec) !important;

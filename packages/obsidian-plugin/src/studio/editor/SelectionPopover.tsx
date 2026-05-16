@@ -24,6 +24,7 @@ import { SnippetPanel } from "./SnippetPanel";
 import {
   SELECTION_ACTIONS,
   buildSelectionPrompt,
+  extractRefinedBlock,
   type SelectionActionDef,
 } from "./selectionPrompts";
 
@@ -372,15 +373,23 @@ async function handleComplete(
       return;
     }
     if (choice === "insert") {
-      // 액션이 본문에 들어갈 부분만 추출 가능하면 (어휘 코치의 §4 개선 문단 등)
-      // 그 부분만 선택 영역에 반영. 추출 실패 시 fullText 전체를 fallback 으로 삽입.
-      let toInsert = trimmed;
+      // 본문 삽입 텍스트 결정 (우선순위):
+      //  1) 액션 전용 extractInsertable (어휘 코치의 §4 개선 문단 등)
+      //  2) <<<REFINED>>>...<<<END>>> 표준 블록 (모든 액션 prompt 에 강제됨)
+      //  3) fullText 전체 (위 둘 다 못 찾으면)
+      let toInsert: string | null = null;
       if (action.extractInsertable) {
-        const extracted = action.extractInsertable(trimmed);
-        if (extracted) {
-          toInsert = extracted;
-        }
-        // extracted === null 이면 fullText 전체로 fallback (위 toInsert = trimmed 그대로).
+        toInsert = action.extractInsertable(trimmed);
+      }
+      if (!toInsert) {
+        toInsert = extractRefinedBlock(trimmed);
+      }
+      if (!toInsert) {
+        toInsert = trimmed;
+        tauriNoticeAdapter.warn(
+          "AI 가 '<<<REFINED>>>' 블록을 안 보내 전체 응답을 삽입합니다. 결과를 확인하세요.",
+          5000,
+        );
       }
 
       const ok = editorRegistry.replaceRange(

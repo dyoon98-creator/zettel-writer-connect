@@ -614,22 +614,54 @@ function phase2ToSelectionAction(p2: PipelineAction): SelectionActionDef {
  *  special char 가 없는 토큰을 사용해 String.replace escape 함정을 피한다. */
 const SELECTION_TOKEN = "__AI_MANUSCRIPT_SELECTION__";
 
+/**
+ * 모든 selection action 의 응답 끝에 자동으로 부탁하는 표준 instruction.
+ * 본문에 그대로 넣을 다듬은 결과가 있다면 <<<REFINED>>>...<<<END>>> 블록으로
+ * 감싸달라고 요청. handleComplete 의 default 추출기가 이 블록을 찾아
+ * "선택 영역에 삽입" 시 그 블록 내용만 적용한다.
+ */
+const REFINED_BLOCK_INSTRUCTION = `
+
+---
+**중요**: 위 분석에 더해, 사용자가 선택한 문장을 그대로 대체할 수 있는
+"다듬은 결과" 가 자연스러우면 응답 마지막에 정확히 아래 형식으로 표시해 주세요
+(평가·진단·후보 제시 만으로 충분한 액션이라 다듬을 게 없다면 이 블록은 생략).
+
+<<<REFINED>>>
+(여기에 사용자가 선택한 문장 분량과 비슷한, 본문에 바로 넣을 수 있는 다듬어진
+한 단락 또는 한 문장만. 제목·번호·"다듬은 문장:" 같은 라벨 없이 본문만.)
+<<<END>>>`;
+
+/** REFINED 블록 매칭 정규식 (응답 파서에서도 사용). */
+export const REFINED_BLOCK_RE = /<<<REFINED>>>([\s\S]*?)<<<END>>>/;
+
+/** AI 응답 fullText 에서 <<<REFINED>>> 블록의 본문만 추출. 없으면 null. */
+export function extractRefinedBlock(fullText: string): string | null {
+  const m = fullText.match(REFINED_BLOCK_RE);
+  if (!m) return null;
+  const inner = m[1].trim();
+  return inner || null;
+}
+
 /** 액션 본문 + 분석할 선택 텍스트를 합성. */
 export function buildSelectionPrompt(
   action: SelectionActionDef,
   selection: string,
 ): string {
+  let body: string;
   if (action.appendSelection === false) {
     // 함수형 replacement — selection 안 `$&` 같은 special 도 그대로 리터럴 삽입.
-    return action.promptBody.replace(
+    body = action.promptBody.replace(
       new RegExp(SELECTION_TOKEN, "g"),
       () => selection,
     );
-  }
-  return `${action.promptBody}
+  } else {
+    body = `${action.promptBody}
 
 분석할 글:
 """
 ${selection}
 """`;
+  }
+  return body + REFINED_BLOCK_INSTRUCTION;
 }
