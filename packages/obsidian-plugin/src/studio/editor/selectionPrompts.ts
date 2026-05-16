@@ -557,6 +557,8 @@ export const SELECTION_ACTIONS: SelectionActionDef[] = [
     saveTo: "revising",
     promptBody: METAPHOR_PROMPT,
     extractInsertable: () => null,
+    extractSnippets: extractMetaphorSnippets,
+    snippetInsertMode: "replace",
   },
   ...PHASE2_ACTIONS.map(phase2ToSelectionAction),
 ];
@@ -613,6 +615,61 @@ function phase2ToSelectionAction(p2: PipelineAction): SelectionActionDef {
 /** 합성된 promptBody 안에 들어가는 selection placeholder. dollar 등 정규식·replace
  *  special char 가 없는 토큰을 사용해 String.replace escape 함정을 피한다. */
 const SELECTION_TOKEN = "__AI_MANUSCRIPT_SELECTION__";
+
+/**
+ * 비유 코치 응답의 "2. 비유 후보 8개" 마크다운 표를 파싱해 카드용 snippet 목록 반환.
+ *
+ * 응답 표 형식 (프롬프트 강제):
+ *   | 유형 | 비유 문장 | 효과 | 어울리는 글의 톤 |
+ *   |---|---|---|---|
+ *   | 생활 비유 | ... | ... | ... |
+ *   ...
+ *
+ * AI 가 라벨을 약간 변형하거나 (예: "비유 문장" → "비유") 4번째 컬럼을 빼먹어도
+ * 일단 첫 두 컬럼 (유형 + 비유) 만 있으면 카드로 노출.
+ */
+export function extractMetaphorSnippets(fullText: string): ResultSnippet[] | null {
+  const lines = fullText.split("\n");
+  const rows: { type: string; metaphor: string }[] = [];
+  let headerSeen = false;
+  let separatorSeen = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line.startsWith("|") || !line.endsWith("|")) {
+      if (separatorSeen) break; // 표가 끝났다.
+      continue;
+    }
+    const cells = line
+      .slice(1, -1)
+      .split("|")
+      .map((c) => c.trim());
+    if (cells.length < 2) continue;
+
+    if (!headerSeen) {
+      // 헤더: 첫 셀에 "유형" 그리고 두 번째 셀에 "비유" 가 들어 있어야 인정.
+      if (cells[0].includes("유형") && cells[1].includes("비유")) {
+        headerSeen = true;
+      }
+      continue;
+    }
+    // separator row: 모든 cell 이 - 또는 : 만 포함.
+    if (!separatorSeen && cells.every((c) => /^[-:\s]+$/.test(c))) {
+      separatorSeen = true;
+      continue;
+    }
+    if (!separatorSeen) continue; // 헤더만 보고 본 row 가 아직 안 옴
+    if (!cells[0] || !cells[1]) continue;
+    rows.push({ type: cells[0], metaphor: cells[1] });
+  }
+
+  if (rows.length === 0) return null;
+  return rows.map((r, i) => ({
+    id: `metaphor-${i}`,
+    title: r.type,
+    text: r.metaphor,
+  }));
+}
 
 /**
  * 모든 selection action 의 응답 끝에 자동으로 부탁하는 표준 instruction.
