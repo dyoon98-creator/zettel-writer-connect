@@ -41,15 +41,16 @@ export interface SelectionPopoverProps {
   /** 선택 영역의 절대 오프셋. replaceRange 에 사용. */
   selectionRange: { from: number; to: number } | null;
   /** 선택 영역의 화면 좌표.
-   *  y = 선택 top, bottomY = 선택 bottom. 위쪽 공간이 부족할 때 아래쪽으로 뒤집기 위해 둘 다 보유.
-   *  editorLeft/editorRight = editor DOM 의 viewport 기준 좌/우 edge. popover 가
-   *  옵시디언 inspector pane 으로 넘어가지 않도록 clamp 기준. */
+   *  x = selection 우측 끝, selectionLeft = selection 좌측 시작.
+   *  y = 선택 top, bottomY = 선택 bottom (위/아래 placement 결정용).
+   *  editorLeft/editorRight = editor DOM 의 viewport 기준 좌/우 edge (clamp 한계). */
   anchor: {
     x: number;
     y: number;
     bottomY: number;
     editorLeft: number;
     editorRight: number;
+    selectionLeft: number;
   } | null;
   /** popover 가 닫혀야 할 때 (ESC, 모달 종료 후) 호출. */
   onClose: () => void;
@@ -157,14 +158,9 @@ export function SelectionPopover(props: SelectionPopoverProps): JSX.Element | nu
     }
     const prompt = buildSelectionPrompt(action, selection);
     console.log("[SelectionPopover] prompt built", { len: prompt.length, head: prompt.slice(0, 120) });
-    // 캐시 hit/miss 판정 — hit 면 모달이 캐시된 결과로 즉시 표시, miss 면
-    // idle 상태로 시작해 사용자가 "분석 시작" 누를 때만 AI 호출.
-    const cacheKey = makeKey(
-      action.id,
-      selection,
-      settings.aiProvider,
-      binaryPath,
-    );
+    // 캐시: action.id 만으로 매칭. selection 이 달라도 같은 메뉴 항목이면
+    // 이전 결과 그대로 보여줌. 사용자가 '다시 분석' 누를 때만 새 호출.
+    const cacheKey = makeKey(action.id);
     const cached = getCached(cacheKey);
     setActive({
       action,
@@ -184,6 +180,7 @@ interface PopoverTriggerProps {
     bottomY: number;
     editorLeft: number;
     editorRight: number;
+    selectionLeft: number;
   };
   onActivate: () => void;
 }
@@ -191,14 +188,18 @@ interface PopoverTriggerProps {
 /** 선택 직후 잠시 떠 있는 작은 ✨ 트리거. 사용자가 클릭해야 풀 메뉴가 열린다.
  *  텍스트 선택의 본연의 동작 (드래그 확장, 더블클릭 단어 선택, 컨텍스트 메뉴) 를 침해하지 않기 위함. */
 function PopoverTrigger({ anchor, onActivate }: PopoverTriggerProps): JSX.Element {
-  // 위치 정책: selection 의 x 는 무시. 무조건 editor pane 의 우측 안쪽에
-  // 고정해 옵시디언 inspector 영역으로 절대 넘어가지 않게 한다. vertical 만
-  // selection 라인에 맞춤 — 위 공간 부족 시 아래로 뒤집기.
+  // 위치 정책: selection 의 우측 끝(anchor.x) 옆에 trigger 를 둠.
+  // selection 의 viewport rect 는 본문 column 안에 반드시 존재 (DOM Selection
+  // API). editor.right - TRIGGER_WIDTH 로 캡해 본문을 절대 벗어나지 않게.
   const TRIGGER_WIDTH = 64;
-  const PAD = 12;
+  const desiredLeft = anchor.x + 4;
+  const maxLeft = Math.max(
+    Math.max(8, anchor.editorLeft),
+    anchor.editorRight - TRIGGER_WIDTH - 8,
+  );
   const left = Math.max(
-    8,
-    anchor.editorRight - TRIGGER_WIDTH - PAD,
+    Math.max(8, anchor.editorLeft),
+    Math.min(maxLeft, desiredLeft),
   );
   const above = anchor.y >= 40;
   const top = above
@@ -257,6 +258,7 @@ interface PopoverShellProps {
     bottomY: number;
     editorLeft: number;
     editorRight: number;
+    selectionLeft: number;
   };
   selection: string;
   onAction: (action: SelectionActionDef) => void;
@@ -271,11 +273,31 @@ function PopoverShell({ anchor, selection, onAction }: PopoverShellProps): JSX.E
     availableBelow >= availableAbove ? "below" : "above";
   const maxHeight = Math.max(160, placement === "below" ? availableBelow : availableAbove);
 
-  // popover 메뉴 width ~ 280px. trigger 와 동일 정책: editor pane 우측 안쪽
-  // 으로 고정해 inspector 영역으로 절대 넘어가지 않게.
+  // popover 메뉴 width ~ 280px.
+  // 위치 정책: selection 의 좌측 시작점(selectionLeft) 에서 펼친다. selection 은
+  // 본문 column 안에 반드시 존재하므로 메뉴도 본문 안에 들어간다. 메뉴의 우측이
+  // editor.right 를 넘으면 그만큼 왼쪽으로 당김.
   const POPOVER_WIDTH = 280;
-  const PAD = 12;
-  const left = Math.max(8, anchor.editorRight - POPOVER_WIDTH - PAD);
+  const desiredLeft = anchor.selectionLeft;
+  // editor.right 를 넘지 않도록 right edge - width 로 캡.
+  const maxLeft = Math.max(
+    Math.max(8, anchor.editorLeft),
+    anchor.editorRight - POPOVER_WIDTH - 8,
+  );
+  const left = Math.max(
+    Math.max(8, anchor.editorLeft),
+    Math.min(maxLeft, desiredLeft),
+  );
+  // eslint-disable-next-line no-console
+  console.log("[PopoverShell] position", {
+    selectionLeft: anchor.selectionLeft,
+    editorLeft: anchor.editorLeft,
+    editorRight: anchor.editorRight,
+    desiredLeft,
+    maxLeft,
+    finalLeft: left,
+    POPOVER_WIDTH,
+  });
 
   const style: React.CSSProperties = {
     position: "fixed",
@@ -364,10 +386,12 @@ function renderModal(
       // 캐시 hit 면 이전 결과로 시작.
       initialFullText={active.cachedFullText ?? undefined}
       onResultReceived={(fullText, durationMs) => {
+        const preview = active.capturedSelection.slice(0, 80).replace(/\s+/g, " ");
         setCached(active.cacheKey, {
           fullText,
           durationMs,
           timestampMs: Date.now(),
+          selectionPreview: preview,
         });
       }}
       renderTopPanel={({ fullText, phase }) => {

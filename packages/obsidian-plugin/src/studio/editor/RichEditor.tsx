@@ -75,6 +75,7 @@ export function RichEditor(props: RichEditorProps): JSX.Element {
       bottomY: number;
       editorLeft: number;
       editorRight: number;
+      selectionLeft: number;
     };
   } | null>(null);
 
@@ -157,24 +158,69 @@ export function RichEditor(props: RichEditorProps): JSX.Element {
       return;
     }
     try {
-      const head = editor.view.coordsAtPos(sel.head);
-      const anchorC = editor.view.coordsAtPos(sel.anchor);
-      const top = Math.min(head.top, anchorC.top);
-      const bottom = Math.max(head.bottom, anchorC.bottom);
-      // editor DOM 의 viewport 기준 right edge — popover 가 옵시디언 inspector
-      // 영역으로 넘어가지 않도록 clamp 기준으로 SelectionPopover 에 전달.
+      // 1) selection 의 실제 viewport rect — DOM Selection API.
+      //    ProseMirror coordsAtPos 보다 정확하다 (browser 가 직접 계산한
+      //    selection visible rect).  본문 column 안에 무조건 위치.
+      const winSel = globalThis.getSelection?.();
+      let selLeft = 0,
+        selRight = 0,
+        selTop = 0,
+        selBottom = 0;
+      let usedDomRange = false;
+      if (winSel && winSel.rangeCount > 0) {
+        const range = winSel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        // 빈 rect (0,0,0,0) 이면 fallback.
+        if (rect.width > 0 || rect.height > 0) {
+          selLeft = rect.left;
+          selRight = rect.right;
+          selTop = rect.top;
+          selBottom = rect.bottom;
+          usedDomRange = true;
+        }
+      }
+      if (!usedDomRange) {
+        // fallback — ProseMirror 좌표.
+        const head = editor.view.coordsAtPos(sel.head);
+        const anchorC = editor.view.coordsAtPos(sel.anchor);
+        selLeft = Math.min(head.left, anchorC.left);
+        selRight = Math.max(head.right, anchorC.right);
+        selTop = Math.min(head.top, anchorC.top);
+        selBottom = Math.max(head.bottom, anchorC.bottom);
+      }
+
+      // 2) editor DOM 의 viewport 기준 rect — popover clamp 한계.
       const editorRect = editor.view.dom.getBoundingClientRect();
-      const editorRight = editorRect.right;
-      const editorLeft = editorRect.left;
+      // 디버그: 사용자 보고에 따라 menu 가 사이드바에 떴는데 trigger 는 본문
+      // 안. anchor 와 editor rect 값이 실제로 무엇인지 한 번 dump.
+      // eslint-disable-next-line no-console
+      console.log("[SelectionPopover] anchor calc", {
+        selectionRect: {
+          left: selLeft,
+          right: selRight,
+          top: selTop,
+          bottom: selBottom,
+        },
+        editorRect: {
+          left: editorRect.left,
+          right: editorRect.right,
+          top: editorRect.top,
+          bottom: editorRect.bottom,
+        },
+        usedDomRange,
+        winInner: { w: window.innerWidth, h: window.innerHeight },
+      });
       setSelectionPopover({
         text,
         range: { from: sel.from, to: sel.to },
         anchor: {
-          x: head.right,
-          y: top,
-          bottomY: bottom,
-          editorLeft,
-          editorRight,
+          x: selRight,
+          y: selTop,
+          bottomY: selBottom,
+          editorLeft: editorRect.left,
+          editorRight: editorRect.right,
+          // 선택 영역의 좌측 — 메뉴는 여기에서부터 펼치면 본문 안에 무조건.
+          selectionLeft: selLeft,
         },
       });
     } catch {
