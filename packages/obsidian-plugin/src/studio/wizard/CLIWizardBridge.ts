@@ -250,14 +250,28 @@ export class CLIWizardBridge implements WizardAIBridge {
         }
       } catch (e) {
         lastErr = e;
-        if (attempt === 0) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // OAuth/인증/네트워크 종류 에러는 retry 가 오히려 토큰을 무효화시킨다
+        // (refresh token rotation 시 first-use 가 invalidate 됨). 한 번만
+        // 시도하고 사용자에게 명확히 알린다.
+        const isAuthError =
+          /refresh token|access token|sign in|log out|unauthorized|401/i.test(
+            msg,
+          );
+        if (attempt === 0 && !isAuthError) {
           tauriNoticeAdapter.warn(
-            `Codex 첫 시도 실패: ${e instanceof Error ? e.message : String(e)} — 재시도합니다`,
+            `Codex 첫 시도 실패: ${msg} — 재시도합니다`,
             4000,
           );
           continue;
         }
-        const msg = e instanceof Error ? e.message : String(e);
+        if (isAuthError) {
+          tauriNoticeAdapter.error(
+            `Codex 인증 만료. 터미널에서 \`codex logout && codex login\` 으로 재로그인 후 다시 시도해주세요.`,
+            12000,
+          );
+          throw new Error(`CLI 인증 만료 — ${msg}`);
+        }
         tauriNoticeAdapter.error(
           `Codex CLI 호출 실패: ${msg}. 설정 → 추가 인자에 다른 모델(예: \`-m gpt-5-codex\`) 지정을 시도해보세요.`,
           10000,
