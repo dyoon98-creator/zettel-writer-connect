@@ -3,7 +3,7 @@ import process from "process";
 import builtins from "builtin-modules";
 
 const banner = `/*
-AI 원고실 v2 — slim indexer plugin (Phase G).
+AI 원고실 v2 — Obsidian monolith plugin (인덱서 + 작업실 view).
 이 파일은 esbuild가 자동 생성한 빌드 산출물입니다. 직접 수정하지 마세요.
 */`;
 
@@ -36,6 +36,12 @@ const ctx = await esbuild.context({
   treeShaking: true,
   outfile: "main.js",
   minify: prod,
+  loader: {
+    ".css": "text",
+  },
+  jsx: "automatic",
+  jsxDev: !prod,
+  resolveExtensions: [".tsx", ".ts", ".jsx", ".js", ".mjs", ".css"],
 });
 
 if (prod) {
