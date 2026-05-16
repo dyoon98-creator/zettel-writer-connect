@@ -1,4 +1,12 @@
-# AI 원고실 (AI Manuscript Studio) — v0.1
+# Futurewave Obsidian Plugins
+
+이 저장소가 정식 소스 위치입니다:
+
+`/Users/futurewave/Documents/dev/obsidian-plugins`
+
+AI 원고실과 Zettel Connect를 한 pnpm 모노레포에서 관리합니다.
+
+## AI 원고실 (AI Manuscript Studio) — v0.1
 
 > AI가 대신 쓰지 않습니다. 작가가 끝까지 쓰게 만듭니다.
 
@@ -35,12 +43,17 @@
 |---|---|---|
 | `packages/core/` | 순수 TS — 환경 중립 비즈니스 로직 | type-only |
 | `packages/obsidian-plugin/` | **통합 플러그인** (인덱서 + 작업실 view) | `main.js` 1.16 MB |
+| `packages/zettel-connect/` | Zettel Connect 옵시디언 플러그인 | `main.js` |
 | `apps/desktop/` | (검증 후 폐기 예정) Tauri 데스크톱 앱 | `.dmg` |
 
 ## 빌드 / 테스트
 
 ```bash
 pnpm install                                                # 한 번
+pnpm run deploy                                             # 두 옵시디언 플러그인 빌드 + 배포
+pnpm plugins:deploy                                         # 위와 동일
+pnpm deploy:ai-manuscript                                   # AI 원고실만 빌드 + 배포
+pnpm deploy:zettel                                          # Zettel Connect만 빌드 + 배포
 pnpm --filter @ai-manuscript-studio/obsidian-plugin build   # 통합 플러그인
 pnpm --filter @ai-manuscript-studio/core test               # 코어 (251 pass)
 pnpm --filter @ai-manuscript-studio/obsidian-plugin test    # 플러그인 (40 pass)
@@ -63,10 +76,11 @@ packages/obsidian-plugin/
 └─ styles.css    (인덱서 + 작업실 CSS 통합)
 ```
 
-이 3 파일을 사용자 볼트의 `.obsidian/plugins/ai-manuscript-studio/` 에
-복사하면 끝입니다.
+이 3 파일은 `pnpm deploy`가 `~/.local/obsidian-plugins/<plugin-id>/` 로
+복사하고, 볼트의 `.obsidian/plugins/<plugin-id>` symlink도 맞춥니다.
 
 설치 절차: `docs/install-guide.md`
+현재 로컬 개발 레이아웃: `docs/plugin-layout.md`
 v0.0.x 레거시 절차: `docs/install-guide-legacy.md`
 마이그레이션 기록: `docs/migration-monolith.md`
 

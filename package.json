@@ -1,11 +1,16 @@
 {
-  "name": "ai-manuscript-studio-monorepo",
+  "name": "obsidian-plugins-monorepo",
   "version": "0.0.1",
   "private": true,
-  "description": "AI 원고실 v2 — pnpm monorepo. Hybrid Obsidian indexer + Tauri desktop app sharing a core library.",
+  "description": "Futurewave Obsidian plugin monorepo: AI Manuscript Studio and Zettel Connect.",
   "scripts": {
     "test": "pnpm -r test",
     "build": "pnpm -r build",
+    "build:plugins": "pnpm --filter @ai-manuscript-studio/core build && pnpm --filter @ai-manuscript-studio/obsidian-plugin build && pnpm --filter zettel-connect build",
+    "deploy": "bash scripts/deploy-obsidian-plugins.sh",
+    "plugins:deploy": "bash scripts/deploy-obsidian-plugins.sh",
+    "deploy:ai-manuscript": "bash scripts/deploy-obsidian-plugins.sh ai-manuscript-studio",
+    "deploy:zettel": "bash scripts/deploy-obsidian-plugins.sh zettel-connect",
     "typecheck": "pnpm -r exec tsc -noEmit"
   },
   "devDependencies": {

@@ -13,6 +13,7 @@
 //   - "무시": 아무 것도 안 함
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { UnifiedAction } from "@ai-manuscript-studio/core";
 
 import { ResultPreviewModal, type PreviewChoice } from "../ai/ResultPreviewModal";
@@ -25,6 +26,7 @@ import { tauriNoticeAdapter } from "../noticeAdapter";
 import { useSettingsStore } from "../state/settingsStore";
 import * as editorRegistry from "./editorRegistry";
 import { SnippetPanel } from "./SnippetPanel";
+import { getSelectionPopoverPortalTarget } from "./selectionPopoverPortal";
 
 import {
   SELECTION_ACTIONS,
@@ -95,30 +97,35 @@ export function SelectionPopover(props: SelectionPopoverProps): JSX.Element | nu
 
   // 모달이 활성 상태면 popover 자체는 안 보이지만 모달은 계속 떠있어야 한다.
   if (active) {
-    return renderModal(active, docId, settings, () => {
-      setActive(null);
-      setExpanded(false);
-      onClose();
-    });
+    return createPortal(
+      renderModal(active, docId, settings, () => {
+        setActive(null);
+        setExpanded(false);
+        onClose();
+      }),
+      getSelectionPopoverPortalTarget(),
+    );
   }
 
   if (!selection || !anchor || !selectionRange) return null;
 
   if (!expanded) {
-    return (
+    return createPortal(
       <PopoverTrigger
         anchor={anchor}
         onActivate={() => setExpanded(true)}
-      />
+      />,
+      getSelectionPopoverPortalTarget(),
     );
   }
 
-  return (
+  return createPortal(
     <PopoverShell
       anchor={anchor}
       selection={selection}
       onAction={(a) => void handleAction(a)}
-    />
+    />,
+    getSelectionPopoverPortalTarget(),
   );
 
   async function handleAction(action: SelectionActionDef): Promise<void> {
