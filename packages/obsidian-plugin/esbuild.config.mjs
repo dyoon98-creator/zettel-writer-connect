@@ -95,9 +95,33 @@ const ctx = await esbuild.context({
   plugins: [mdRawPlugin],
 });
 
+/**
+ * styles.css 합치기 — 옵시디언이 자동 로드하는 단일 파일에
+ * 인덱서 CSS(`styles-indexer.css`) + 작업실 CSS(`src/studio/styles/global.css`)
+ * 두 source 를 묶어 출력. studio CSS 는 옵시디언 변수와 충돌하지 않도록 작업실
+ * root (.manuscript-studio-root) 안에서만 적용된다고 가정.
+ */
+function rebuildStyles() {
+  const indexerCss = fs.readFileSync(
+    path.join(__dirname, "styles-indexer.css"),
+    "utf8",
+  );
+  const studioCss = fs.readFileSync(
+    path.join(__dirname, "src/studio/styles/global.css"),
+    "utf8",
+  );
+  const banner = "/* AI 원고실 styles — auto-generated; indexer + studio */\n";
+  fs.writeFileSync(
+    path.join(__dirname, "styles.css"),
+    `${banner}\n${indexerCss}\n\n/* ====== STUDIO ====== */\n\n${studioCss}`,
+  );
+}
+
 if (prod) {
   await ctx.rebuild();
+  rebuildStyles();
   process.exit(0);
 } else {
+  rebuildStyles();
   await ctx.watch();
 }

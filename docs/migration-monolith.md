@@ -66,3 +66,34 @@
 - Tauri 산출물은 **Phase 5 검증 통과 후에만 폐기**. 그 전까진 `apps/desktop/` 그대로 유지.
 - React UI 는 가능한 원본 그대로 옮긴다. 디자인 개선·리팩토링은 별도 작업.
 - 282 tests 베이스라인 유지가 PR 머지 조건.
+
+## 진행 현황 (2026-05-16)
+
+| Phase | 상태 | 커밋 |
+|---|---|---|
+| 0. 안전망 | ✅ | `1cafcab` |
+| 1. 빌드 파이프라인 + view 골격 | ✅ | `60c7e3e` |
+| 2. 어댑터 매핑 15개 | ✅ | `cbd4952` |
+| 3. UI 9종 + 81 파일 이식 | ✅ | `be8c7e1` |
+| 4. 통합 테스트 | ✅ | 본 커밋 |
+| 5. 정리 + 데스크톱 폐기 | ⏳ 검증 후 | — |
+
+### Phase 4 메트릭
+
+- TypeScript 에러 0 (이식 직후 90 → 0)
+- `main.js` 1.16 MB (Tiptap + CodeMirror 6 + dnd-kit + zustand 모두 inline)
+- `styles.css` 73 KB (인덱서 + studio CSS 통합)
+- 테스트: **466 pass / 17 사전 fail / 32 skip**
+  - obsidian-plugin: 8 → **40 pass** (dispatcher + adapter 단위 테스트 21+11개 추가)
+  - core: 251 pass / 32 skip (베이스라인 유지)
+  - desktop: 175 pass / 17 사전 fail (Tauri webviewWindow 의존)
+- 옵시디언 볼트 deploy: `~/.local/obsidian-plugins/ai-manuscript-studio/`
+  에 새 빌드 설치 완료. 사용자 reload 시 즉시 동작.
+
+### Phase 5 잔여 작업 (사용자 검증 후)
+
+- `apps/desktop/` → `.archive/desktop-v0.0.x/` 로 이동 (소스 보존, 빌드 비활성)
+- `apps/desktop/src-tauri/` (Rust 코드) 동반 이동
+- `pnpm-workspace.yaml` 에서 `apps/desktop` 제거
+- `docs/release-distribution.md` 의 macOS/Windows 빌드 절차 archive
+- 옵시디언 커뮤니티 플러그인 / BRAT 제출 검토

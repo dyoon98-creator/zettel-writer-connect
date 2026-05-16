@@ -185,6 +185,17 @@ export class FileSystemAdapter {
     return { folders: Array.from(folders), files };
   }
   async remove(p: string): Promise<void> { this.fs.delete(p); }
+  async writeBinary(p: string, _data: ArrayBuffer): Promise<void> {
+    // unit-test 환경에서는 binary 내용 검증할 일이 없으므로 sentinel 만 저장.
+    this.fs.set(p, "[[binary]]");
+  }
+  async copy(src: string, dst: string): Promise<void> {
+    const v = this.fs.get(src);
+    if (v !== undefined) this.fs.set(dst, v);
+  }
+  async mkdir(p: string, _opts?: { recursive?: boolean }): Promise<void> {
+    this.dirs.add(p);
+  }
 }
 
 class Vault {
@@ -201,7 +212,9 @@ class Vault {
   }
   on(_e: string, _cb: unknown): { ref: number } { return { ref: 0 }; }
   offref(_r: unknown): void {}
-  async createFolder(_p: string): Promise<void> {}
+  async createFolder(p: string): Promise<void> {
+    this.adapter.__setDir(p);
+  }
   async read(_f: TFile): Promise<string> { return ""; }
   async modify(_f: TFile, _c: string): Promise<void> {}
 }
