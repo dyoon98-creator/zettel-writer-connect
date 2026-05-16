@@ -13,6 +13,7 @@
 // 를 그대로 모방하여 UI 가 import 경로만 바꾸면 동작하도록 설계.
 
 import { electronRequire } from "./electronBridge";
+import { getExpandedPathString } from "./findBinary";
 
 const STDERR_TAIL_BYTES = 2 * 1024;
 const KILL_GRACE_MS = 2_000;
@@ -176,9 +177,27 @@ function spawnProcess(binaryPath: string, args: string[]): SpawnedProcess {
   if (!cp) {
     throw new Error("Node child_process 를 사용할 수 없습니다 (모바일 환경?).");
   }
+  // 옵시디언이 GUI 앱이라 PATH 가 launchd 의 짧은 것 (보통 /usr/bin:/bin:/...)
+  // 만 가진다. codex 같은 Node CLI 는 shebang `#!/usr/bin/env node` 라
+  // 자식 프로세스가 PATH 에서 node 를 못 찾아 exit 127 (env: node: No such
+  // file or directory) 로 죽는다. login shell 로 확장된 PATH 를 env 로
+  // 전달해 자식 프로세스가 nvm/homebrew/.bun/.cargo 등의 node 를 찾을 수
+  // 있게 한다. (findBinary 가 이미 캐싱한 PATH 재사용)
+  const proc = electronRequire<{ env: Record<string, string | undefined> }>(
+    "process",
+  );
+  const baseEnv: Record<string, string> = {};
+  if (proc) {
+    for (const [k, v] of Object.entries(proc.env)) {
+      if (typeof v === "string") baseEnv[k] = v;
+    }
+  }
+  baseEnv.PATH = getExpandedPathString();
+
   const child = cp.spawn(binaryPath, args, {
     stdio: ["pipe", "pipe", "pipe"],
     detached: false,
+    env: baseEnv,
   });
   return child as unknown as SpawnedProcess;
 }

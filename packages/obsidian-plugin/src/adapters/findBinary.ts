@@ -16,6 +16,11 @@ const KNOWN_PREFIXES: readonly string[] = [
 
 let cachedExpandedPath: string[] | null = null;
 
+/** PATH 문자열 형태로 반환 — child_process.spawn 의 env.PATH 에 그대로 쓸 수 있다. */
+export function getExpandedPathString(): string {
+  return getExpandedPath().join(":");
+}
+
 function homeDir(): string | null {
   const proc = electronRequire<{ env: Record<string, string | undefined> }>(
     "process",
