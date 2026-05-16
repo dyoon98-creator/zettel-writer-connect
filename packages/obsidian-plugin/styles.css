@@ -48,7 +48,9 @@
 
 /* primary CTA — 갈색 강조 배경 + 흰 글자 */
 .manuscript-studio-root .header-new-manuscript-btn,
-.manuscript-studio-root .app-empty-cta {
+.manuscript-studio-root .app-empty-cta,
+.manuscript-studio-root .header-new-manuscript-btn:hover,
+.manuscript-studio-root .app-empty-cta:hover {
   background: var(--color-accent);
   color: #fff;
   border-radius: 999px;
@@ -57,12 +59,17 @@
   font-weight: 600;
   border: 1px solid transparent;
 }
-.manuscript-studio-root .app-empty-cta {
+.manuscript-studio-root .header-new-manuscript-btn:hover,
+.manuscript-studio-root .app-empty-cta:hover {
+  filter: brightness(1.08);
+}
+.manuscript-studio-root .app-empty-cta,
+.manuscript-studio-root .app-empty-cta:hover {
   padding: 8px 22px;
   font-size: 14px;
 }
 
-/* secondary outline button */
+/* secondary outline button — base 와 :hover 모두 color 명시 */
 .manuscript-studio-root .header-interview-btn,
 .manuscript-studio-root .app-topbar-btn {
   background: var(--color-bg-pane, #fff);
@@ -75,14 +82,20 @@
 .manuscript-studio-root .header-interview-btn:hover,
 .manuscript-studio-root .app-topbar-btn:hover {
   background: var(--color-row-hover, #f4f1ec);
+  color: var(--color-text, #2b2620);
+  border: 1px solid var(--color-border, #e0dcd4);
 }
 
 /* indexer 카드의 launch 버튼 */
-.manuscript-studio-root .ams-launch-btn {
+.manuscript-studio-root .ams-launch-btn,
+.manuscript-studio-root .ams-launch-btn:hover {
   background: var(--color-accent);
   color: #fff;
   border-radius: 999px;
   padding: 6px 14px;
+}
+.manuscript-studio-root .ams-launch-btn:hover {
+  filter: brightness(1.08);
 }
 
 /* 둥근 icon-only 버튼 (⚙ 등) */
