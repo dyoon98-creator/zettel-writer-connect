@@ -81,12 +81,30 @@ export class ManuscriptStudioView extends ItemView {
 
   async onOpen(): Promise<void> {
     initStudioContext(this.plugin);
-    this.containerEl.children[1].empty();
-    const host = this.containerEl.children[1].createDiv({
-      cls: "manuscript-studio-root",
-    });
+    // 옵시디언 view leaf 의 content area 자체에 absolute fill 을 적용해
+    // .app-shell 의 100vh/100vw 가 view 영역 안으로 가둬지도록 한다.
+    const contentEl = this.containerEl.children[1] as HTMLElement;
+    contentEl.empty();
+    contentEl.style.padding = "0";
+    contentEl.style.overflow = "hidden";
+    contentEl.style.position = "relative";
+    const host = contentEl.createDiv({ cls: "manuscript-studio-root" });
     this.root = createRoot(host);
     this.render();
+
+    // 작업실에 집중할 수 있도록 옵시디언 우측 사이드바 (인덱서 카드 목록)
+    // 자동 접기. 사용자가 다시 펼치고 싶으면 옵시디언 단축키 (Cmd+Opt+→)
+    // 또는 사이드바 토글 버튼으로 가능.
+    try {
+      const split = (
+        this.app.workspace as unknown as {
+          rightSplit?: { collapse?: () => void };
+        }
+      ).rightSplit;
+      if (split && typeof split.collapse === "function") split.collapse();
+    } catch {
+      /* 옛 옵시디언 또는 mock 환경에서 fail-safe */
+    }
   }
 
   async onClose(): Promise<void> {

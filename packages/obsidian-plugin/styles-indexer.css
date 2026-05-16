@@ -1,5 +1,26 @@
 /* AI 원고실 v2 — slim indexer styles */
 
+/* ────────────────────────────────────────────────────────────────────────
+   작업실 view 루트 컨테이너 — 옵시디언 WorkspaceLeaf 의 view content 영역을
+   꽉 채운다. studio/global.css 의 .app-shell 은 100vh/100vw 로 작성돼
+   있어 옵시디언 안에서는 윈도우 전체를 차지하며 깨진다. 부모 root 에서
+   absolute fill 로 가두고 .app-shell 의 100vh/100vw 를 부모 100% 로 덮어쓴다.
+   ──────────────────────────────────────────────────────────────────────── */
+.manuscript-studio-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.manuscript-studio-root .app-shell {
+  height: 100% !important;
+  width: 100% !important;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
 .ams-indexer {
   display: flex;
   flex-direction: column;
