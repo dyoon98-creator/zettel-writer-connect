@@ -116,6 +116,83 @@
   color: var(--color-text, #2b2620);
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+   Selection popover (에디터 텍스트 선택 → AI 액션) — 옵시디언 button reset
+   이 trigger/메뉴 항목의 배경/패딩/flex 를 깎아 계층이 깨지던 문제 복원.
+   position:fixed 라 .manuscript-studio-root 스코프 밖이라도 styles.css 가
+   옵시디언 plugin css 로 inject 되므로 root prefix 없이 직접 강화. */
+.selection-popover-trigger {
+  background: var(--color-accent-soft, #d9c69a) !important;
+  border: 1px solid var(--color-accent, #8a6f3a) !important;
+  border-radius: 999px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--color-text, #2b2620) !important;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.selection-popover-trigger:hover {
+  background: var(--color-accent, #8a6f3a) !important;
+  color: #fff !important;
+}
+
+.selection-popover {
+  z-index: 1000 !important;
+  background: var(--color-bg-elev, #ffffff) !important;
+  border: 1px solid var(--color-border, #e0dcd4) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+}
+
+.selection-popover-btn {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  text-align: left !important;
+  color: var(--color-text, #2b2620) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  width: 100%;
+}
+.selection-popover-btn:hover {
+  background: var(--color-row-hover, #f4f1ec) !important;
+  color: var(--color-text, #2b2620) !important;
+}
+.selection-popover-icon {
+  font-size: 16px !important;
+  flex-shrink: 0;
+  margin-top: 1px;
+  /* emoji glyph 가 옵시디언 Inter 폰트 fallback 으로 안 그려지는 경우 대비
+     OS emoji 폰트 강제 — macOS / Windows / Linux 공통. */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+    "Twemoji Mozilla", emoji, sans-serif !important;
+}
+.selection-popover-label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1;
+}
+.selection-popover-label-main {
+  font-weight: 600 !important;
+}
+.selection-popover-label-sub {
+  font-size: 11px !important;
+  color: var(--color-text-muted, #786f63) !important;
+  line-height: 1.4 !important;
+}
+
 .ams-indexer {
   display: flex;
   flex-direction: column;
