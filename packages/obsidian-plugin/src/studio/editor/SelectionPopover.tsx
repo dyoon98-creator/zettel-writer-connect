@@ -16,6 +16,11 @@ import { useEffect, useRef, useState } from "react";
 import type { UnifiedAction } from "@ai-manuscript-studio/core";
 
 import { ResultPreviewModal, type PreviewChoice } from "../ai/ResultPreviewModal";
+import {
+  getCached,
+  makeKey,
+  setCached,
+} from "../ai/selectionResultCache";
 import { tauriNoticeAdapter } from "../noticeAdapter";
 import { useSettingsStore } from "../state/settingsStore";
 import * as editorRegistry from "./editorRegistry";
@@ -56,6 +61,12 @@ interface ActiveModalState {
   /** AI 호출 시점에 캡처한 선택 영역 — 모달이 떠있는 동안 사용자가 본문을 수정해도
    *  결과를 정확히 그 위치에 적용할 수 있도록 보존. */
   capturedRange: { from: number; to: number };
+  /** 캐시 hit 시점에 채워진 이전 결과. 없으면 모달은 idle 상태로 시작. */
+  cachedFullText: string | null;
+  /** 캐시 갱신 시 사용할 key. */
+  cacheKey: string;
+  /** 캡처된 선택 텍스트 (캐시 갱신 시 그대로 보관, 이미 알려진 값). */
+  capturedSelection: string;
 }
 
 export function SelectionPopover(props: SelectionPopoverProps): JSX.Element | null {
@@ -146,7 +157,23 @@ export function SelectionPopover(props: SelectionPopoverProps): JSX.Element | nu
     }
     const prompt = buildSelectionPrompt(action, selection);
     console.log("[SelectionPopover] prompt built", { len: prompt.length, head: prompt.slice(0, 120) });
-    setActive({ action, prompt, capturedRange: selectionRange });
+    // 캐시 hit/miss 판정 — hit 면 모달이 캐시된 결과로 즉시 표시, miss 면
+    // idle 상태로 시작해 사용자가 "분석 시작" 누를 때만 AI 호출.
+    const cacheKey = makeKey(
+      action.id,
+      selection,
+      settings.aiProvider,
+      binaryPath,
+    );
+    const cached = getCached(cacheKey);
+    setActive({
+      action,
+      prompt,
+      capturedRange: selectionRange,
+      cachedFullText: cached?.fullText ?? null,
+      cacheKey,
+      capturedSelection: selection,
+    });
   };
 }
 
@@ -164,16 +191,19 @@ interface PopoverTriggerProps {
 /** 선택 직후 잠시 떠 있는 작은 ✨ 트리거. 사용자가 클릭해야 풀 메뉴가 열린다.
  *  텍스트 선택의 본연의 동작 (드래그 확장, 더블클릭 단어 선택, 컨텍스트 메뉴) 를 침해하지 않기 위함. */
 function PopoverTrigger({ anchor, onActivate }: PopoverTriggerProps): JSX.Element {
-  // selection 의 우상단 외곽에 작게 띄움. 위쪽 공간이 부족하면 아래쪽으로.
+  // 위치 정책: selection 의 x 는 무시. 무조건 editor pane 의 우측 안쪽에
+  // 고정해 옵시디언 inspector 영역으로 절대 넘어가지 않게 한다. vertical 만
+  // selection 라인에 맞춤 — 위 공간 부족 시 아래로 뒤집기.
+  const TRIGGER_WIDTH = 64;
+  const PAD = 12;
+  const left = Math.max(
+    8,
+    anchor.editorRight - TRIGGER_WIDTH - PAD,
+  );
   const above = anchor.y >= 40;
-  const top = above ? Math.max(8, anchor.y - 32) : Math.min(window.innerHeight - 32, anchor.bottomY + 8);
-  // trigger 의 width ~ 56px (sparkle icon + "AI" text + padding). 옵시디언
-  // inspector 영역으로 넘어가지 않도록 editor pane 의 right edge - 60 으로 clamp.
-  const TRIGGER_WIDTH = 60;
-  const leftMin = Math.max(8, anchor.editorLeft);
-  const leftMax = Math.max(leftMin, anchor.editorRight - TRIGGER_WIDTH);
-  const desiredLeft = anchor.x;
-  const left = Math.max(leftMin, Math.min(leftMax, desiredLeft));
+  const top = above
+    ? Math.max(8, anchor.y - 36)
+    : Math.min(window.innerHeight - 36, anchor.bottomY + 8);
   const style: React.CSSProperties = {
     position: "fixed",
     left,
@@ -241,12 +271,11 @@ function PopoverShell({ anchor, selection, onAction }: PopoverShellProps): JSX.E
     availableBelow >= availableAbove ? "below" : "above";
   const maxHeight = Math.max(160, placement === "below" ? availableBelow : availableAbove);
 
-  // popover 메뉴 width ~ 280px. editor pane 의 right 안에 들어오도록 clamp.
+  // popover 메뉴 width ~ 280px. trigger 와 동일 정책: editor pane 우측 안쪽
+  // 으로 고정해 inspector 영역으로 절대 넘어가지 않게.
   const POPOVER_WIDTH = 280;
-  const leftMin = Math.max(8, anchor.editorLeft);
-  const leftMax = Math.max(leftMin, anchor.editorRight - POPOVER_WIDTH);
-  const desiredLeft = anchor.x;
-  const left = Math.max(leftMin, Math.min(leftMax, desiredLeft));
+  const PAD = 12;
+  const left = Math.max(8, anchor.editorRight - POPOVER_WIDTH - PAD);
 
   const style: React.CSSProperties = {
     position: "fixed",
@@ -330,16 +359,31 @@ function renderModal(
       provider={settings.aiProvider}
       timeoutSecs={300}
       discardStreamTokens
-      renderTopPanel={({ fullText, phase }) => (
-        <SnippetPanel
-          fullText={fullText}
-          phase={phase}
-          action={active.action}
-          docId={docId}
-          capturedRange={active.capturedRange}
-          onAfterInsert={onDone}
-        />
-      )}
+      // 자동 호출 금지 — 사용자가 모달 안 "분석 시작" 또는 "다시 분석" 클릭 시만.
+      autoStart={false}
+      // 캐시 hit 면 이전 결과로 시작.
+      initialFullText={active.cachedFullText ?? undefined}
+      onResultReceived={(fullText, durationMs) => {
+        setCached(active.cacheKey, {
+          fullText,
+          durationMs,
+          timestampMs: Date.now(),
+        });
+      }}
+      renderTopPanel={({ fullText, phase }) => {
+        // SnippetPanel 은 결과 (done) 일 때만 의미. idle/streaming/error 는 null.
+        if (phase !== "done") return null;
+        return (
+          <SnippetPanel
+            fullText={fullText}
+            phase={phase}
+            action={active.action}
+            docId={docId}
+            capturedRange={active.capturedRange}
+            onAfterInsert={onDone}
+          />
+        );
+      }}
       onComplete={(choice: PreviewChoice, fullText: string) =>
         void handleComplete(
           choice,

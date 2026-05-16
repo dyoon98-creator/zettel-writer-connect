@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
 
-export type StreamPhase = "streaming" | "done" | "error";
+export type StreamPhase = "idle" | "streaming" | "done" | "error";
 
 export interface StreamViewProps {
   actionLabel: string;
@@ -24,6 +24,13 @@ export interface StreamViewProps {
   durationMs?: number;
   /** 저장 버튼 라벨. 기본 "피드백 탭에 저장". */
   saveButtonLabel?: string;
+  /**
+   * idle 또는 done 상태에서 표시할 '분석 시작' / '다시 분석' 버튼의 핸들러.
+   * 주어지지 않으면 버튼 자체가 표시되지 않는다.
+   */
+  onStart?: () => void;
+  /** done 상태에서 캐시된 결과임을 표시하는 안내 (예: "이전 분석 결과"). */
+  cachedHint?: string;
   onCancel?: () => void;
   onSave?: () => void;
   onInsert?: () => void;
@@ -59,6 +66,8 @@ export function StreamView(props: StreamViewProps): JSX.Element {
     phase,
     errorMessage,
     saveButtonLabel = "피드백 탭에 저장",
+    onStart,
+    cachedHint,
     onCancel,
     onSave,
     onInsert,
@@ -98,7 +107,13 @@ export function StreamView(props: StreamViewProps): JSX.Element {
         </div>
       </header>
 
-      {phase === "streaming" && !debounced ? (
+      {phase === "idle" ? (
+        <div className="stream-view-body stream-view-body--idle">
+          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+            "분석 시작" 을 누르면 AI 가 호출됩니다.
+          </p>
+        </div>
+      ) : phase === "streaming" && !debounced ? (
         <div className="stream-view-body stream-view-body--loading">
           <span className="stream-view-loading-label">AI 가 분석 중</span>
           <span className="stream-view-loading-dots" aria-hidden>
@@ -117,6 +132,29 @@ export function StreamView(props: StreamViewProps): JSX.Element {
         />
       )}
 
+      {phase === "idle" && (
+        <footer className="stream-view-footer">
+          {onStart && (
+            <button
+              type="button"
+              className="stream-view-action"
+              data-testid="stream-view-start"
+              onClick={onStart}
+            >
+              분석 시작
+            </button>
+          )}
+          <button
+            type="button"
+            className="stream-view-action stream-view-action--secondary"
+            data-testid="stream-view-discard"
+            onClick={onDiscard}
+          >
+            닫기
+          </button>
+        </footer>
+      )}
+
       {phase === "streaming" && (
         <footer className="stream-view-footer">
           <button
@@ -132,6 +170,20 @@ export function StreamView(props: StreamViewProps): JSX.Element {
 
       {phase === "done" && (
         <footer className="stream-view-footer">
+          {cachedHint && (
+            <span className="stream-view-cached-hint">{cachedHint}</span>
+          )}
+          {onStart && (
+            <button
+              type="button"
+              className="stream-view-action stream-view-action--secondary"
+              data-testid="stream-view-rerun"
+              onClick={onStart}
+              title="동일한 액션과 선택으로 AI 를 다시 호출"
+            >
+              다시 분석
+            </button>
+          )}
           <button
             type="button"
             className="stream-view-action"

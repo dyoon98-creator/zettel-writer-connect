@@ -272,6 +272,36 @@
   filter: brightness(1.08);
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+   에디터 본문 padding — ResizablePanel splitter 경계에 글자가 딱 붙는 회귀.
+   ProseMirror 본문 영역에 좌우 24px / 상단 16px / 하단 32px 보장.
+   ──────────────────────────────────────────────────────────────────────── */
+.manuscript-studio-root .rich-editor-scroll {
+  padding: 8px 0 !important;
+}
+.manuscript-studio-root .rich-editor-cm,
+.manuscript-studio-root .rich-editor-cm .ProseMirror,
+.manuscript-studio-root .ProseMirror {
+  padding: 16px 28px 32px !important;
+  box-sizing: border-box;
+}
+
+/* StreamView idle/cached hint 영역 */
+.stream-view-body--idle {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+.stream-view-cached-hint {
+  font-size: 11px;
+  color: var(--color-text-muted, #786f63);
+  margin-right: auto;
+  align-self: center;
+  padding: 0 4px;
+}
+
 .ams-indexer {
   display: flex;
   flex-direction: column;

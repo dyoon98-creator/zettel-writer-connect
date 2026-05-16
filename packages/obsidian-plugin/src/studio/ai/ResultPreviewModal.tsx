@@ -46,10 +46,24 @@ export interface ResultPreviewModalProps {
    */
   renderTopPanel?: (info: {
     fullText: string;
-    phase: "streaming" | "done" | "error";
+    phase: "idle" | "streaming" | "done" | "error";
   }) => React.ReactNode;
   /** 닫기 버튼/ESC + choice 결정 후 호출. */
   onComplete: (choice: PreviewChoice, fullText: string) => void;
+  /**
+   * false 면 mount 시 자동으로 AI 호출하지 않는다. 사용자가 모달 안의
+   * '분석 시작' 버튼을 눌러야 시작. 캐시된 결과가 있는 경우 false 로 띄워
+   * 사용자가 '다시 분석' 을 선택할 때만 호출하도록 한다.
+   * default = true (기존 동작).
+   */
+  autoStart?: boolean;
+  /**
+   * 캐시된 이전 결과. 주어지면 phase="done", text=initialFullText 로 시작.
+   * '다시 분석' 또는 '분석 시작' 클릭 시 새 호출.
+   */
+  initialFullText?: string;
+  /** 새 호출이 시작되어 새 결과가 나오면 호출 (캐시 갱신 등). */
+  onResultReceived?: (fullText: string, durationMs: number) => void;
 }
 
 export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element {
@@ -64,17 +78,34 @@ export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element 
     discardStreamTokens = false,
     renderTopPanel,
     onComplete,
+    autoStart = true,
+    initialFullText,
+    onResultReceived,
   } = props;
 
-  const [phase, setPhase] = useState<StreamPhase>("streaming");
-  const [text, setText] = useState("");
+  // 캐시된 결과로 시작하는 경우 — phase=done, text=initialFullText.
+  // autoStart=false 면 사용자가 명시적으로 분석 시작/다시 분석 누르기 전까지 대기.
+  const hasInitial = !!(initialFullText && initialFullText.length > 0);
+  const [phase, setPhase] = useState<StreamPhase>(
+    hasInitial ? "done" : autoStart ? "streaming" : "idle",
+  );
+  const [text, setText] = useState(initialFullText ?? "");
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [durationMs, setDurationMs] = useState<number | undefined>();
   const handleRef = useRef<StreamingHandle | null>(null);
-  const fullTextRef = useRef("");
+  const fullTextRef = useRef(initialFullText ?? "");
+  // 같은 시점에 여러 번 run 트리거되어도 한 핸들만 동작하도록.
+  const [runToken, setRunToken] = useState(autoStart && !hasInitial ? 1 : 0);
 
   useEffect(() => {
+    if (runToken === 0) return; // idle / done(캐시) 상태 — 사용자가 시작 누르기 전.
     let mounted = true;
+    setPhase("streaming");
+    setText("");
+    setErrorMessage(undefined);
+    setDurationMs(undefined);
+    fullTextRef.current = "";
+
     const handle = startAiInvocation({
       provider,
       binaryPath,
@@ -90,16 +121,13 @@ export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element 
         for await (const tok of handle.tokens()) {
           if (!mounted) return;
           acc += tok;
-          // discardStreamTokens 모드에서는 토큰을 사용자에게 보여주지 않는다.
-          // codex 의 stdout JSONL 같은 가비지가 가시화되는 걸 막기 위함.
-          // 하지만 backpressure 회피를 위해 큐 소비는 계속 한다.
           if (!discardStreamTokens) {
             fullTextRef.current = acc;
             setText(acc);
           }
         }
       } catch {
-        // 에러는 done.catch에서 잡는다.
+        /* done.catch */
       }
     };
 
@@ -108,13 +136,13 @@ export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element 
     handle.done
       .then((r) => {
         if (!mounted) return;
-        // 일부 CLI 는 stdout 라인을 얻지 못하고 fullText로만 결과를 줄 수도 있다.
         if (r.fullText && r.fullText.length > acc(fullTextRef)) {
           fullTextRef.current = r.fullText;
           setText(r.fullText);
         }
         setDurationMs(r.durationMs);
         setPhase("done");
+        onResultReceived?.(fullTextRef.current, r.durationMs);
       })
       .catch((e: Error) => {
         if (!mounted) return;
@@ -124,13 +152,16 @@ export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element 
 
     return () => {
       mounted = false;
-      // 모달 unmount 시 진행 중이면 취소.
       if (handleRef.current) {
         void handleRef.current.cancel();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [runToken]);
+
+  const startRun = (): void => {
+    setRunToken((t) => t + 1);
+  };
 
   const saveButtonLabel =
     SAVE_LABELS[action.saveTo] ?? "피드백 탭에 저장";
@@ -161,6 +192,12 @@ export function ResultPreviewModal(props: ResultPreviewModalProps): JSX.Element 
           errorMessage={errorMessage}
           durationMs={durationMs}
           saveButtonLabel={saveButtonLabel}
+          onStart={phase === "idle" || phase === "done" ? startRun : undefined}
+          cachedHint={
+            hasInitial && runToken === 0
+              ? "이전 분석 결과 (캐시)"
+              : undefined
+          }
           onCancel={handleCancel}
           onSave={() => handleChoice("save")}
           onInsert={() => handleChoice("insert")}
