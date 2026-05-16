@@ -21,6 +21,43 @@
   min-width: 0;
 }
 
+/* 옵시디언이 자체 button 스타일 (배경/색/패딩/폰트) 을 모든 button 에 적용한다.
+   studio 측 .header-icon-btn / .app-topbar-btn / .header-new-manuscript-btn 등의
+   배경·색·폰트 사이즈를 옵시디언이 override 해 글자가 거의 안 보이는 회귀가
+   생긴다. .manuscript-studio-root 스코프 안의 모든 button 에 reset 을 적용해
+   studio 자체 class style 만 살아남게 한다. */
+.manuscript-studio-root button {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+  box-shadow: none;
+}
+.manuscript-studio-root button:hover {
+  /* 옵시디언 default hover 도 무력화. studio 측 :hover 만 활성화. */
+  background: transparent;
+}
+/* 단, 각 class 가 padding/배경/색을 명시한 곳에서는 다시 재현되도록 specificity
+   을 한 단계 더 살린다. 아래 selector 는 class-스코프 rule 의 우선순위 회복. */
+.manuscript-studio-root .header-new-manuscript-btn,
+.manuscript-studio-root .header-interview-btn,
+.manuscript-studio-root .app-topbar-btn,
+.manuscript-studio-root .ams-launch-btn,
+.manuscript-studio-root .header-icon-btn,
+.manuscript-studio-root .settings-toggle,
+.manuscript-studio-root .app-empty-cta {
+  padding: 6px 12px;
+  border-radius: var(--radius, 6px);
+}
+.manuscript-studio-root .header-icon-btn,
+.manuscript-studio-root .settings-toggle {
+  padding: 0;
+}
+
 .ams-indexer {
   display: flex;
   flex-direction: column;
