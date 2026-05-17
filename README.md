@@ -67,6 +67,116 @@ pnpm --filter @ai-manuscript-studio/desktop test            # 데스크톱 (175 
 (Rust / Xcode CLT / Windows Build Tools 는 **Tauri 빌드를 직접 만들 때만** 필요.
 통합 플러그인만 빌드하려면 Node + pnpm 으로 충분.)
 
+## AI 에이전트용 Obsidian 설치 가이드
+
+이 절차는 Codex, Claude Code 같은 AI 에이전트가 사용자의 로컬 머신에서
+플러그인을 빌드해 Obsidian 볼트에 설치할 때 따라야 하는 최소 경로입니다.
+
+### 1. 소스 받기
+
+```bash
+git clone https://github.com/vibelabs-web/zettel-writer-connect.git obsidian-plugins
+cd obsidian-plugins
+pnpm install --frozen-lockfile
+```
+
+### 2. 볼트 플러그인 폴더 확인
+
+Obsidian 플러그인은 항상 다음 위치에 설치됩니다.
+
+```text
+<vault>/.obsidian/plugins/<plugin-id>/
+```
+
+AI 에이전트는 사용자의 볼트 경로를 확인한 뒤, 아래 환경 변수에
+`<vault>/.obsidian/plugins` 절대 경로를 넣어야 합니다.
+
+```bash
+export OBSIDIAN_VAULT_PLUGINS_DIR="/absolute/path/to/vault/.obsidian/plugins"
+```
+
+이 저장소의 Futurewave 로컬 개발 환경에서는 이미 다음 경로를 기본값으로
+사용합니다.
+
+```text
+/Users/futurewave/Library/CloudStorage/GoogleDrive-futurewave@gmail.com/내 드라이브/03 Resources/옵시디언 볼트/futurewave/.obsidian/plugins
+```
+
+### 3. 빌드 및 설치
+
+두 플러그인을 모두 설치:
+
+```bash
+pnpm run deploy
+```
+
+AI 원고실만 설치:
+
+```bash
+pnpm deploy:ai-manuscript
+```
+
+Zettel Connect만 설치:
+
+```bash
+pnpm deploy:zettel
+```
+
+배포 스크립트는 각 플러그인을 빌드한 뒤 `main.js`, `manifest.json`,
+`styles.css`를 설치 위치에 복사합니다. 기본 설치 루트는
+`~/.local/obsidian-plugins/<plugin-id>`이며, 볼트의
+`.obsidian/plugins/<plugin-id>`는 그 위치를 가리키는 symlink로 맞춥니다.
+
+### 4. Obsidian에서 활성화
+
+1. Obsidian을 재시작하거나 커뮤니티 플러그인을 reload합니다.
+2. `설정 -> 커뮤니티 플러그인`에서 `AI 원고실` 또는 `Zettel Connect`를 켭니다.
+3. AI 원고실에서 AI 기능을 쓰려면 플러그인 설정에 로컬 CLI 경로를 입력합니다.
+
+지원하는 AI CLI:
+
+```text
+Codex CLI
+Claude Code CLI
+```
+
+AI 에이전트는 사용자의 CLI가 이미 로그인되어 있는지 확인해야 합니다. 플러그인은
+사용자의 로컬 CLI를 실행할 뿐, API 키나 토큰을 저장소에 포함하지 않습니다.
+
+### 5. 설치 검증
+
+```bash
+pnpm --filter @ai-manuscript-studio/obsidian-plugin test
+pnpm --filter @ai-manuscript-studio/core test
+pnpm --filter zettel-connect build
+```
+
+설치 후 Obsidian에서 확인할 항목:
+
+- 우측 사이드바에 `원고 프로젝트` 패널이 뜨는지
+- `+ 첫 원고 만들기` 버튼이 보이는지
+- 원고 에디터에서 텍스트 선택 시 AI 버튼이 에디터 근처에 뜨는지
+- Zettel Connect 명령/패널이 커뮤니티 플러그인 목록에서 활성화되는지
+
+### 보안 주의
+
+AI 에이전트는 다음 파일을 복사하거나 압축하지 말아야 합니다.
+
+```text
+.git/
+node_modules/
+.env*
+data.json
+cache/
+embeddings.json
+*.key
+*secret*
+*token*
+```
+
+설치에는 빌드 산출물 3개만 필요합니다: `main.js`, `manifest.json`,
+`styles.css`.
+
 ## 출시 산출물
 
 ```
@@ -76,7 +186,7 @@ packages/obsidian-plugin/
 └─ styles.css    (인덱서 + 작업실 CSS 통합)
 ```
 
-이 3 파일은 `pnpm deploy`가 `~/.local/obsidian-plugins/<plugin-id>/` 로
+이 3 파일은 `pnpm run deploy`가 `~/.local/obsidian-plugins/<plugin-id>/` 로
 복사하고, 볼트의 `.obsidian/plugins/<plugin-id>` symlink도 맞춥니다.
 
 설치 절차: `docs/install-guide.md`
