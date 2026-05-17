@@ -175,3 +175,259 @@ export function toAssetUrl(absPathOrRel: string): string {
   const p = absPathOrRel.startsWith("/") ? absPathOrRel : abs(absPathOrRel);
   return convertFileSrc(p);
 }
+
+// ---- 옵시디언 노트 컨텍스트 fetch ------------------------------------------
+//
+// 컨셉 마법사가 작가의 기존 옵시디언 노트를 AI system prompt 컨텍스트로 끌어오기
+// 위한 헬퍼. `[[wiki-link]]` 또는 노트 제목/경로를 받아 본문을 concat 한다.
+
+const NOTE_SEARCH_SKIP_DIRS = new Set([
+  ".obsidian",
+  ".git",
+  "node_modules",
+  "_attachments",
+  "_index",
+  "_skillpacks",
+  "_templates",
+  "4 Archive",
+]);
+
+/**
+ * 사용자 입력 link 를 노트 제목 (확장자 / wiki-link 표기 / 경로 제거) 으로 정규화.
+ *  - "[[제목]]" → "제목"
+ *  - "제목.md" / "제목.MD" → "제목"
+ *  - "폴더/제목.md" → "폴더/제목"
+ *  - 양쪽 공백 trim.
+ *
+ * 슬래시 포함 여부는 호출부에서 별도 분기 — 여기서는 보존한다.
+ */
+export function normalizeNoteLink(raw: string): string {
+  let s = raw.trim();
+  if (s.startsWith("[[") && s.endsWith("]]")) {
+    s = s.slice(2, -2).trim();
+  }
+  // 옵시디언 wiki-link alias / 헤딩 표기 ("Note|alias", "Note#heading") 는
+  // 파일 식별에 무관하므로 떼어낸다.
+  const pipeIdx = s.indexOf("|");
+  if (pipeIdx >= 0) s = s.slice(0, pipeIdx).trim();
+  const hashIdx = s.indexOf("#");
+  if (hashIdx >= 0) s = s.slice(0, hashIdx).trim();
+  // 끝의 .md (대소문자 무관) 제거.
+  if (/\.md$/i.test(s)) s = s.slice(0, -3);
+  return s;
+}
+
+/**
+ * 노트 본문 머리에 있는 YAML frontmatter 블록 제거. 첫 줄이 정확히 "---" 이고
+ * 그 다음 "---" 닫힘 마커가 있으면 그 사이를 잘라낸다. 없으면 원본 반환.
+ */
+export function stripFrontmatter(md: string): string {
+  // CRLF 정규화 후 검사. 원본 line endings 는 trim 단계에서 어차피 사라짐.
+  const text = md.replace(/\r\n/g, "\n");
+  if (!text.startsWith("---\n")) return md;
+  const closing = text.indexOf("\n---", 4);
+  if (closing < 0) return md;
+  // "---" 다음 줄 시작 위치까지 잘라냄.
+  const after = closing + "\n---".length;
+  // 닫힘 마커 뒤의 newline 한 개도 같이 소비.
+  const rest = text.slice(after).replace(/^\n/, "");
+  return rest;
+}
+
+/**
+ * vault 전체를 BFS 로 탐색해 첫 매칭 `**\/<name>.md` 의 vault-relative 경로 반환.
+ * 못 찾으면 null. 디렉토리 listing 실패는 silent skip.
+ */
+export async function findNoteFileRecursive(
+  name: string,
+): Promise<string | null> {
+  const target = `${name}.md`;
+  // BFS 큐: vault-relative 디렉토리 경로 ("" = vault root).
+  const queue: string[] = [""];
+  while (queue.length > 0) {
+    const dir = queue.shift()!;
+    let entries;
+    try {
+      entries = await tauriVaultAdapter.listDir(dir);
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      if (e.isDirectory) {
+        if (NOTE_SEARCH_SKIP_DIRS.has(e.name)) continue;
+        queue.push(dir === "" ? e.name : `${dir}/${e.name}`);
+      } else if (e.name === target) {
+        return dir === "" ? e.name : `${dir}/${e.name}`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * 옵시디언 노트들의 본문을 컨텍스트 문자열로 모은다.
+ *
+ * 입력 link 형태:
+ *   - "[[제목]]"       — wiki-link
+ *   - "제목"           — 확장자 없는 제목
+ *   - "제목.md"        — 확장자 포함
+ *   - "폴더/제목.md"   — vault-relative 경로
+ *
+ * 동작:
+ *   1) 정규화 (wiki-link / .md / alias / heading 제거).
+ *   2) 슬래시 포함 → 그 경로 그대로 fileExists 시도.
+ *      슬래시 미포함 → root 직속 `<name>.md` 시도 후 실패하면 BFS 재귀 탐색.
+ *   3) 본문 read → frontmatter 제거 → trim.
+ *   4) `### [[정규화된 제목]]\n<본문>\n\n` 헤더로 concat.
+ *
+ * 못 찾은 노트는 console.warn 후 notFound 에 추가 (graceful skip).
+ */
+export async function fetchNotesForContext(
+  links: string[],
+): Promise<{ context: string; found: string[]; notFound: string[] }> {
+  if (links.length === 0) {
+    return { context: "", found: [], notFound: [] };
+  }
+
+  const found: string[] = [];
+  const notFound: string[] = [];
+  const parts: string[] = [];
+
+  for (const raw of links) {
+    const normalized = normalizeNoteLink(raw);
+    if (normalized.length === 0) {
+      notFound.push(raw);
+      console.warn(`[fetchNotesForContext] empty link after normalize: ${raw}`);
+      continue;
+    }
+
+    // 헤더에 보일 "제목" — 슬래시 포함 입력은 마지막 segment 만 노출.
+    const displayTitle = normalized.includes("/")
+      ? normalized.slice(normalized.lastIndexOf("/") + 1)
+      : normalized;
+
+    let resolvedRel: string | null = null;
+
+    if (normalized.includes("/")) {
+      // 명시적 경로 — 그대로 시도.
+      const candidate = `${normalized}.md`;
+      try {
+        if (await tauriVaultAdapter.fileExists(candidate)) {
+          resolvedRel = candidate;
+        }
+      } catch {
+        /* fall through to not found */
+      }
+    } else {
+      // 1차: vault root 직속.
+      const rootCandidate = `${normalized}.md`;
+      try {
+        if (await tauriVaultAdapter.fileExists(rootCandidate)) {
+          resolvedRel = rootCandidate;
+        }
+      } catch {
+        /* try BFS */
+      }
+      // 2차: 재귀 BFS.
+      if (!resolvedRel) {
+        resolvedRel = await findNoteFileRecursive(normalized);
+      }
+    }
+
+    if (!resolvedRel) {
+      notFound.push(displayTitle);
+      console.warn(`[fetchNotesForContext] note not found: ${raw}`);
+      continue;
+    }
+
+    let body: string;
+    try {
+      body = await tauriVaultAdapter.readFile(resolvedRel);
+    } catch (e) {
+      notFound.push(displayTitle);
+      console.warn(
+        `[fetchNotesForContext] readFile failed for ${resolvedRel}:`,
+        e,
+      );
+      continue;
+    }
+
+    const cleaned = stripFrontmatter(body).trim();
+    found.push(displayTitle);
+    parts.push(`### [[${displayTitle}]]\n${cleaned}\n`);
+  }
+
+  const context = parts.join("\n");
+  return { context, found, notFound };
+}
+
+// ---- 노트 자동완성 데이터 소스 ---------------------------------------------
+
+const NOTES_AUTOCOMPLETE_SKIP_DIRS = new Set([
+  ".obsidian",
+  ".git",
+  "node_modules",
+  "_attachments",
+  "_index",
+  "_skillpacks",
+  "_templates",
+  "4 Archive",
+  "3 Writing",
+]);
+
+/**
+ * vault 안의 모든 .md 파일 제목(확장자 제외)을 BFS 로 수집해 정렬 반환.
+ *
+ * 컨셉 마법사 노트 첨부 input 의 datalist 자동완성 데이터 소스.
+ *
+ * 우선순위 정렬:
+ *  1. `2 Permanent/` 직속 (영구노트 — 가장 자주 첨부됨)
+ *  2. `1 Literature/` 직속 (문헌노트)
+ *  3. 기타 위치
+ *
+ * @param max 최대 반환 개수 (기본 500). datalist 가 너무 커지지 않도록.
+ */
+export async function listVaultNotes(max = 500): Promise<string[]> {
+  if (!basePath) return [];
+  const permanent: string[] = [];
+  const literature: string[] = [];
+  const others: string[] = [];
+
+  async function walk(rel: string): Promise<void> {
+    if (permanent.length + literature.length + others.length >= max) return;
+    let entries;
+    try {
+      entries = await tauriVaultAdapter.listDir(rel);
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (permanent.length + literature.length + others.length >= max) return;
+      if (e.isDirectory) {
+        if (NOTES_AUTOCOMPLETE_SKIP_DIRS.has(e.name)) continue;
+        const child = rel ? `${rel}/${e.name}` : e.name;
+        await walk(child);
+      } else if (e.name.toLowerCase().endsWith(".md")) {
+        const title = e.name.slice(0, -3);
+        if (rel.startsWith("2 Permanent")) permanent.push(title);
+        else if (rel.startsWith("1 Literature")) literature.push(title);
+        else others.push(title);
+      }
+    }
+  }
+
+  await walk("");
+  const sorter = (a: string, b: string): number => a.localeCompare(b, "ko");
+  permanent.sort(sorter);
+  literature.sort(sorter);
+  others.sort(sorter);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of [...permanent, ...literature, ...others]) {
+    if (!seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out;
+}

@@ -1,16 +1,22 @@
-// main.ts — slim Phase G plugin entry. Stays under 100 lines.
+// main.ts — Obsidian monolith plugin entry.
 //
 // Surface:
-//   - One ItemView (right sidebar) listing projects under `<writingFolder>/`.
-//   - Three commands: open-indexer, launch-app, refresh.
+//   - Sidebar indexer view (project cards).
+//   - Studio view (Scrivener-style workspace) opened in the main area.
+//   - Commands: open-indexer, open-studio, refresh, new-project, launch-app
+//     (legacy Tauri deep link, kept until Phase 5).
 //   - One ribbon icon.
-//   - Mobile-only banner inside the view.
 
 import { Plugin, WorkspaceLeaf } from "obsidian";
 import {
   PROJECT_INDEXER_VIEW_TYPE,
   ProjectIndexerView,
 } from "./ProjectIndexerView";
+import {
+  MANUSCRIPT_STUDIO_VIEW_TYPE,
+  ManuscriptStudioView,
+  type ManuscriptStudioViewState,
+} from "./studio/ManuscriptStudioView";
 import { launchApp } from "./launchApp";
 import {
   AIManuscriptStudioSettings,
@@ -39,6 +45,11 @@ export default class AIManuscriptStudioPlugin extends Plugin {
       (leaf: WorkspaceLeaf) => new ProjectIndexerView(leaf, this),
     );
 
+    this.registerView(
+      MANUSCRIPT_STUDIO_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => new ManuscriptStudioView(leaf, this),
+    );
+
     this.addRibbonIcon("pencil", "AI 원고실 인덱서 열기", () =>
       void this.openIndexer(),
     );
@@ -50,24 +61,26 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "launch-app",
-      name: "원고실 앱에서 열기 (현재 노트의 프로젝트)",
+      id: "open-studio",
+      name: "원고실 열기 (현재 노트의 프로젝트)",
       checkCallback: (checking) => {
-        const file = this.app.workspace.getActiveFile();
-        if (!file) return false;
-        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter as
-          | Record<string, unknown>
-          | undefined;
-        const ours =
-          fm?.plugin === PLUGIN_ID &&
-          (fm?.type === "writing-scene" || fm?.type === "writing-planning");
-        const slug = typeof fm?.project === "string" ? fm.project : "";
-        if (!ours || !slug) return false;
+        const folder = this.activeProjectFolder();
+        if (!folder) return false;
+        if (!checking) void this.openStudio(folder);
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "launch-app",
+      name: "(레거시) Tauri 데스크톱 앱 호출 — 현재 노트의 프로젝트",
+      checkCallback: (checking) => {
+        const folder = this.activeProjectFolder();
+        if (!folder) return false;
         if (!checking) {
-          const root = this.settings.writingFolder.replace(/\/+$/, "");
           launchApp({
             vaultPath: this.vaultAdapter.getBasePath(),
-            projectFolder: `${root}/${slug}`,
+            projectFolder: folder,
             notice: this.noticeAdapter,
           });
         }
@@ -143,5 +156,49 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     if (view instanceof ProjectIndexerView) {
       view.openNewProjectModal();
     }
+  }
+
+  /** 현재 활성 노트의 프로젝트 폴더 경로(vault 기준 상대). 아니면 null. */
+  private activeProjectFolder(): string | null {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) return null;
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter as
+      | Record<string, unknown>
+      | undefined;
+    const ours =
+      fm?.plugin === PLUGIN_ID &&
+      (fm?.type === "writing-scene" || fm?.type === "writing-planning");
+    const slug = typeof fm?.project === "string" ? fm.project : "";
+    if (!ours || !slug) return null;
+    const root = this.settings.writingFolder.replace(/\/+$/, "");
+    return `${root}/${slug}`;
+  }
+
+  /**
+   * 작업실 view 를 메인 영역에 연다. 이미 같은 프로젝트가 열려 있으면 해당
+   * leaf 를 reveal, 다른 프로젝트면 새 leaf 에 열고, 비어 있으면 새 leaf 생성.
+   */
+  async openStudio(projectFolder: string): Promise<WorkspaceLeaf | null> {
+    const { workspace } = this.app;
+    const state: ManuscriptStudioViewState = { projectFolder };
+    const existing = workspace
+      .getLeavesOfType(MANUSCRIPT_STUDIO_VIEW_TYPE)
+      .find(
+        (l) =>
+          (l.view as ManuscriptStudioView).getState().projectFolder ===
+          projectFolder,
+      );
+    if (existing) {
+      workspace.revealLeaf(existing);
+      return existing;
+    }
+    const leaf = workspace.getLeaf("tab");
+    await leaf.setViewState({
+      type: MANUSCRIPT_STUDIO_VIEW_TYPE,
+      active: true,
+      state,
+    });
+    workspace.revealLeaf(leaf);
+    return leaf;
   }
 }

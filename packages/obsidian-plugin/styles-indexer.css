@@ -1,0 +1,504 @@
+/* AI 원고실 v2 — slim indexer styles */
+
+/* ────────────────────────────────────────────────────────────────────────
+   작업실 view 루트 컨테이너 — 옵시디언 WorkspaceLeaf 의 view content 영역을
+   꽉 채운다. studio/global.css 의 .app-shell 은 100vh/100vw 로 작성돼
+   있어 옵시디언 안에서는 윈도우 전체를 차지하며 깨진다. 부모 root 에서
+   absolute fill 로 가두고 .app-shell 의 100vh/100vw 를 부모 100% 로 덮어쓴다.
+   ──────────────────────────────────────────────────────────────────────── */
+.manuscript-studio-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.manuscript-studio-root .app-shell {
+  height: 100% !important;
+  width: 100% !important;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* 옵시디언이 자체 button 스타일 (배경/색/패딩/폰트) 을 모든 button 에 적용한다.
+   studio 측 .header-icon-btn / .app-topbar-btn / .header-new-manuscript-btn 등의
+   배경·색·폰트 사이즈를 옵시디언이 override 해 글자가 거의 안 보이는 회귀가
+   생긴다. .manuscript-studio-root 스코프 안의 모든 button 에 reset 을 적용해
+   studio 자체 class style 만 살아남게 한다. */
+.manuscript-studio-root button {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+  box-shadow: none;
+}
+.manuscript-studio-root button:hover {
+  /* 옵시디언 default hover 도 무력화. studio 측 :hover 만 활성화. */
+  background: transparent;
+}
+/* 명시 class 의 배경/색/패딩을 specificity 한 단계 올려 reset 보다 우선.
+   .manuscript-studio-root .foo (0,2,0) > .manuscript-studio-root button (0,1,1). */
+
+/* primary CTA — 갈색 강조 배경 + 흰 글자 */
+.manuscript-studio-root .header-new-manuscript-btn,
+.manuscript-studio-root .app-empty-cta,
+.manuscript-studio-root .header-new-manuscript-btn:hover,
+.manuscript-studio-root .app-empty-cta:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.manuscript-studio-root .header-new-manuscript-btn:hover,
+.manuscript-studio-root .app-empty-cta:hover {
+  filter: brightness(1.08);
+}
+.manuscript-studio-root .app-empty-cta,
+.manuscript-studio-root .app-empty-cta:hover {
+  padding: 8px 22px;
+  font-size: 14px;
+}
+
+/* secondary outline button — base 와 :hover 모두 color 명시 */
+.manuscript-studio-root .header-interview-btn,
+.manuscript-studio-root .app-topbar-btn {
+  background: var(--color-bg-pane, #fff);
+  color: var(--color-text, #2b2620);
+  border: 1px solid var(--color-border, #e0dcd4);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.manuscript-studio-root .header-interview-btn:hover,
+.manuscript-studio-root .app-topbar-btn:hover {
+  background: var(--color-row-hover, #f4f1ec);
+  color: var(--color-text, #2b2620);
+  border: 1px solid var(--color-border, #e0dcd4);
+}
+
+/* indexer 카드의 launch 버튼 */
+.manuscript-studio-root .ams-launch-btn,
+.manuscript-studio-root .ams-launch-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.manuscript-studio-root .ams-launch-btn:hover {
+  filter: brightness(1.08);
+}
+
+/* 둥근 icon-only 버튼 (⚙ 등) */
+.manuscript-studio-root .header-icon-btn,
+.manuscript-studio-root .settings-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color-text-muted, #786f63);
+  padding: 0;
+}
+.manuscript-studio-root .header-icon-btn:hover,
+.manuscript-studio-root .settings-toggle:hover {
+  background: var(--color-row-hover, #f4f1ec);
+  color: var(--color-text, #2b2620);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Selection popover (에디터 텍스트 선택 → AI 액션) — 옵시디언 button reset
+   이 trigger/메뉴 항목의 배경/패딩/flex 를 깎아 계층이 깨지던 문제 복원.
+   position:fixed 라 .manuscript-studio-root 스코프 밖이라도 styles.css 가
+   옵시디언 plugin css 로 inject 되므로 root prefix 없이 직접 강화. */
+.selection-popover-trigger {
+  background: var(--color-accent-soft, #d9c69a) !important;
+  border: 1px solid var(--color-accent, #8a6f3a) !important;
+  border-radius: 999px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--color-text, #2b2620) !important;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.selection-popover-trigger:hover {
+  background: var(--color-accent, #8a6f3a) !important;
+  color: #fff !important;
+}
+
+.selection-popover {
+  z-index: 1000 !important;
+  background: var(--color-bg-elev, #ffffff) !important;
+  border: 1px solid var(--color-border, #e0dcd4) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+}
+
+.selection-popover-btn {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid transparent !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  text-align: left !important;
+  color: var(--color-text, #2b2620) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  width: 100%;
+  min-height: 52px !important;
+  /* row 간 시각 분리 — hover 시 다음 row 와 겹쳐 보이지 않게 약한 separator */
+  position: relative;
+}
+.selection-popover-btn + .selection-popover-btn {
+  border-top: 1px solid var(--color-border, #e0dcd4) !important;
+}
+.selection-popover-btn:hover {
+  background: var(--color-row-hover, #f4f1ec) !important;
+  color: var(--color-text, #2b2620) !important;
+}
+.selection-popover-icon {
+  font-size: 16px !important;
+  flex-shrink: 0;
+  margin-top: 1px;
+  /* emoji glyph 가 옵시디언 Inter 폰트 fallback 으로 안 그려지는 경우 대비
+     OS emoji 폰트 강제 — macOS / Windows / Linux 공통. */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+    "Twemoji Mozilla", emoji, sans-serif !important;
+}
+.selection-popover-label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1;
+}
+.selection-popover-label-main {
+  font-weight: 600 !important;
+}
+.selection-popover-label-sub {
+  font-size: 11px !important;
+  color: var(--color-text-muted, #786f63) !important;
+  line-height: 1.4 !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   SnippetPanel — AI 결과의 후보 문장 카드. modal 이 React tree 안에서 mount
+   되는 경우와 portal 로 body 에 mount 되는 경우 모두 안정적으로 표시되도록
+   selector 를 직접 강화 (옵시디언 button override 대비).
+   ──────────────────────────────────────────────────────────────────────── */
+.snippet-panel {
+  background: var(--color-bg-pane-alt, #f4f1ec) !important;
+  border: 1px solid var(--color-border, #e0dcd4) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  margin-bottom: 12px;
+}
+.snippet-panel-title {
+  font-size: 12px !important;
+  color: var(--color-text-muted, #786f63) !important;
+  margin-bottom: 8px !important;
+  font-weight: 600;
+}
+.snippet-panel-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 10px !important;
+}
+.snippet-card {
+  background: var(--color-bg-pane, #fff) !important;
+  border: 1px solid var(--color-border, #e0dcd4) !important;
+  border-radius: 6px !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+.snippet-card-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--color-accent, #8a6f3a) !important;
+}
+.snippet-card-body {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: var(--color-text, #2b2620) !important;
+  white-space: pre-wrap;
+}
+.snippet-card-actions {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 4px;
+}
+.snippet-card-btn,
+.snippet-card-btn:hover {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  border: 1px solid var(--color-border, #e0dcd4) !important;
+  background: transparent !important;
+  color: var(--color-text, #2b2620) !important;
+  border-radius: 999px !important;
+  cursor: pointer;
+}
+.snippet-card-btn:hover {
+  background: var(--color-row-hover, #f4f1ec) !important;
+}
+.snippet-card-btn--primary,
+.snippet-card-btn--primary:hover {
+  background: var(--color-accent, #8a6f3a) !important;
+  border-color: var(--color-accent, #8a6f3a) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+.snippet-card-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   에디터 본문 padding — ResizablePanel splitter 경계에 글자가 딱 붙는 회귀.
+   ProseMirror 본문 영역에 좌우 24px / 상단 16px / 하단 32px 보장.
+   ──────────────────────────────────────────────────────────────────────── */
+.manuscript-studio-root .rich-editor-scroll {
+  padding: 8px 0 !important;
+}
+.manuscript-studio-root .rich-editor-cm,
+.manuscript-studio-root .rich-editor-cm .ProseMirror,
+.manuscript-studio-root .ProseMirror {
+  padding: 16px 28px 32px !important;
+  box-sizing: border-box;
+}
+
+/* StreamView idle/cached hint 영역 */
+.stream-view-body--idle {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+.stream-view-cached-hint {
+  font-size: 11px;
+  color: var(--color-text-muted, #786f63);
+  margin-right: auto;
+  align-self: center;
+  padding: 0 4px;
+}
+
+.ams-indexer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-3);
+  gap: var(--size-4-2);
+  overflow-y: auto;
+}
+
+.ams-indexer-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.ams-indexer-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2-2);
+}
+
+.ams-indexer-title {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+}
+
+.ams-new-project-btn {
+  font-size: var(--font-ui-smaller);
+  padding: 6px 12px !important;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ams-indexer-sub {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ams-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  padding: var(--size-4-4);
+  text-align: center;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.ams-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+  min-height: 34px;
+  padding: 7px 16px !important;
+  border-radius: var(--radius-s);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ams-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-2-2);
+  margin-top: var(--size-4-3);
+}
+
+.ams-mobile-banner {
+  background: var(--background-modifier-error-rgb, var(--background-modifier-border));
+  color: var(--text-on-accent);
+  padding: var(--size-4-3);
+  border-radius: var(--radius-m);
+  font-size: var(--font-ui-small);
+}
+
+/* ── Project card ──────────────────────────────── */
+
+.ams-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.ams-card {
+  background: var(--background-secondary);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.ams-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  flex-wrap: wrap;
+}
+
+.ams-card-title {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+.ams-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
+  background: var(--background-modifier-border);
+  color: var(--text-on-accent);
+  white-space: nowrap;
+}
+
+.ams-progress-text {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.ams-progress-bar {
+  height: 6px;
+  background: var(--background-modifier-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ams-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  transition: width 200ms ease;
+}
+
+.ams-card-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-3);
+}
+
+.ams-launch-btn {
+  width: 100%;
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+/* ── Scenes expand ─────────────────────────────── */
+
+.ams-scenes-toggle {
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-accent);
+  user-select: none;
+}
+
+.ams-scenes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  margin-top: var(--size-2-2);
+  padding-left: var(--size-4-2);
+}
+
+.ams-scene-link {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-normal);
+  cursor: pointer;
+  text-decoration: none;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ams-scene-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.ams-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-2-2);
+}

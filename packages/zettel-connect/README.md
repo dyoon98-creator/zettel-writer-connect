@@ -19,10 +19,12 @@ Claude Code CLI의 `/permanent` 스킬과 통합돼 **선택한 후보로 창의
 ## 빌드
 
 ```bash
-cd .obsidian/plugins/zettel-connect
-npm install
-npm run build        # production
-npm run dev          # watch
+cd /Users/futurewave/Documents/dev/obsidian-plugins
+pnpm deploy:zettel   # build + deploy to Obsidian
+
+# package-only development
+pnpm --filter zettel-connect build
+pnpm --filter zettel-connect dev
 ```
 
 빌드 후 옵시디언에서 `Settings → 커뮤니티 플러그인 → Zettel Connect` 토글 ON.

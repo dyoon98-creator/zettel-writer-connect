@@ -1,9 +1,9 @@
 {
   "id": "ai-manuscript-studio",
   "name": "AI 원고실",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "minAppVersion": "1.5.0",
-  "description": "원고 프로젝트 인덱서. 깊은 작업은 별도 데스크톱 앱(AI 원고실)에서 진행됩니다.",
+  "description": "원고 프로젝트 인덱서 + Scrivener-style 작업실. 옵시디언 안에서 마법사·바인더·에디터·AI 액션을 모두 사용합니다.",
   "author": "futurewave",
   "isDesktopOnly": true
 }

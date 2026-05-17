@@ -23,7 +23,6 @@ import type {
   VaultEvent,
 } from "@ai-manuscript-studio/core/adapters";
 import type AIManuscriptStudioPlugin from "./main";
-import { launchApp } from "./launchApp";
 import { NewProjectModal, type NewProjectInput } from "./NewProjectModal";
 import { createProjectFromInput } from "./createProject";
 
@@ -270,17 +269,13 @@ export class ProjectIndexerView extends ItemView {
       }
     }
 
-    // Launch button
+    // Launch button — 옵시디언 내 작업실 view 로 직접 연다.
     const btn = cardEl.createEl("button", {
       cls: "ams-launch-btn mod-cta",
-      text: "원고실 앱에서 열기",
+      text: "원고실 열기",
     });
     btn.addEventListener("click", () => {
-      launchApp({
-        vaultPath: this.vault.getBasePath(),
-        projectFolder: card.folderPath,
-        notice: this.notice,
-      });
+      void this.plugin.openStudio(card.folderPath);
     });
   }
 
@@ -301,11 +296,7 @@ export class ProjectIndexerView extends ItemView {
         this.notice.info(`새 원고를 만들었습니다: ${result.title}`);
         await this.refresh();
         if (input.openInApp) {
-          launchApp({
-            vaultPath: this.vault.getBasePath(),
-            projectFolder: result.folderPath,
-            notice: this.notice,
-          });
+          void this.plugin.openStudio(result.folderPath);
         }
       } catch (err) {
         this.notice.error(`원고 만들기 실패: ${(err as Error).message}`);

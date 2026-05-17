@@ -26,17 +26,16 @@ afterEach(() => {
 });
 
 describe("WizardOverlay", () => {
-  it("empty state 에서 '새 원고 만들기' 버튼이 보이고 누르면 오버레이가 뜬다", () => {
+  it("empty state 에서 '새 원고 만들기' 버튼이 보이고 누르면 ConceptWizard 모달이 뜬다", () => {
     render(<App />);
     const cta = screen.getByTestId("app-empty-new-manuscript");
     expect(cta).toBeInTheDocument();
-    expect(screen.queryByTestId("wizard-overlay")).toBeNull();
+    expect(screen.queryByTestId("concept-wizard-window")).toBeNull();
 
     fireEvent.click(cta);
 
-    expect(screen.getByTestId("wizard-overlay")).toBeInTheDocument();
-    expect(screen.getByTestId("wizard-sidebar")).toBeInTheDocument();
-    expect(screen.getByTestId("wizard-chat")).toBeInTheDocument();
+    expect(screen.getByTestId("concept-wizard-window")).toBeInTheDocument();
+    expect(screen.getByTestId("concept-wizard-body")).toBeInTheDocument();
   });
 
   it("사용자 메시지를 보내면 assistant 메시지가 누적된다", async () => {

@@ -61,6 +61,8 @@ export interface ProjectMeta {
   plugin: typeof PLUGIN_ID;
   /** 자유로운 추가 메타데이터 (작가가 원하는 키-값). */
   customMetadata?: Record<string, string>;
+  /** Concept Wizard 가 진행 중일 때 sessionId 를 박아 둔다. 재진입 시 복구용. */
+  pendingWizard?: { sessionId: string };
 }
 
 // ---- Binder 트리 ----
@@ -202,6 +204,10 @@ export function isProjectMeta(v: unknown): v is ProjectMeta {
     return false;
   }
   if (v.plugin !== PLUGIN_ID) return false;
+  if (v.pendingWizard !== undefined) {
+    if (!isStringRecord(v.pendingWizard)) return false;
+    if (typeof v.pendingWizard.sessionId !== "string") return false;
+  }
   return true;
 }
 
@@ -247,4 +253,232 @@ export function isSceneFrontmatter(v: unknown): v is SceneFrontmatter {
     typeof v.word_count === "number" &&
     typeof v.updated === "string"
   );
+}
+
+// ---- Concept Wizard Draft Session (Phase G) ----
+//
+// 책 한 권의 컨셉/시놉시스/12-30장 목차를 작가와 AI 가 다턴으로 짜는 5단계
+// 마법사의 in-flight 상태. 단계별 결과물은 모두 한 세션 객체에 누적된다.
+// 영구 저장은 P3-T9 에서 도입 — 그 전까지는 sessionStorage 만 거친다.
+
+export const CONCEPT_DRAFT_SCHEMA = "ai-manuscript-studio.concept-draft.v1";
+
+// v2 — memo (의식의 흐름) + treatment (역할별 카드 보드) 단계가 추가됐다.
+// 디스크 호환을 위해 옛 stage 값("outline") 도 union 에 남겨두고, 마이그레이션 시
+// loadFromSession 단에서 treatment 로 lift 한다.
+export type ConceptDraftStage =
+  | "seed"
+  | "memo"
+  | "concept"
+  | "synopsis"
+  | "treatment"
+  | "outline" // legacy — 옛 세션 파일이 가질 수 있음. 새 세션은 "treatment" 사용.
+  | "done";
+
+/** 작품의 톤 — 장르(Genre)와 별개. UI 라디오에서 골라 잡는다. */
+export type ConceptTone = "novel" | "essay" | "nonfiction" | "screenplay";
+
+export interface ConceptMessage {
+  role: "user" | "assistant";
+  content: string;
+  /** ISO 8601. */
+  at: string;
+}
+
+export interface OutlineChapter {
+  /** "ch-01" 등 안정 id (mergeChapters / splitChapter 가 새 번호 부여). */
+  id: string;
+  title: string;
+  /** 한 단락 일세. */
+  summary: string;
+}
+
+/** 의식의 흐름 메모를 AI 가 5축으로 분해한 결과. 모든 배열은 길이 무관. */
+export interface MemoAnalysis {
+  recurringThoughts: string[];
+  emotionAxis: string;
+  hiddenThemes: string[];
+  strongSentences: string[];
+  /** 글로 발전 가능한 방향 — 정확히 3개를 권장하지만 강제하진 않는다. */
+  developmentDirections: string[];
+}
+
+export interface ConceptMemo {
+  raw: string;
+  analysis?: MemoAnalysis;
+  /** 사용자가 ✓ 체크한 항목들의 "축:인덱스" 또는 "축:문자열" 식별자. concept 단계 prefill 용. */
+  selected?: string[];
+}
+
+/** 트리트먼트 카드 한 장의 역할. */
+export type TreatmentCardRole =
+  | "intro"
+  | "problem"
+  | "case"
+  | "explain"
+  | "pivot"
+  | "conclusion";
+
+export interface TreatmentCard {
+  /** "tc-<n>" 안정 id. */
+  id: string;
+  title: string;
+  role: TreatmentCardRole;
+  /** 본 카드의 내용 요약 (1~3문장). */
+  summary: string;
+  /** 카드에서 가장 힘 있는 한 문장 (선택). */
+  keySentence?: string;
+  /** 카드 끝에서 독자가 느꼈으면 하는 감정 (선택). */
+  readerEmotion?: string;
+  /** 작가 메모 (선택). */
+  note?: string;
+}
+
+export interface ConceptDraftSession {
+  schema: typeof CONCEPT_DRAFT_SCHEMA;
+  id: string;
+  seed: string;
+  tone: ConceptTone;
+  /** 기존 Genre 재사용. */
+  genre: Genre;
+  /** 옵시디언 노트 [[wiki-link]] 또는 경로. */
+  attachedNotes: string[];
+  conversation: ConceptMessage[];
+  conceptParagraph: string;
+  synopsis: string;
+  /** v1 호환 — 옛 세션이 outline 만 가진 경우 유지. 신규 작성은 treatment 사용. */
+  outline: OutlineChapter[];
+  /** v2 — 의식의 흐름 메모 + AI 분석. */
+  memo?: ConceptMemo;
+  /** v2 — 역할별 카드 배열. binder 시드의 1차 소스. */
+  treatment?: TreatmentCard[];
+  stage: ConceptDraftStage;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function isConceptMessage(v: unknown): v is ConceptMessage {
+  if (!isStringRecord(v)) return false;
+  return (
+    (v.role === "user" || v.role === "assistant") &&
+    typeof v.content === "string" &&
+    typeof v.at === "string"
+  );
+}
+
+export function isOutlineChapter(v: unknown): v is OutlineChapter {
+  if (!isStringRecord(v)) return false;
+  return (
+    typeof v.id === "string" &&
+    typeof v.title === "string" &&
+    typeof v.summary === "string"
+  );
+}
+
+const TREATMENT_ROLES: readonly TreatmentCardRole[] = [
+  "intro",
+  "problem",
+  "case",
+  "explain",
+  "pivot",
+  "conclusion",
+];
+
+export function isTreatmentCardRole(v: unknown): v is TreatmentCardRole {
+  return typeof v === "string" && (TREATMENT_ROLES as readonly string[]).includes(v);
+}
+
+export function isTreatmentCard(v: unknown): v is TreatmentCard {
+  if (!isStringRecord(v)) return false;
+  if (typeof v.id !== "string") return false;
+  if (typeof v.title !== "string") return false;
+  if (!isTreatmentCardRole(v.role)) return false;
+  if (typeof v.summary !== "string") return false;
+  if (v.keySentence !== undefined && typeof v.keySentence !== "string") return false;
+  if (v.readerEmotion !== undefined && typeof v.readerEmotion !== "string") return false;
+  if (v.note !== undefined && typeof v.note !== "string") return false;
+  return true;
+}
+
+export function isMemoAnalysis(v: unknown): v is MemoAnalysis {
+  if (!isStringRecord(v)) return false;
+  const strArr = (x: unknown): boolean =>
+    Array.isArray(x) && x.every((s) => typeof s === "string");
+  return (
+    strArr(v.recurringThoughts) &&
+    typeof v.emotionAxis === "string" &&
+    strArr(v.hiddenThemes) &&
+    strArr(v.strongSentences) &&
+    strArr(v.developmentDirections)
+  );
+}
+
+export function isConceptMemo(v: unknown): v is ConceptMemo {
+  if (!isStringRecord(v)) return false;
+  if (typeof v.raw !== "string") return false;
+  if (v.analysis !== undefined && !isMemoAnalysis(v.analysis)) return false;
+  if (
+    v.selected !== undefined &&
+    (!Array.isArray(v.selected) || !v.selected.every((s) => typeof s === "string"))
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function isConceptDraftSession(v: unknown): v is ConceptDraftSession {
+  if (!isStringRecord(v)) return false;
+  if (v.schema !== CONCEPT_DRAFT_SCHEMA) return false;
+  if (typeof v.id !== "string") return false;
+  if (typeof v.seed !== "string") return false;
+  const tone = v.tone;
+  if (
+    tone !== "novel" &&
+    tone !== "essay" &&
+    tone !== "nonfiction" &&
+    tone !== "screenplay"
+  ) {
+    return false;
+  }
+  if (typeof v.genre !== "string") return false;
+  if (
+    !Array.isArray(v.attachedNotes) ||
+    !v.attachedNotes.every((x) => typeof x === "string")
+  ) {
+    return false;
+  }
+  if (
+    !Array.isArray(v.conversation) ||
+    !v.conversation.every(isConceptMessage)
+  ) {
+    return false;
+  }
+  if (typeof v.conceptParagraph !== "string") return false;
+  if (typeof v.synopsis !== "string") return false;
+  if (!Array.isArray(v.outline) || !v.outline.every(isOutlineChapter)) {
+    return false;
+  }
+  // v2 — memo / treatment 는 optional. 있으면 형태 확인.
+  if (v.memo !== undefined && !isConceptMemo(v.memo)) return false;
+  if (
+    v.treatment !== undefined &&
+    (!Array.isArray(v.treatment) || !v.treatment.every(isTreatmentCard))
+  ) {
+    return false;
+  }
+  const stage = v.stage;
+  if (
+    stage !== "seed" &&
+    stage !== "memo" &&
+    stage !== "concept" &&
+    stage !== "synopsis" &&
+    stage !== "treatment" &&
+    stage !== "outline" &&
+    stage !== "done"
+  ) {
+    return false;
+  }
+  if (typeof v.createdAt !== "string") return false;
+  if (typeof v.updatedAt !== "string") return false;
+  return true;
 }

@@ -36,12 +36,20 @@ export {
   SCENE_TYPE,
   DEFAULT_STATUSES,
   DEFAULT_LABELS,
+  CONCEPT_DRAFT_SCHEMA,
   isProjectMeta,
   isBinderTree,
   isBinderNode,
   isSceneFrontmatter,
   isStatusDef,
   isLabelDef,
+  isConceptDraftSession,
+  isConceptMessage,
+  isOutlineChapter,
+  isTreatmentCard,
+  isTreatmentCardRole,
+  isMemoAnalysis,
+  isConceptMemo,
 } from "./project/schema";
 export type {
   ProjectMeta,
@@ -54,6 +62,15 @@ export type {
   LabelDef,
   NodeStatusId,
   NodeLabelId,
+  ConceptDraftSession,
+  ConceptDraftStage,
+  ConceptTone,
+  ConceptMessage,
+  OutlineChapter,
+  ConceptMemo,
+  MemoAnalysis,
+  TreatmentCard,
+  TreatmentCardRole,
 } from "./project/schema";
 export { ProjectMetaIO } from "./project/ProjectMetaIO";
 export type { CreateProjectMetaInput } from "./project/ProjectMetaIO";
