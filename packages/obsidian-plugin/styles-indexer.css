@@ -330,7 +330,12 @@
 
 .ams-new-project-btn {
   font-size: var(--font-ui-smaller);
-  padding: 4px 10px;
+  padding: 6px 12px !important;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -355,8 +360,17 @@
 }
 
 .ams-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   font-size: var(--font-ui-small);
+  font-weight: 600;
+  min-height: 34px;
+  padding: 7px 16px !important;
+  border-radius: var(--radius-s);
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .ams-modal-buttons {
