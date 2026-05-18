@@ -208,7 +208,7 @@ export class WizardEngine {
     return {
       sessionId: this._session.id,
       title: this._session.draftTitle?.trim() || "새 원고",
-      genre: this._session.draftGenre ?? "essay",
+      genre: this._session.draftGenre ?? "investment-strategy-memo",
       motive: motiveDecisions.motive ?? motiveDecisions.summary ?? "",
       targetReader:
         audMsgDecisions.target_reader ??

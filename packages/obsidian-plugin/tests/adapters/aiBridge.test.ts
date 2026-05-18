@@ -26,11 +26,11 @@ describe("buildCodexArgs", () => {
     expect(args[args.length - 1]).toBe("-");
   });
 
-  test("사용자가 -m 을 안 주면 기본 모델 gpt-5.4 가 추가된다", () => {
+  test("사용자가 -m 을 안 주면 기본 모델 gpt-5.5 가 추가된다", () => {
     const args = buildCodexArgs(ctx, []);
     const mIdx = args.indexOf("-m");
     expect(mIdx).toBeGreaterThanOrEqual(0);
-    expect(args[mIdx + 1]).toBe("gpt-5.4");
+    expect(args[mIdx + 1]).toBe("gpt-5.5");
   });
 
   test("사용자가 -m 을 명시하면 기본 모델은 추가되지 않는다", () => {

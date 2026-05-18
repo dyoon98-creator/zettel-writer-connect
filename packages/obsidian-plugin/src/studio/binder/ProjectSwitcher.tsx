@@ -1,6 +1,6 @@
 // ProjectSwitcher.tsx — topbar 의 "다른 원고 열기" dropdown.
 //
-// 현재 열린 vault 의 `3 Writing/` 아래에서 모든 project.json 을 스캔해 목록 표시.
+// 현재 열린 vault 의 설정된 writingFolder 아래에서 모든 project.json 을 스캔해 목록 표시.
 // 클릭 시 useProjectStore.loadProject(vaultPath, projectFolder) 호출 → 데스크톱 앱이
 // 그 원고로 즉시 전환.
 
@@ -11,15 +11,23 @@ import { ProjectV2Manager, type ProjectMeta } from "@ai-manuscript-studio/core";
 import { tauriNoticeAdapter } from "../noticeAdapter";
 import { createFrontmatterAdapter } from "../frontmatterAdapter";
 import { useProjectStore } from "../state/projectStore";
+import { getStudioPlugin } from "../context";
 import { tauriVaultAdapter } from "../vaultAdapter";
 
-const WRITING_ROOT = "3 Writing";
+function getWritingRoot(): string {
+  try {
+    return getStudioPlugin().settings.writingFolder.replace(/\/+$/, "") || "4.Writing";
+  } catch {
+    return "4.Writing";
+  }
+}
 
 export function ProjectSwitcher(): JSX.Element | null {
   const vaultPath = useProjectStore((s) => s.vaultPath);
   const projectFolder = useProjectStore((s) => s.projectFolder);
   const currentTitle = useProjectStore((s) => s.meta?.title ?? "");
   const loadProject = useProjectStore((s) => s.loadProject);
+  const writingRoot = getWritingRoot();
 
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -41,7 +49,7 @@ export function ProjectSwitcher(): JSX.Element | null {
           notice: tauriNoticeAdapter,
           frontmatter: createFrontmatterAdapter(tauriVaultAdapter),
         });
-        const list = await manager.list(WRITING_ROOT);
+        const list = await manager.list(writingRoot);
         if (cancelled) return;
         setProjects(list);
       } catch (e) {
@@ -54,7 +62,7 @@ export function ProjectSwitcher(): JSX.Element | null {
     return () => {
       cancelled = true;
     };
-  }, [open, vaultPath]);
+  }, [open, vaultPath, writingRoot]);
 
   // 바깥 클릭으로 dropdown 닫기.
   useEffect(() => {
@@ -71,7 +79,7 @@ export function ProjectSwitcher(): JSX.Element | null {
 
   function handlePick(meta: ProjectMeta): void {
     if (!vaultPath) return;
-    const targetFolder = `${WRITING_ROOT}/${meta.id}`;
+    const targetFolder = `${writingRoot}/${meta.id}`;
     if (targetFolder === projectFolder) {
       setOpen(false);
       return;
@@ -130,11 +138,11 @@ export function ProjectSwitcher(): JSX.Element | null {
           )}
           {!isLoading && !error && projects.length === 0 && (
             <div style={{ padding: "10px 12px", fontSize: 13, opacity: 0.7 }}>
-              {WRITING_ROOT} 아래에 원고가 없습니다.
+              {writingRoot} 아래에 원고가 없습니다.
             </div>
           )}
           {projects.map((p) => {
-            const folder = `${WRITING_ROOT}/${p.id}`;
+            const folder = `${writingRoot}/${p.id}`;
             const isCurrent = folder === projectFolder;
             return (
               <button

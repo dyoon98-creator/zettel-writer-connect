@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 
 import { tauriNoticeAdapter } from "../noticeAdapter";
+import { normalizeVoiceFolderInput } from "../tauriShims/plugin-dialog";
 
 import { analyzeStyle } from "./analyzeStyle";
 import {
@@ -44,6 +45,8 @@ export function VoicePane(): JSX.Element | null {
   const [defaultFolder, setDefaultFolder] = useState<string>("");
   const [report, setReport] = useState<FreshnessReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [directInput, setDirectInput] = useState<string>("");
+  const [directInputError, setDirectInputError] = useState<string>("");
 
   const reload = async (): Promise<void> => {
     setLoading(true);
@@ -53,6 +56,7 @@ export function VoicePane(): JSX.Element | null {
         checkFreshness(),
       ]);
       setFolder(info.path);
+      setDirectInput(info.path);
       setIsCustom(info.isCustom);
       setDefaultFolder(info.defaultPath);
       setReport(fresh);
@@ -64,10 +68,32 @@ export function VoicePane(): JSX.Element | null {
     }
   };
 
+  const handleApplyFolder = async (): Promise<void> => {
+    setDirectInputError("");
+    const result = normalizeVoiceFolderInput(directInput);
+    if (!result.ok) {
+      setDirectInputError(result.error);
+      return;
+    }
+    try {
+      await voiceIO.setFolder(result.path);
+      tauriNoticeAdapter.info(`내 문체 폴더가 변경되었습니다: ${result.path}`);
+      await reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      tauriNoticeAdapter.error(`폴더 변경 실패: ${msg}`);
+    }
+  };
+
   const handlePickFolder = async (): Promise<void> => {
     try {
       const picked = await voiceIO.pickFolder(folder || undefined);
-      if (!picked) return;
+      if (!picked) {
+        tauriNoticeAdapter.info(
+          "폴더 선택 다이얼로그를 사용할 수 없습니다. 아래 경로 입력란에 절대 경로를 직접 붙여넣어 주세요.",
+        );
+        return;
+      }
       await voiceIO.setFolder(picked);
       tauriNoticeAdapter.info(`내 문체 폴더가 변경되었습니다: ${picked}`);
       await reload();
@@ -193,6 +219,34 @@ export function VoicePane(): JSX.Element | null {
               >
                 새로고침
               </button>
+            </div>
+
+            <div className="voice-folder-direct-row">
+              <input
+                type="text"
+                data-field="voice-folder-input"
+                className="voice-folder-direct-input"
+                value={directInput}
+                onChange={(e) => {
+                  setDirectInput(e.target.value);
+                  setDirectInputError("");
+                }}
+                placeholder="/절대/경로/를/입력하세요"
+                aria-label="내 문체 폴더 절대 경로 직접 입력"
+              />
+              <button
+                type="button"
+                className="voice-btn"
+                onClick={() => void handleApplyFolder()}
+                disabled={loading}
+              >
+                경로 적용
+              </button>
+              {directInputError && (
+                <span className="voice-folder-error" role="alert">
+                  {directInputError}
+                </span>
+              )}
             </div>
 
             {report && (

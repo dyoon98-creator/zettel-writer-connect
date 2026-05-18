@@ -14,7 +14,7 @@ describe("ProjectMetaIO.create", () => {
     const meta = await ProjectMetaIO.create(vault, "Writing/p1", {
       id: "p1",
       title: "Project 1",
-      genre: "essay",
+      genre: "investment-strategy-memo",
     });
     expect(meta.customStatuses).toHaveLength(DEFAULT_STATUSES.length);
     expect(meta.customLabels).toHaveLength(DEFAULT_LABELS.length);
@@ -29,7 +29,7 @@ describe("ProjectMetaIO.create", () => {
     await ProjectMetaIO.create(vault, "Writing/p1", {
       id: "p1",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
     });
     const raw = vault.getFile("Writing/p1/project.json");
     expect(raw.endsWith("\n")).toBe(true);
@@ -45,7 +45,7 @@ describe("ProjectMetaIO.create", () => {
     const meta = await ProjectMetaIO.create(vault, "Writing/p", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       customStatuses,
     });
     expect(meta.customStatuses).toEqual(customStatuses);
@@ -57,7 +57,7 @@ describe("ProjectMetaIO.create", () => {
       ProjectMetaIO.create(vault, "Writing/p", {
         id: "",
         title: "",
-        genre: "essay",
+        genre: "investment-strategy-memo",
       }),
     ).rejects.toThrow();
   });
@@ -69,7 +69,7 @@ describe("ProjectMetaIO.read / write round-trip", () => {
     const orig = await ProjectMetaIO.create(vault, "Writing/p", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
     });
     const round = await ProjectMetaIO.read(vault, "Writing/p");
     expect(round.id).toBe(orig.id);
@@ -82,7 +82,7 @@ describe("ProjectMetaIO.read / write round-trip", () => {
     const meta = await ProjectMetaIO.create(vault, "Writing/p", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       createdAt: "2020-01-01",
     });
     expect(meta.createdAt).toBe("2020-01-01");
@@ -118,7 +118,7 @@ describe("ProjectMetaIO.exists", () => {
     await ProjectMetaIO.create(vault, "Writing/p", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
     });
     expect(await ProjectMetaIO.exists(vault, "Writing/p")).toBe(true);
   });
@@ -130,7 +130,7 @@ describe("ProjectMetaIO.write preserves explicit customMetadata", () => {
     const meta: ProjectMeta = await ProjectMetaIO.create(vault, "Writing/p", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       customMetadata: { mood: "warm" },
     });
     expect(meta.customMetadata?.mood).toBe("warm");

@@ -11,6 +11,7 @@ import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useStreamingChat } from "../../ai/useStreamingChat";
 import { fetchNotesForContext } from "../../vaultAdapter";
 import {
+  buildConceptSystemPrompt,
   CONCEPT_STAGE_SYSTEM_PROMPT,
   CONCEPT_PARAGRAPH_DISTILL_PROMPT,
   READY_TO_DISTILL_PATTERNS,
@@ -200,11 +201,11 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
       const notesContext = await getNotesContext();
       return await chat.run({
         messages,
-        systemPrompt: CONCEPT_STAGE_SYSTEM_PROMPT,
+        systemPrompt: session ? buildConceptSystemPrompt(session) : CONCEPT_STAGE_SYSTEM_PROMPT,
         notesContext,
       });
     },
-    [getNotesContext],
+    [getNotesContext, session],
   );
 
   // 첫 진입 시 시드를 user message로 push 후 AI 첫 응답 호출.
@@ -282,7 +283,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
       const notesContext = await getNotesContext();
       const fullText = await distillChat.run({
         messages,
-        systemPrompt: CONCEPT_STAGE_SYSTEM_PROMPT,
+        systemPrompt: session ? buildConceptSystemPrompt(session) : CONCEPT_STAGE_SYSTEM_PROMPT,
         notesContext,
       });
       setConceptParagraph(fullText.trim());

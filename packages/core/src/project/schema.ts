@@ -275,8 +275,16 @@ export type ConceptDraftStage =
   | "outline" // legacy — 옛 세션 파일이 가질 수 있음. 새 세션은 "treatment" 사용.
   | "done";
 
-/** 작품의 톤 — 장르(Genre)와 별개. UI 라디오에서 골라 잡는다. */
-export type ConceptTone = "novel" | "essay" | "nonfiction" | "screenplay";
+/** 글의 문체·논조 — 장르(Genre)와 별개. UI 라디오에서 골라 잡는다. */
+export type ConceptTone =
+  | "decision-memo"
+  | "analytical-report"
+  | "customer-report"
+  | "legal-accounting-review"
+  | "column-narrative"
+  | "long-form-reasoning"
+  | "lecture-presentation"
+  | "explanatory";
 
 export interface ConceptMessage {
   role: "user" | "assistant";
@@ -431,16 +439,30 @@ export function isConceptDraftSession(v: unknown): v is ConceptDraftSession {
   if (v.schema !== CONCEPT_DRAFT_SCHEMA) return false;
   if (typeof v.id !== "string") return false;
   if (typeof v.seed !== "string") return false;
-  const tone = v.tone;
-  if (
-    tone !== "novel" &&
-    tone !== "essay" &&
-    tone !== "nonfiction" &&
-    tone !== "screenplay"
-  ) {
+  const VALID_TONES = new Set<string>([
+    "decision-memo",
+    "analytical-report",
+    "customer-report",
+    "legal-accounting-review",
+    "column-narrative",
+    "long-form-reasoning",
+    "lecture-presentation",
+    "explanatory",
+  ]);
+  if (typeof v.tone !== "string" || !VALID_TONES.has(v.tone)) {
     return false;
   }
-  if (typeof v.genre !== "string") return false;
+  const VALID_GENRES = new Set<string>([
+    "investment-strategy-memo",
+    "investment-report",
+    "legal-accounting-review",
+    "column-essay",
+    "lecture-presentation",
+    "long-form-manuscript",
+  ]);
+  if (typeof v.genre !== "string" || !VALID_GENRES.has(v.genre)) {
+    return false;
+  }
   if (
     !Array.isArray(v.attachedNotes) ||
     !v.attachedNotes.every((x) => typeof x === "string")

@@ -31,13 +31,35 @@ describe("types", () => {
     }
   });
 
-  it("has Korean labels for every genre", () => {
+  it("has Korean labels for every genre (final six)", () => {
     expect(Object.keys(GENRE_LABEL_KO)).toEqual([
-      "essay",
-      "practical",
-      "youtube",
-      "lecture",
-      "world",
+      "investment-strategy-memo",
+      "investment-report",
+      "legal-accounting-review",
+      "column-essay",
+      "lecture-presentation",
+      "long-form-manuscript",
     ]);
+  });
+
+  it("genre labels are final representative set", () => {
+    const labels = Object.values(GENRE_LABEL_KO);
+    expect(labels).toEqual([
+      "투자·전략 메모",
+      "투자보고서",
+      "법률·회계·계약 검토",
+      "칼럼/에세이",
+      "강의·발표안",
+      "장문 원고",
+    ]);
+  });
+
+  it("does not contain old generic genre keys", () => {
+    const keys = Object.keys(GENRE_LABEL_KO);
+    expect(keys).not.toContain("essay");
+    expect(keys).not.toContain("practical");
+    expect(keys).not.toContain("youtube");
+    expect(keys).not.toContain("lecture");
+    expect(keys).not.toContain("world");
   });
 });

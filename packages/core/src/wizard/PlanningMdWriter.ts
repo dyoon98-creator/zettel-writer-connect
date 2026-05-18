@@ -190,7 +190,7 @@ export const PlanningMdWriter = {
 
     const sessionId = fm.values.sessionid ?? fm.values.sessionId ?? "";
     const title = fm.values.title ?? "";
-    const genre = (fm.values.genre as Genre) ?? "essay";
+    const genre = (fm.values.genre as Genre) ?? "investment-strategy-memo";
     const completedAt = fm.values.completedat ?? fm.values.completedAt ?? "";
 
     const body = content.slice(fm.endIndex);

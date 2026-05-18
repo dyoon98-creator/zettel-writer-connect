@@ -8,7 +8,7 @@ import {
 const SAMPLE: WritingProjectFrontmatter = {
   type: "writing",
   status: "drafting",
-  genre: "essay",
+  genre: "investment-strategy-memo",
   created: "2026-04-28",
   updated: "2026-04-28",
   word_goal: 3000,

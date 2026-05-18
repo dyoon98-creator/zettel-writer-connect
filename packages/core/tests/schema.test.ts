@@ -1,11 +1,13 @@
 import {
   BINDER_SCHEMA,
+  CONCEPT_DRAFT_SCHEMA,
   DEFAULT_LABELS,
   DEFAULT_STATUSES,
   PROJECT_SCHEMA,
   SCENE_TYPE,
   isBinderNode,
   isBinderTree,
+  isConceptDraftSession,
   isLabelDef,
   isProjectMeta,
   isSceneFrontmatter,
@@ -57,7 +59,7 @@ describe("isProjectMeta", () => {
     schema: PROJECT_SCHEMA,
     id: "proj-1",
     title: "프로젝트 1",
-    genre: "essay",
+    genre: "investment-strategy-memo",
     status: "drafting",
     label: "scene",
     wordGoal: 1000,
@@ -171,5 +173,88 @@ describe("isSceneFrontmatter", () => {
 
   it("word_count 가 number 가 아니면 false", () => {
     expect(isSceneFrontmatter({ ...valid, word_count: "0" })).toBe(false);
+  });
+});
+
+describe("isConceptDraftSession — ConceptTone 8종 검증", () => {
+  const base = {
+    schema: CONCEPT_DRAFT_SCHEMA,
+    id: "sess-1",
+    seed: "test seed",
+    genre: "investment-report",
+    attachedNotes: [],
+    conversation: [],
+    conceptParagraph: "",
+    synopsis: "",
+    outline: [],
+    stage: "concept",
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-01T00:00:00Z",
+  };
+
+  const ALL_TONES = [
+    "decision-memo",
+    "analytical-report",
+    "customer-report",
+    "legal-accounting-review",
+    "column-narrative",
+    "long-form-reasoning",
+    "lecture-presentation",
+    "explanatory",
+  ];
+
+  for (const tone of ALL_TONES) {
+    it(`유효 tone "${tone}" 통과`, () => {
+      expect(isConceptDraftSession({ ...base, tone })).toBe(true);
+    });
+  }
+
+  const OLD_INVALID_TONES = ["novel", "essay", "nonfiction", "screenplay", "investment-committee"];
+  for (const tone of OLD_INVALID_TONES) {
+    it(`구/무효 tone "${tone}" 거부`, () => {
+      expect(isConceptDraftSession({ ...base, tone })).toBe(false);
+    });
+  }
+
+  it("tone 이 없으면 false", () => {
+    const { tone: _t, ...noTone } = { ...base, tone: "decision-memo" };
+    expect(isConceptDraftSession(noTone)).toBe(false);
+  });
+
+  it("schema 가 다르면 false", () => {
+    expect(isConceptDraftSession({ ...base, tone: "decision-memo", schema: "wrong" })).toBe(false);
+  });
+
+  describe("genre 6종 유효성 검증", () => {
+    const VALID_GENRES = [
+      "investment-strategy-memo",
+      "investment-report",
+      "legal-accounting-review",
+      "column-essay",
+      "lecture-presentation",
+      "long-form-manuscript",
+    ];
+
+    for (const genre of VALID_GENRES) {
+      it(`유효 genre "${genre}" 통과`, () => {
+        expect(
+          isConceptDraftSession({ ...base, tone: "decision-memo", genre }),
+        ).toBe(true);
+      });
+    }
+
+    const OLD_GENRES = ["essay", "practical", "youtube", "lecture", "world"];
+    for (const genre of OLD_GENRES) {
+      it(`구 genre "${genre}" 거부`, () => {
+        expect(
+          isConceptDraftSession({ ...base, tone: "decision-memo", genre }),
+        ).toBe(false);
+      });
+    }
+
+    it("genre 가 없으면 false", () => {
+      const { genre: _g, ...noGenre } = { ...base, tone: "decision-memo", genre: "investment-report" };
+      expect(isConceptDraftSession(noGenre)).toBe(false);
+    });
   });
 });

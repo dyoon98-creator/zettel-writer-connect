@@ -121,13 +121,27 @@ export function WizardChat(): JSX.Element {
     await sendUserMessage(text);
   };
 
+  // 일반 옵션 클릭 → 즉시 전송. 마지막(직접 입력) 옵션 클릭 → textarea 노출 후 명시적 전송.
+  const handleChoiceSelect = (i: number): void => {
+    const opts = currentQuestion?.options ?? [];
+    const isLast = i === opts.length - 1;
+    setSelectedChoice(i);
+    if (!isLast) {
+      const chosen = opts[i] ?? "";
+      if (chosen.trim()) {
+        userScrolledUpRef.current = false;
+        void sendUserMessage(chosen);
+      }
+    }
+  };
+
   const handleChoiceSubmit = async (): Promise<void> => {
     if (!currentQuestion || currentQuestion.format !== "choice") return;
     if (selectedChoice === null) return;
     const opts = currentQuestion.options ?? [];
     const chosen = opts[selectedChoice] ?? "";
     const isLast = selectedChoice === opts.length - 1;
-    // 마지막(기타) 옵션은 직접 입력 텍스트가 본문이 됨.
+    // 마지막(직접 입력) 옵션은 직접 입력 텍스트가 본문이 됨.
     const content = isLast && otherDraft.trim()
       ? `${chosen}: ${otherDraft.trim()}`
       : chosen;
@@ -183,7 +197,7 @@ export function WizardChat(): JSX.Element {
               <ChoiceInput
                 options={currentQuestion.options}
                 selected={selectedChoice}
-                onSelect={setSelectedChoice}
+                onSelect={handleChoiceSelect}
                 otherDraft={otherDraft}
                 onOtherChange={setOtherDraft}
                 disabled={false}
@@ -335,29 +349,38 @@ function ChoiceInput({
         ))}
       </div>
       {isOtherSelected && (
-        <textarea
-          className="wizard-choice-other"
-          placeholder="기타: 직접 입력해주세요"
-          value={otherDraft}
-          rows={2}
-          onChange={(e) => onOtherChange(e.target.value)}
-          disabled={disabled}
-        />
+        <>
+          <textarea
+            className="wizard-choice-other"
+            placeholder="직접 입력해주세요"
+            value={otherDraft}
+            rows={2}
+            onChange={(e) => onOtherChange(e.target.value)}
+            disabled={disabled}
+            // eslint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+          />
+          <div className="wizard-input-actions">
+            <span className="wizard-input-hint">
+              입력 후 답변 버튼을 누르세요.
+            </span>
+            <button
+              type="button"
+              className="wizard-send-btn"
+              disabled={disabled || !canSubmit}
+              onClick={onSubmit}
+              data-testid="wizard-choice-submit"
+            >
+              답변
+            </button>
+          </div>
+        </>
       )}
-      <div className="wizard-input-actions">
-        <span className="wizard-input-hint">
-          답을 골라주세요. 마지막 옵션을 선택하면 직접 입력할 수 있습니다.
-        </span>
-        <button
-          type="button"
-          className="wizard-send-btn"
-          disabled={disabled || !canSubmit}
-          onClick={onSubmit}
-          data-testid="wizard-choice-submit"
-        >
-          답변
-        </button>
-      </div>
+      {!isOtherSelected && (
+        <div className="wizard-input-hint" style={{ marginTop: 6, fontSize: 12 }}>
+          항목을 클릭하면 바로 다음 질문으로 넘어갑니다.
+        </div>
+      )}
     </div>
   );
 }

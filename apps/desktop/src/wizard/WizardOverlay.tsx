@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import {
   type Genre,
   type WizardSummary,
+  GENRE_LABEL_KO,
 } from "@ai-manuscript-studio/core";
 
 import { tauriNoticeAdapter } from "../noticeAdapter";
@@ -65,13 +66,9 @@ function BridgeBadge(): JSX.Element {
   );
 }
 
-const GENRE_OPTIONS: { id: Genre; label: string }[] = [
-  { id: "essay", label: "에세이" },
-  { id: "practical", label: "실용서" },
-  { id: "youtube", label: "유튜브 대본" },
-  { id: "lecture", label: "강의안" },
-  { id: "world", label: "세계관/웹소설" },
-];
+const GENRE_OPTIONS: { id: Genre; label: string }[] = (
+  Object.entries(GENRE_LABEL_KO) as [Genre, string][]
+).map(([id, label]) => ({ id, label }));
 
 interface SeedPromptProps {
   summary: WizardSummary;
@@ -153,17 +150,17 @@ export function WizardOverlay({
   const vaultPath = vaultPathOverride ?? projectVaultPath ?? null;
 
   const [titleDraft, setTitleDraft] = useState("");
-  const [genreDraft, setGenreDraft] = useState<Genre>("essay");
+  const [genreDraft, setGenreDraft] = useState<Genre>("investment-strategy-memo");
 
   // engine 이 새로 만들어졌을 때 draft 초기화.
   useEffect(() => {
     if (!engine) {
       setTitleDraft("");
-      setGenreDraft("essay");
+      setGenreDraft("investment-strategy-memo");
       return;
     }
     setTitleDraft(engine.session.draftTitle ?? "");
-    setGenreDraft(engine.session.draftGenre ?? "essay");
+    setGenreDraft(engine.session.draftGenre ?? "investment-strategy-memo");
   }, [engine]);
 
   if (!isOpen) return null;

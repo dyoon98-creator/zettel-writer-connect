@@ -171,6 +171,7 @@ export class CLIWizardBridge implements WizardAIBridge {
       stage_user_turn_count: String(userTurnCount(session, stage)),
       stage_id: stage,
       stage_label: STAGE_LABEL[stage],
+      structured_handoff: buildStructuredHandoff(session),
     });
 
     const handle = startAiInvocation({

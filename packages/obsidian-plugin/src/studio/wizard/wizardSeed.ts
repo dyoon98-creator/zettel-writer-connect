@@ -68,7 +68,7 @@ export async function seedProjectFromSummary(
   const finalSlug = finalFolder.slice(writingRoot.length + 1);
 
   // 1) 새 프로젝트 (project.json + 빈 binder.json + planning.md placeholder).
-  const genre: Genre = summary.genre ?? "essay";
+  const genre: Genre = summary.genre ?? "investment-strategy-memo";
   await manager.createProject(writingRoot, {
     id: finalSlug,
     title: summary.title,

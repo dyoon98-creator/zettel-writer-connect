@@ -3073,6 +3073,8 @@ select:focus {
   gap: 2px;
   font-size: 12px;
   color: var(--color-text);
+  max-height: 120px;
+  overflow-y: auto;
 }
 .wizard-seed-actions {
   display: flex;

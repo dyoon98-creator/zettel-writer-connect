@@ -162,7 +162,8 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     }
 
     engineRef.addMessage("user", trimmed);
-    set({ rev: get().rev + 1 });
+    // 클릭 즉시 대기 상태 표시 — CLI 응답 전에 ChoiceInput 숨기고 로딩 인디케이터 노출.
+    set({ rev: get().rev + 1, isAwaitingQuestion: true, currentQuestion: null });
 
     // 압축 인터뷰 — 단계당 한 번의 객관식이 기본. audience-message 만 (독자, 메시지) 두
     // 번. 임계값 도달 시 단계를 닫고 자동으로 다음 단계의 첫 질문으로 넘어간다.
@@ -226,8 +227,9 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     const { conductorRef, engineRef } = get();
     if (!conductorRef || !engineRef) return;
 
-    // 진행 중 스트림 중지.
+    // 진행 중 스트림 중지 + 즉시 대기 상태 표시.
     get().cancelStream();
+    set({ isAwaitingQuestion: true, currentQuestion: null });
 
     try {
       await conductorRef.completeCurrentStage();
@@ -426,10 +428,6 @@ export function useWizardProgress(): {
 
 export const ALL_WIZARD_STAGES = WIZARD_STAGES;
 
-/**
- * settings에 따라 production CLI 또는 mock bridge를 결정.
- * settings.useMockBridge=true 또는 settings가 아직 로드되지 않았으면 mock.
- */
 /** 마법사가 어떤 bridge 를 쓰는지 외부 컴포넌트가 표시할 수 있게 노출. */
 export interface BridgeInfo {
   kind: "codex-cli" | "claude-code-cli" | "mock";

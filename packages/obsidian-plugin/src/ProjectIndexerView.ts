@@ -4,9 +4,9 @@
 // Responsibilities:
 //   - Scan the writing folder for subfolders containing `project.json`.
 //   - Render one card per project (title, status badge, progress bar,
-//     "원고실 앱에서 열기" button, expandable scene list).
+//     "원고실 열기" button that opens the in-vault AI 원고실 작업실 view).
 //   - Re-render on project.json/binder.json changes (debounced 200ms).
-//   - Show a desktop-only banner on mobile.
+//   - Show a mobile-unsupported banner on mobile.
 
 import { ItemView, Platform, TFile, WorkspaceLeaf } from "obsidian";
 import {
@@ -166,7 +166,7 @@ export class ProjectIndexerView extends ItemView {
     newBtn.addEventListener("click", () => this.openNewProjectModal());
     header.createEl("p", {
       cls: "ams-indexer-sub",
-      text: "깊은 작업은 별도 데스크톱 앱(AI 원고실)에서 진행됩니다.",
+      text: "원고를 선택하면 Obsidian AI 원고실 작업실에서 바로 작업할 수 있습니다.",
     });
 
     if (this.cards.length === 0) {

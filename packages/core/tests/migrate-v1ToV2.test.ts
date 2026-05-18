@@ -92,7 +92,7 @@ describe("migrate (write)", () => {
     );
     const meta = await ProjectMetaIO.read(vault, "3 Writing/ai-시대의-작가");
     expect(meta.title).toBe("ai-시대의-작가");
-    expect(meta.genre).toBe("essay");
+    expect(meta.genre).toBe("investment-strategy-memo");
     expect(meta.status).toBe("drafting");
     expect(meta.wordGoal).toBe(30000);
     expect(meta.coreMessage).toBe("AI는 작가를 대체하지 않는다");

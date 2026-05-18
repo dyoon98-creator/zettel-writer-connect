@@ -7,13 +7,13 @@
 //   3. projectStore.loadProject(vaultPath, projectFolder) — view state 로 받은
 //      프로젝트를 자동 로드
 //
-// unmount 시: React unmount + disposeStudioContext.
+// unmount 시: React unmount + release (context ref-count 감소).
 
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type AIManuscriptStudioPlugin from "../main";
-import { initStudioContext, disposeStudioContext } from "./context";
+import { initStudioContext } from "./context";
 
 // App tree 자체는 lazy require 로 mount 시점에 평가. test/non-Electron 환경에서
 // React tree 의 무거운 transitive deps 가 즉시 로드되지 않게 한다.
@@ -45,6 +45,7 @@ export interface ManuscriptStudioViewState extends Record<string, unknown> {
 export class ManuscriptStudioView extends ItemView {
   private root: Root | null = null;
   private state: ManuscriptStudioViewState = {};
+  private releaseContext: (() => void) | null = null;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -80,7 +81,7 @@ export class ManuscriptStudioView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    initStudioContext(this.plugin);
+    this.releaseContext = initStudioContext(this.plugin);
     // 옵시디언 view leaf 의 content area 자체에 absolute fill 을 적용해
     // .app-shell 의 100vh/100vw 가 view 영역 안으로 가둬지도록 한다.
     const contentEl = this.containerEl.children[1] as HTMLElement;
@@ -110,7 +111,8 @@ export class ManuscriptStudioView extends ItemView {
   async onClose(): Promise<void> {
     this.root?.unmount();
     this.root = null;
-    disposeStudioContext();
+    this.releaseContext?.();
+    this.releaseContext = null;
   }
 
   private render(): void {

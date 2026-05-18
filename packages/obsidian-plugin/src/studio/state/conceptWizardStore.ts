@@ -208,7 +208,12 @@ export const useConceptWizardStore = create<ConceptWizardState>()(
       },
 
       loadFromSession(s) {
-        set({ session: s, isOpen: true, pausedForBinder: false });
+        // Normalize stale tone key from sessions persisted before customer-report rename.
+        const normalized: ConceptDraftSession =
+          (s.tone as string) === "investment-committee"
+            ? { ...s, tone: "customer-report" as ConceptTone }
+            : s;
+        set({ session: normalized, isOpen: true, pausedForBinder: false });
       },
 
       openEmpty() {

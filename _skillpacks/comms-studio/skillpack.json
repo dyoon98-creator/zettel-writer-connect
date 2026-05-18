@@ -1,0 +1,72 @@
+{
+  "id": "comms-studio",
+  "name": "대표님 커뮤니케이션 스튜디오",
+  "version": "0.1.0",
+  "vendor": "kw-local",
+  "tier": "free",
+  "actions": [
+    {
+      "id": "comms.email-draft",
+      "label": "이메일 초안 쓰기",
+      "status_show": [],
+      "prompt_file": "prompts/email-draft.md",
+      "save_to": "draft",
+      "requires_user_input": true,
+      "placeholders": ["user_input", "source_notes", "reader", "core_message"]
+    },
+    {
+      "id": "comms.email-polish",
+      "label": "이메일 다듬기",
+      "status_show": [],
+      "prompt_file": "prompts/email-polish.md",
+      "save_to": "revising",
+      "requires_user_input": true,
+      "placeholders": ["manuscript", "user_input"]
+    },
+    {
+      "id": "comms.kakao-short",
+      "label": "카카오톡 메시지 쓰기",
+      "status_show": [],
+      "prompt_file": "prompts/kakao-short.md",
+      "save_to": "draft",
+      "requires_user_input": true,
+      "placeholders": ["user_input"]
+    },
+    {
+      "id": "comms.telegram-brief",
+      "label": "텔레그램 메시지 쓰기",
+      "status_show": [],
+      "prompt_file": "prompts/telegram-brief.md",
+      "save_to": "draft",
+      "requires_user_input": true,
+      "placeholders": ["user_input", "source_notes"]
+    },
+    {
+      "id": "comms.report-polish",
+      "label": "보고서 다듬기",
+      "status_show": [],
+      "prompt_file": "prompts/report-polish.md",
+      "save_to": "revising",
+      "requires_user_input": true,
+      "placeholders": ["manuscript", "user_input", "source_notes", "core_message", "reader"]
+    },
+    {
+      "id": "comms.summary-briefing",
+      "label": "요약 보고자료 만들기",
+      "status_show": [],
+      "prompt_file": "prompts/summary-briefing.md",
+      "save_to": "draft",
+      "requires_user_input": true,
+      "placeholders": ["manuscript", "user_input", "source_notes", "reader", "core_message"]
+    },
+    {
+      "id": "comms.memo-capture",
+      "label": "메모 정리하기",
+      "status_show": [],
+      "prompt_file": "prompts/memo-capture.md",
+      "save_to": "draft",
+      "requires_user_input": true,
+      "placeholders": ["manuscript", "user_input"]
+    }
+  ]
+}

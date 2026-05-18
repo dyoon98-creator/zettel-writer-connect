@@ -1,34 +1,21 @@
 // NewProjectModal.ts — 인덱서 사이드바에서 새 원고를 빠르게 만들기 위한 모달.
-// v2 의 의도는 "깊은 작업은 데스크톱 앱"이지만, 옵시디언에서 빈 프로젝트 폴더를
-// 한 번에 시드해 두면 카드가 등장하므로 흐름이 빨라진다.
 
 import { App, Modal, Setting } from "obsidian";
+import { type Genre, GENRE_LABEL_KO } from "@ai-manuscript-studio/core/browser";
 
-export type NewProjectGenre =
-  | "essay"
-  | "practical"
-  | "youtube"
-  | "lecture"
-  | "world";
-
-export const GENRE_LABEL_KO: Record<NewProjectGenre, string> = {
-  essay: "에세이",
-  practical: "실용서",
-  youtube: "유튜브 대본",
-  lecture: "강의안",
-  world: "세계관/웹소설",
-};
+export type { Genre };
+export { GENRE_LABEL_KO };
 
 export interface NewProjectInput {
   title: string;
-  genre: NewProjectGenre;
+  genre: Genre;
   wordGoal: number;
   openInApp: boolean;
 }
 
 export class NewProjectModal extends Modal {
   private title = "";
-  private genre: NewProjectGenre = "essay";
+  private genre: Genre = "investment-strategy-memo";
   private wordGoal = 3000;
   private openInApp = true;
 
@@ -46,7 +33,7 @@ export class NewProjectModal extends Modal {
     contentEl.createEl("h2", { text: "새 원고 만들기" });
     contentEl.createEl("p", {
       cls: "setting-item-description",
-      text: "프로젝트 폴더와 빈 binder/planning 파일이 만들어집니다. 깊은 마법사 인터뷰는 데스크톱 앱에서 진행하세요.",
+      text: "프로젝트 폴더와 빈 binder/planning 파일이 만들어집니다. 완성 후 Obsidian AI 원고실에서 바로 작업하세요.",
     });
 
     new Setting(contentEl)
@@ -65,7 +52,7 @@ export class NewProjectModal extends Modal {
         d.addOption(k, label);
       }
       d.setValue(this.genre).onChange((v) => {
-        this.genre = v as NewProjectGenre;
+        this.genre = v as Genre;
       });
     });
 
@@ -83,8 +70,8 @@ export class NewProjectModal extends Modal {
       );
 
     new Setting(contentEl)
-      .setName("만든 뒤 데스크톱 앱에서 열기")
-      .setDesc("URL scheme 으로 'AI 원고실' 앱이 그 프로젝트로 부팅됩니다.")
+      .setName("만든 뒤 Obsidian 원고실에서 열기")
+      .setDesc("프로젝트를 만든 직후 Obsidian AI 원고실 작업실 view 를 엽니다.")
       .addToggle((t) =>
         t.setValue(this.openInApp).onChange((v) => {
           this.openInApp = v;

@@ -26,14 +26,21 @@ export const STATUS_LABEL_KO: Record<ProjectStatus, string> = {
   published: "발행",
 };
 
-export type Genre = "essay" | "practical" | "youtube" | "lecture" | "world";
+export type Genre =
+  | "investment-strategy-memo"
+  | "investment-report"
+  | "legal-accounting-review"
+  | "column-essay"
+  | "lecture-presentation"
+  | "long-form-manuscript";
 
 export const GENRE_LABEL_KO: Record<Genre, string> = {
-  essay: "에세이",
-  practical: "실용서",
-  youtube: "유튜브 대본",
-  lecture: "강의안",
-  world: "세계관/웹소설",
+  "investment-strategy-memo": "투자·전략 메모",
+  "investment-report":        "투자보고서",
+  "legal-accounting-review":  "법률·회계·계약 검토",
+  "column-essay":             "칼럼/에세이",
+  "lecture-presentation":     "강의·발표안",
+  "long-form-manuscript":     "장문 원고",
 };
 
 export interface WritingProjectFrontmatter {

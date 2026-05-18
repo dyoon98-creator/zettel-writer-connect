@@ -2,7 +2,7 @@
 // 시드 텍스트 + 노트 첨부 + 톤/장르 선택 → store.start() → onAdvance()
 
 import { useRef, useState } from "react";
-import type { ConceptTone, Genre } from "@ai-manuscript-studio/core";
+import { type ConceptTone, type Genre, GENRE_LABEL_KO } from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
@@ -18,27 +18,19 @@ interface GenreOption {
 }
 
 const TONE_OPTIONS: ToneOption[] = [
-  { id: "novel", label: "소설" },
-  { id: "essay", label: "에세이" },
-  { id: "nonfiction", label: "논픽션" },
-  { id: "screenplay", label: "시나리오" },
+  { id: "decision-memo",           label: "간결한 의사결정체" },
+  { id: "analytical-report",       label: "분석적 보고체" },
+  { id: "customer-report",          label: "고객 보고체" },
+  { id: "legal-accounting-review", label: "법률·회계 검토체" },
+  { id: "column-narrative",        label: "칼럼형 서술체" },
+  { id: "long-form-reasoning",     label: "장문 원고형 사유체" },
+  { id: "lecture-presentation",    label: "강의·발표체" },
+  { id: "explanatory",             label: "친절한 설명체" },
 ];
 
-const GENRE_OPTIONS: GenreOption[] = [
-  { id: "essay", label: "에세이" },
-  { id: "practical", label: "실용서" },
-  { id: "youtube", label: "유튜브 대본" },
-  { id: "lecture", label: "강의안" },
-  { id: "world", label: "세계관/웹소설" },
-];
-
-/** 톤 → 기본 장르 자동 추천. 사용자가 변경 가능. */
-const DEFAULT_GENRE_FOR_TONE: Record<ConceptTone, Genre> = {
-  novel: "world",
-  essay: "essay",
-  nonfiction: "practical",
-  screenplay: "youtube",
-};
+const GENRE_OPTIONS: GenreOption[] = (
+  Object.entries(GENRE_LABEL_KO) as [Genre, string][]
+).map(([id, label]) => ({ id, label }));
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -185,10 +177,8 @@ const nextBtnStyle = (disabled: boolean): React.CSSProperties => ({
 export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // ── local state ──
   const [seed, setSeed] = useState("");
-  const [tone, setTone] = useState<ConceptTone>("novel");
-  const [genre, setGenre] = useState<Genre>(DEFAULT_GENRE_FOR_TONE["novel"]);
-  // userChangedGenre: 사용자가 직접 장르를 선택했으면 톤 변경 시 자동 매칭 적용 안 함.
-  const [userChangedGenre, setUserChangedGenre] = useState(false);
+  const [tone, setTone] = useState<ConceptTone>("decision-memo");
+  const [genre, setGenre] = useState<Genre>("investment-strategy-memo");
   const [attachedNotes, setAttachedNotes] = useState<string[]>([]);
   const [noteInput, setNoteInput] = useState("");
 
@@ -197,18 +187,9 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // 옵시디언 vault 의 노트 제목 자동완성.
   const { notes: vaultNotes } = useVaultNoteSuggestions();
 
-  // ── 톤 변경 → 장르 자동 추천 ──
+  // ── 톤 변경 ──
   function handleToneChange(t: ConceptTone): void {
     setTone(t);
-    if (!userChangedGenre) {
-      setGenre(DEFAULT_GENRE_FOR_TONE[t]);
-    }
-  }
-
-  // ── 장르 변경 ──
-  function handleGenreChange(g: Genre): void {
-    setGenre(g);
-    setUserChangedGenre(true);
   }
 
   // ── 노트 첨부 ──
@@ -253,7 +234,7 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
       {/* 시드 입력 */}
       <section>
         <label htmlFor="step1-seed" style={labelStyle}>
-          어떤 책을 쓰고 싶나요?
+          어떤 글/문서를 만들까요?
         </label>
         <textarea
           id="step1-seed"
@@ -262,7 +243,7 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
           autoFocus
           rows={3}
           maxLength={500}
-          placeholder="어떤 책을 쓰고 싶나요? 한두 문장으로 알려주세요."
+          placeholder="목적, 독자, 핵심 메시지를 한두 문장으로 알려주세요."
           value={seed}
           onChange={(e) => setSeed(e.target.value)}
           style={textareaStyle}
@@ -332,9 +313,9 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
 
       {/* 톤 선택 */}
       <section>
-        <div role="radiogroup" aria-label="작품 톤 선택">
+        <div role="radiogroup" aria-label="문체·논조 선택">
           <span style={labelStyle} id="step1-tone-label">
-            톤
+            문체·논조
           </span>
           <div style={radioGroupStyle()}>
             {TONE_OPTIONS.map((opt) => (
@@ -377,7 +358,7 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
                   name="step1-genre"
                   value={opt.id}
                   checked={genre === opt.id}
-                  onChange={() => handleGenreChange(opt.id)}
+                  onChange={() => setGenre(opt.id)}
                   style={{ display: "none" }}
                   aria-label={opt.label}
                 />

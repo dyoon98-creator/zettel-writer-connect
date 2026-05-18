@@ -181,7 +181,7 @@ describe("buildCoachPrompt", () => {
       task: "글 검토",
       projectMeta: {
         title: "AI 시대의 작가",
-        genre: "essay",
+        genre: "investment-strategy-memo",
         targetReader: "20-30대 작가 지망생",
         coreMessage: "AI 와 함께 쓰는 글",
       },

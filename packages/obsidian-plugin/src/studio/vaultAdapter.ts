@@ -79,7 +79,9 @@ const NOTE_SEARCH_SKIP_DIRS = new Set([
   "_index",
   "_skillpacks",
   "_templates",
+  "4.Writing",
   "4 Archive",
+  "9.Archive",
 ]);
 
 export function normalizeNoteLink(raw: string): string {
@@ -214,6 +216,8 @@ const NOTES_AUTOCOMPLETE_SKIP_DIRS = new Set([
   "_skillpacks",
   "_templates",
   "4 Archive",
+  "4.Writing",
+  "9.Archive",
   "3 Writing",
 ]);
 

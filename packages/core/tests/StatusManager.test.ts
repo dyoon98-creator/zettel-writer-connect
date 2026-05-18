@@ -13,7 +13,7 @@ function makeMeta(): ProjectMeta {
     schema: PROJECT_SCHEMA,
     id: "p",
     title: "P",
-    genre: "essay",
+    genre: "investment-strategy-memo",
     status: "drafting",
     label: "scene",
     wordGoal: 0,

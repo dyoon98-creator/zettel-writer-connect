@@ -84,7 +84,7 @@ describe.skip("WizardEngine", () => {
 
   it("finalize 는 stage decisions 를 기반으로 WizardSummary 를 만든다", () => {
     const engine = new WizardEngine({ draftTitle: "AI 시대의 작가" });
-    engine.setDraftGenre("essay");
+    engine.setDraftGenre("investment-strategy-memo");
 
     const decisionsPerStage: Record<WizardStageId, Record<string, string>> = {
       motive: { motive: "AI 도구가 작가의 자리를 위협한다고 느꼈다" },
@@ -106,7 +106,7 @@ describe.skip("WizardEngine", () => {
 
     const summary = engine.finalize();
     expect(summary.title).toBe("AI 시대의 작가");
-    expect(summary.genre).toBe("essay");
+    expect(summary.genre).toBe("investment-strategy-memo");
     expect(summary.targetReader).toBe("기록은 많지만 원고로 못 만드는 사람");
     expect(summary.coreMessage).toBe("AI는 작가를 대체하지 않는다");
     expect(summary.tone).toBe("따뜻한 회의주의자");

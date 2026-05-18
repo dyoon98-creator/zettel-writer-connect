@@ -27,6 +27,7 @@ import { ObsidianVaultAdapter } from "./vaultAdapter";
 import { ObsidianNoticeAdapter } from "./noticeAdapter";
 import { ObsidianFrontmatterAdapter } from "./frontmatterAdapter";
 import { PLUGIN_ID } from "@ai-manuscript-studio/core/browser";
+import { QuickComposeModal } from "./QuickComposeModal";
 
 export default class AIManuscriptStudioPlugin extends Plugin {
   settings!: AIManuscriptStudioSettings;
@@ -63,7 +64,7 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     this.addCommand({
       id: "open-studio",
       name: "원고실 열기 (현재 노트의 프로젝트)",
-      checkCallback: (checking) => {
+      checkCallback: (checking: boolean) => {
         const folder = this.activeProjectFolder();
         if (!folder) return false;
         if (!checking) void this.openStudio(folder);
@@ -74,7 +75,7 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     this.addCommand({
       id: "launch-app",
       name: "(레거시) Tauri 데스크톱 앱 호출 — 현재 노트의 프로젝트",
-      checkCallback: (checking) => {
+      checkCallback: (checking: boolean) => {
         const folder = this.activeProjectFolder();
         if (!folder) return false;
         if (!checking) {
@@ -100,7 +101,22 @@ export default class AIManuscriptStudioPlugin extends Plugin {
       callback: () => void this.openNewProjectFlow(),
     });
 
+    this.addCommand({
+      id: "quick-compose-communication",
+      name: "즉석 커뮤니케이션 작성",
+      callback: () => {
+        new QuickComposeModal(this.app, this).open();
+      },
+    });
+
     this.addSettingTab(new AIManuscriptStudioSettingTab(this.app, this));
+
+    // Surface the indexer panel as soon as the workspace layout is ready.
+    // Mirrors the Zettel Connect pattern so enabling/reloading the plugin
+    // makes the right-sidebar panel visible without requiring the ribbon/command.
+    this.app.workspace.onLayoutReady(() => {
+      void this.openIndexerOnLayoutReady();
+    });
   }
 
   async onunload(): Promise<void> {
@@ -136,6 +152,13 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     });
     workspace.revealLeaf(leaf);
     return leaf;
+  }
+
+  private async openIndexerOnLayoutReady(): Promise<void> {
+    if (this.app.workspace.getLeavesOfType(PROJECT_INDEXER_VIEW_TYPE).length > 0) {
+      return;
+    }
+    await this.openIndexer();
   }
 
   private async refreshIndexer(): Promise<void> {

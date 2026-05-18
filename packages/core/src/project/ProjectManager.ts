@@ -95,7 +95,7 @@ export class ProjectManager {
     return {
       type: "writing",
       status: (raw.status as ProjectStatus) ?? "idea",
-      genre: (raw.genre as Genre) ?? "essay",
+      genre: (raw.genre as Genre) ?? "investment-strategy-memo",
       created: String(raw.created ?? ""),
       updated: String(raw.updated ?? ""),
       word_goal: Number(raw.word_goal ?? 0),

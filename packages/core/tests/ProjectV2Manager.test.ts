@@ -22,7 +22,7 @@ describe("ProjectV2Manager.createProject", () => {
     const meta = await mgr.createProject("3 Writing", {
       id: "test-proj",
       title: "Test",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       wordGoal: 1000,
     });
     expect(meta.id).toBe("test-proj");
@@ -36,7 +36,7 @@ describe("ProjectV2Manager.createProject", () => {
     await mgr.createProject("3 Writing", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       seedPlanning: false,
     });
     expect(vault.hasFile("3 Writing/p/planning.md")).toBe(false);
@@ -44,9 +44,9 @@ describe("ProjectV2Manager.createProject", () => {
 
   it("이미 project.json 이 있으면 throw", async () => {
     const { mgr } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await expect(
-      mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" }),
+      mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" }),
     ).rejects.toThrow(/이미 프로젝트/);
   });
 });
@@ -59,8 +59,8 @@ describe("ProjectV2Manager.list", () => {
 
   it("project.json 이 있는 폴더만 모음", async () => {
     const { vault, mgr } = makeManager();
-    await mgr.createProject("3 Writing", { id: "a", title: "A", genre: "essay" });
-    await mgr.createProject("3 Writing", { id: "b", title: "B", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "a", title: "A", genre: "investment-strategy-memo" });
+    await mgr.createProject("3 Writing", { id: "b", title: "B", genre: "investment-strategy-memo" });
     // 노이즈 — project.json 없는 폴더
     await vault.writeFile("3 Writing/junk/note.md", "x");
     const list = await mgr.list("3 Writing");
@@ -71,7 +71,7 @@ describe("ProjectV2Manager.list", () => {
 describe("ProjectV2Manager binder operations", () => {
   it("addFolder 가 binder 에 추가됨", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     const folder = await mgr.addFolder("3 Writing/p", null, {
       id: "ch1",
       title: "1장",
@@ -83,7 +83,7 @@ describe("ProjectV2Manager binder operations", () => {
 
   it("addScene 이 binder + scene 파일 둘 다 만든다", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "도입" });
     const scene = await mgr.addScene("3 Writing/p", "ch1", {
       title: "노트북을 펼치다",
@@ -107,7 +107,7 @@ describe("ProjectV2Manager binder operations", () => {
 
   it("addScene 이 같은 파일명 충돌 시 자동 회피", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "장1" });
     const a = await mgr.addScene("3 Writing/p", "ch1", {
       title: "같은-제목",
@@ -124,7 +124,7 @@ describe("ProjectV2Manager binder operations", () => {
 
   it("moveNode 로 노드 위치 이동", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch2", title: "2" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", {
@@ -144,7 +144,7 @@ describe("ProjectV2Manager binder operations", () => {
 
   it("removeNode + deleteFile 옵션이 파일도 지움", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", { title: "scene" });
     expect(vault.hasFile(`3 Writing/p/${sc.file}`)).toBe(true);
@@ -154,7 +154,7 @@ describe("ProjectV2Manager binder operations", () => {
 
   it("removeNode 가 deleteFile 미지정 시 파일 보존", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", { title: "scene" });
     await mgr.removeNode("3 Writing/p", sc.id);
@@ -165,7 +165,7 @@ describe("ProjectV2Manager binder operations", () => {
 describe("ProjectV2Manager status/label", () => {
   it("setNodeStatus 가 binder + scene frontmatter 모두 갱신", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", { title: "scene" });
     await mgr.setNodeStatus("3 Writing/p", sc.id, "done");
@@ -177,7 +177,7 @@ describe("ProjectV2Manager status/label", () => {
 
   it("setNodeStatus 가 존재하지 않는 statusId 거부 + 사용자 알림", async () => {
     const { mgr, notice } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", { title: "scene" });
     await expect(
@@ -188,7 +188,7 @@ describe("ProjectV2Manager status/label", () => {
 
   it("setNodeLabel 도 동일하게 갱신", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const sc = await mgr.addScene("3 Writing/p", "ch1", { title: "scene" });
     await mgr.setNodeLabel("3 Writing/p", sc.id, "fragment");
@@ -201,7 +201,7 @@ describe("ProjectV2Manager status/label", () => {
     await mgr.createProject("3 Writing", {
       id: "p",
       title: "P",
-      genre: "essay",
+      genre: "investment-strategy-memo",
       status: "drafting",
     });
     await mgr.setProjectStatus("3 Writing/p", "revising");
@@ -213,7 +213,7 @@ describe("ProjectV2Manager status/label", () => {
 describe("ProjectV2Manager.getCombinedWordCount", () => {
   it("전체 합 계산", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const a = await mgr.addScene("3 Writing/p", "ch1", { title: "a" });
     const b = await mgr.addScene("3 Writing/p", "ch1", { title: "b" });
@@ -230,7 +230,7 @@ describe("ProjectV2Manager.getCombinedWordCount", () => {
 
   it("nodeIds 지정 시 부분 합", async () => {
     const { mgr, vault } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "1" });
     const a = await mgr.addScene("3 Writing/p", "ch1", { title: "a" });
     const b = await mgr.addScene("3 Writing/p", "ch1", { title: "b" });
@@ -248,7 +248,7 @@ describe("ProjectV2Manager.getCombinedWordCount", () => {
 describe("ProjectV2Manager.open", () => {
   it("project.json + binder.json 을 함께 로드", async () => {
     const { mgr } = makeManager();
-    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "essay" });
+    await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });
     const snapshot = await mgr.open("3 Writing/p");
     expect(snapshot.meta.id).toBe("p");
     expect(snapshot.binder.root).toEqual([]);

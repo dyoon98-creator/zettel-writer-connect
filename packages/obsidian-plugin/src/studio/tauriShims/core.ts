@@ -183,10 +183,14 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
     }
     case "voice_folder_info": {
       const loc = await ensureVoiceFolder();
+      const basePath = plugin.vaultAdapter.getBasePath();
+      const defaultPath = basePath
+        ? `${basePath}/${VOICE_FOLDER_DEFAULT_REL}`
+        : VOICE_FOLDER_DEFAULT_REL;
       return {
         path: loc.abs,
-        is_default: loc.isDefault,
-        is_external: loc.isExternal,
+        isCustom: !loc.isDefault,
+        defaultPath,
       } as unknown as T;
     }
     case "voice_set_folder": {
@@ -196,10 +200,14 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
       const settings = await store.load();
       await store.save({ ...settings, voiceFolder: newPath });
       const loc = await ensureVoiceFolder();
+      const basePath2 = plugin.vaultAdapter.getBasePath();
+      const defaultPath2 = basePath2
+        ? `${basePath2}/${VOICE_FOLDER_DEFAULT_REL}`
+        : VOICE_FOLDER_DEFAULT_REL;
       return {
         path: loc.abs,
-        is_default: loc.isDefault,
-        is_external: loc.isExternal,
+        isCustom: !loc.isDefault,
+        defaultPath: defaultPath2,
       } as unknown as T;
     }
     case "voice_reset_folder": {
@@ -208,36 +216,56 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
       const settings = await store.load();
       await store.save({ ...settings, voiceFolder: "" });
       const loc = await ensureVoiceFolder();
+      const basePath3 = plugin.vaultAdapter.getBasePath();
+      const defaultPath3 = basePath3
+        ? `${basePath3}/${VOICE_FOLDER_DEFAULT_REL}`
+        : VOICE_FOLDER_DEFAULT_REL;
       return {
         path: loc.abs,
-        is_default: loc.isDefault,
-        is_external: loc.isExternal,
+        isCustom: !loc.isDefault,
+        defaultPath: defaultPath3,
       } as unknown as T;
     }
     case "voice_list_files": {
       const loc = await ensureVoiceFolder();
+      const fsNode =
+        electronRequire<typeof import("node:fs")>("node:fs") ??
+        electronRequire<typeof import("fs")>("fs");
       if (loc.rel !== null) {
         const entries = await va.listDir(loc.rel);
         return entries
           .filter((e) => !e.isDirectory)
-          .map((e) => ({
-            name: e.name,
-            abs_path: `${loc.abs}/${e.name}`,
-          })) as unknown as T;
+          .map((e) => {
+            const absPath = `${loc.abs}/${e.name}`;
+            let modifiedMs = 0;
+            let size = 0;
+            if (fsNode) {
+              try {
+                const s = fsNode.statSync(absPath);
+                modifiedMs = s.mtimeMs;
+                size = s.size;
+              } catch { /* stat unavailable */ }
+            }
+            return { name: e.name, absPath, modifiedMs, size };
+          }) as unknown as T;
       }
       // 외부 폴더 — Node fs 로 readdir
-      const fs =
-        electronRequire<typeof import("node:fs")>("node:fs") ??
-        electronRequire<typeof import("fs")>("fs");
-      if (!fs) return [] as unknown as T;
+      if (!fsNode) return [] as unknown as T;
       try {
-        const names = fs.readdirSync(loc.abs, { withFileTypes: true });
+        const names = fsNode.readdirSync(loc.abs, { withFileTypes: true });
         return names
           .filter((d) => d.isFile())
-          .map((d) => ({
-            name: d.name,
-            abs_path: `${loc.abs}/${d.name}`,
-          })) as unknown as T;
+          .map((d) => {
+            const absPath = `${loc.abs}/${d.name}`;
+            let modifiedMs = 0;
+            let size = 0;
+            try {
+              const s = fsNode.statSync(absPath);
+              modifiedMs = s.mtimeMs;
+              size = s.size;
+            } catch { /* stat unavailable */ }
+            return { name: d.name, absPath, modifiedMs, size };
+          }) as unknown as T;
       } catch {
         return [] as unknown as T;
       }

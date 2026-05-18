@@ -18,9 +18,15 @@ declare global {
 }
 export {};
 
+export interface CommandRecord {
+  id: string;
+  name: string;
+}
+
 export class Plugin {
   app: App;
   manifest: unknown;
+  __commands: CommandRecord[] = [];
   constructor(app?: App, manifest?: unknown) {
     this.app = app ?? new App();
     this.manifest = manifest ?? {};
@@ -29,7 +35,10 @@ export class Plugin {
   addRibbonIcon(_i: string, _t: string, _cb: () => void): HTMLElement {
     return document.createElement("div");
   }
-  addCommand(_c: unknown) {}
+  addCommand(c: unknown) {
+    const cmd = c as { id?: string; name?: string };
+    if (cmd?.id) this.__commands.push({ id: cmd.id, name: cmd.name ?? "" });
+  }
   addSettingTab(_t: unknown) {}
   registerEvent(_e: unknown) {}
   async loadData(): Promise<unknown> {

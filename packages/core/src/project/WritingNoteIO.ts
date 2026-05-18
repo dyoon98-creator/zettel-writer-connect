@@ -141,7 +141,7 @@ export function parse(raw: string): ParsedNote {
   const fm: WritingProjectFrontmatter = {
     type: "writing",
     status: (rawAny.status as WritingProjectFrontmatter["status"]) ?? "idea",
-    genre: (rawAny.genre as WritingProjectFrontmatter["genre"]) ?? "essay",
+    genre: (rawAny.genre as WritingProjectFrontmatter["genre"]) ?? "investment-strategy-memo",
     created: String(rawAny.created ?? ""),
     updated: String(rawAny.updated ?? ""),
     word_goal: Number(rawAny.word_goal ?? 0),

@@ -17,7 +17,7 @@ import { getExpandedPathString } from "./findBinary";
 
 const STDERR_TAIL_BYTES = 2 * 1024;
 const KILL_GRACE_MS = 2_000;
-const CODEX_DEFAULT_MODEL = "gpt-5.4";
+const CODEX_DEFAULT_MODEL = "gpt-5.5";
 
 export interface StartAiInvocationInput {
   provider: "codex" | "claude-code" | "mock";
