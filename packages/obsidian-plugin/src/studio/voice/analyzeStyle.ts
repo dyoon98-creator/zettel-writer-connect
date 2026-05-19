@@ -235,11 +235,52 @@ interface ClippedSample {
   truncated: boolean;
 }
 
-async function loadSamples(files: VoiceFileEntry[]): Promise<ClippedSample[]> {
+type VoiceFileReader = (absPath: string) => Promise<string>;
+
+function isVoiceExcludedFrontmatter(raw: string): boolean {
+  const text = raw.replace(/^\uFEFF/, "");
+  const firstLineEnd = text.indexOf("\n");
+  const firstLine = (firstLineEnd === -1 ? text : text.slice(0, firstLineEnd)).trim();
+  if (firstLine !== "---") return false;
+
+  const rest = firstLineEnd === -1 ? "" : text.slice(firstLineEnd + 1);
+  const closingMatch = rest.match(/^---\s*$/m);
+  if (!closingMatch || closingMatch.index === undefined) return false;
+
+  const frontmatter = rest.slice(0, closingMatch.index);
+  return frontmatter
+    .split(/\r?\n/)
+    .some((line) => /^\s*voice-exclude\s*:\s*(?:true|"true"|'true')\s*(?:#.*)?$/i.test(line));
+}
+
+async function filterVoiceIncludedFiles(
+  files: VoiceFileEntry[],
+  readFile: VoiceFileReader = voiceIO.readFile,
+): Promise<VoiceFileEntry[]> {
+  const included: VoiceFileEntry[] = [];
+  for (const f of files) {
+    if (!f.name.toLowerCase().endsWith(".md")) {
+      included.push(f);
+      continue;
+    }
+    try {
+      const raw = await readFile(f.absPath);
+      if (!isVoiceExcludedFrontmatter(raw)) included.push(f);
+    } catch {
+      included.push(f);
+    }
+  }
+  return included;
+}
+
+async function loadSamples(
+  files: VoiceFileEntry[],
+  readFile: VoiceFileReader = voiceIO.readFile,
+): Promise<ClippedSample[]> {
   const out: ClippedSample[] = [];
   for (const f of files.slice(0, MAX_FILES)) {
     try {
-      const raw = await voiceIO.readFile(f.absPath);
+      const raw = await readFile(f.absPath);
       const trimmed = raw.trim();
       if (trimmed.length === 0) continue;
       const truncated = trimmed.length > MAX_CHARS_PER_FILE;
@@ -433,7 +474,8 @@ export async function analyzeStyle(): Promise<AnalyzeStyleResult | null> {
     );
     return null;
   }
-  const samples = await loadSamples(files);
+  const includedFiles = await filterVoiceIncludedFiles(files);
+  const samples = await loadSamples(includedFiles);
   if (samples.length === 0) {
     tauriNoticeAdapter.warn("읽을 수 있는 본문이 없습니다.");
     return null;
@@ -472,7 +514,7 @@ export async function analyzeStyle(): Promise<AnalyzeStyleResult | null> {
       version: STYLE_GUIDE_VERSION,
       analyzedAt: new Date().toISOString(),
       provider: settings.aiProvider,
-      sampleSignatures: buildSignatures(files),
+      sampleSignatures: buildSignatures(includedFiles),
       guide: axes,
     };
     await saveStyleGuide(guide);
@@ -488,4 +530,12 @@ export async function analyzeStyle(): Promise<AnalyzeStyleResult | null> {
 }
 
 // 테스트용 export.
-export const _internal = { extractJsonObject, parseAxes, assemblePrompt, USER_PROMPT_BODY };
+export const _internal = {
+  extractJsonObject,
+  parseAxes,
+  assemblePrompt,
+  USER_PROMPT_BODY,
+  isVoiceExcludedFrontmatter,
+  filterVoiceIncludedFiles,
+  loadSamples,
+};

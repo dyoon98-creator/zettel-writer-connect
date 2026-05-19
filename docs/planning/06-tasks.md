@@ -12,7 +12,7 @@
 
 ---
 
-### [ ] C0.1 Verify current staging vs vault unchanged
+### [x] C0.1 Verify current staging vs vault unchanged
 
 **Objective**: 빌드/배포 전 AI 원고실 플러그인의 현재 설치 상태와 소스를 확인하고 vault 파일에 변경이 없는지 확인한다.
 
@@ -39,6 +39,17 @@ cat /Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/manifest.json 
 ```
 
 **Suggested lane**: Sonnet-Executor
+
+**Completion evidence** (2026-05-19, Sonnet + Opus 독립 검증):
+- 활성 설치 경로: `/Users/dongchanyoon/.local/obsidian-plugins/ai-manuscript-studio/` (일반 디렉터리)
+- 볼트 경로: `지식창고/.obsidian/plugins/ai-manuscript-studio` → 위 경로로 symlink ✅
+- SHA-256 비교 (설치본 `~/.local` vs 빌드 산출물 `packages/obsidian-plugin/`):
+  - main.js: `6f4d48e0…` = `6f4d48e0…` ✅ 완전 일치
+  - manifest.json: `3f27d590…` = `3f27d590…` ✅ 완전 일치
+  - styles.css: `289b3a4e…` = `289b3a4e…` ✅ 완전 일치
+- 13.zettel-connect manifest version: **0.1.6** 미변경 확인 ✅
+- `plugins/ai-manuscript-studio/` (untracked `??`): 5/18 20:25 stale 스테이징 산출물. 활성 런타임·소스 빌드와 불일치. 비차단 cleanup 후보.
+- 워킹트리 변경 없음 (git status before = after) ✅
 
 ---
 
@@ -70,6 +81,13 @@ cat /Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/manifest.json 
 **Verification**: 체크리스트 결과 텍스트로 보고
 
 **Suggested lane**: Opus-Verify (수동 체크 지시 + 결과 판정)
+
+**Partial evidence / blocker** (2026-05-19, Opus-Verify C0.2 smoke — PARTIAL-GAP):
+- Opus-Verify 결과: PARTIAL-GAP / REVIEW_DONE.
+- CDP 런타임 DOM 검증 미수행: 검증 시점 Obsidian 라이브 세션 실행 중, port 9222 닫힘. CDP 진행 시 Obsidian 종료·재시작 + 볼트 폴더 생성 승인 필요 — 이 태스크에서 미승인.
+- `_attachments/voice` 및 `_voice-samples` 폴더 부재; voice 샘플 파일 수 0. 샘플 생성·재분석 미승인으로 체크리스트 항목 6–8 PASS 불가.
+- 소스·설치 번들 분석: VoicePane UI/버튼 및 picker fallback 코드 배선 확인됨. 그러나 런타임 전체 PASS는 전용 승인 윈도우 필요.
+- **다음 결정 필요**: Obsidian 재시작 + 임시 voice 샘플 1개 배치를 승인하여 C0.2 전체 런타임 스모크 진행, 또는 C0.2 열어둔 채로 추후 진행.
 
 ---
 
@@ -820,7 +838,7 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 
 ---
 
-### [ ] B3.1 Design register-voice registry schema
+### [x] B3.1 Design register-voice registry schema
 
 **Objective**: 이메일/카카오/보고서/메모별 문체 delta 레지스트리의 스키마와 파일 위치를 설계한다.
 
@@ -831,7 +849,7 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 
 **Spec items**:
 - Base StyleGuide: 전역 `.style-guide.json` (기존)
-- Register delta: `_voice-samples/.register-guides/<register>.json`
+- Register delta: `<resolved voice 폴더>/.register-guides/<register>.json` (원 초안의 `_voice-samples/` 하드코딩은 B3.1 설계에서 폐기 — 권위 스펙: `docs/planning/b3-register-voice-spec.md §1`)
 - delta 형식: `{ register: "email", overrides: { sentenceBreath: "...", readerDistance: "..." }, addedInstructions: "..." }`
 - fallback: register-specific guide 없으면 base guide 사용
 
@@ -842,9 +860,19 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 
 **Suggested lane**: Planning Review
 
+**Completion evidence** (2026-05-19):
+- `docs/planning/b3-register-voice-spec.md` 신규 생성됨.
+- Planning Review 설계 검토(`.cmux-harness/logs/Planning Review-20260519-211133.log` lines 764-993) 반영 — 원 스펙 6개 수정:
+  1. 경로: `_voice-samples/` 하드코딩 → `<resolved voice 폴더>/.register-guides/` (voiceIO.path() + guidePath 패턴 재사용).
+  2. Register 키: action-id형 명칭 폐기 → 기존 6 Register 유니온 사용 (`email|kakao|telegram|report|summary|memo`).
+  3. 스키마: StyleGuideAxes 구조 오버라이드/딥머지 모델 폐기 → 가산형 prompt delta (`addedInstructions` 주 + 화이트리스트 스칼라 `overrides`) + `version`/`updatedAt` 추가.
+  4. 관용 파싱 + version 체크 — `loadStyleGuide()` 동일 정책 명문화. `styleDna`/`compressedPrompt` 오버라이드 금지.
+  5. 프라이버시 절 추가 — 원문 미포함 / dot-폴더 / 자동수집 금지 / compose read-only.
+  6. Obsidian shim 서브폴더 쓰기 미검증 리스크를 B3.2 선결 항목으로 박제.
+
 ---
 
-### [ ] B3.2 Implement register voice loader (core change)
+### [x] B3.2 Implement register voice loader (core change)
 
 **Objective**: B3.1 스키마 기반으로 레지스터별 StyleGuide를 로드하는 함수를 core에 추가한다.
 
@@ -857,21 +885,30 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 - vault 직접 쓰기
 
 **Acceptance criteria**:
-- `loadRegisterGuide(register: string): StyleGuideAxes | null` 구현
-- register guide 없으면 base guide 반환
+- `loadRegisterGuide(register: string)` delta loader 구현
+- register guide 없으면 base guide 반환 (`loadRegisterStyleGuide`) / null-delta fallback
 - 유닛 테스트 (InMemory): email register → delta 적용된 guide 반환 확인
 - pnpm test pass
 
 **Suggested lane**: GPT-Executor
 
+**Completion evidence** (2026-05-19):
+- RED: `cd packages/obsidian-plugin && pnpm test -- --runTestsByPath tests/studio/registerGuide.test.ts` initially failed because `registerGuide.ts` did not exist / feature missing.
+- GREEN targeted: `pnpm test -- --runTestsByPath tests/studio/registerGuide.test.ts` → 1 suite, 9 tests passed.
+- Related targeted: `pnpm test -- --runTestsByPath tests/studio/registerGuide.test.ts tests/studio/tauriShimsCore.test.ts tests/quickCompose.test.ts` → 3 suites, 39 tests passed.
+- Full verification: `pnpm test` → 23 suites, 228 tests passed.
+- Build: `pnpm build` → exit 0.
+- Implemented read-only loader/merge in `packages/obsidian-plugin/src/studio/voice/registerGuide.ts`; no QuickComposeModal/B3.3 wiring.
+
 ---
 
-### [ ] B3.3 Corpus manifest and exclusion tags
+### [x] B3.3 Corpus manifest and exclusion tags
 
 **Objective**: voice-exclude frontmatter 태그가 있는 파일을 voice corpus에서 제외하는 필터를 구현한다.
 
 **Allowed write paths**:
 - `packages/obsidian-plugin/src/studio/voice/voiceIO.ts` (exclusion filter 추가)
+- `packages/obsidian-plugin/src/studio/voice/analyzeStyle.ts` (frontmatter 기반 corpus/signature filter — 구현 범위 보정)
 
 **Forbidden paths**:
 - vault 직접 쓰기
@@ -883,6 +920,15 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 - pnpm test pass
 
 **Suggested lane**: GPT-Executor
+
+**Completion evidence** (2026-05-19):
+- Scope correction: 원래 B3.3 row는 `voiceIO.ts`만 listed했으나, frontmatter 판정은 파일 내용 read 이후 가능하므로 `analyzeStyle.ts`에 read-only pre-AI filter를 구현.
+- RED: `cd packages/obsidian-plugin && pnpm test -- --runTestsByPath tests/studio/voiceExclude.test.ts` initially failed because `_internal.isVoiceExcludedFrontmatter` / `filterVoiceIncludedFiles` / `loadSamples` did not exist.
+- GREEN targeted: `pnpm test -- --runTestsByPath tests/studio/voiceExclude.test.ts` → 1 suite, 7 tests passed.
+- Related targeted: `pnpm test -- --runTestsByPath tests/studio/voiceExclude.test.ts tests/studio/registerGuide.test.ts tests/studio/tauriShimsCore.test.ts` → 3 suites, 27 tests passed.
+- Full verification: `pnpm test` → 24 suites, 235 tests passed.
+- Build: `pnpm build` → exit 0.
+- Excluded `.md` files are omitted from prompt samples and `buildSignatures(includedFiles)`; no QuickComposeModal/registerGuide/vault/installed-plugin writes.
 
 ---
 
