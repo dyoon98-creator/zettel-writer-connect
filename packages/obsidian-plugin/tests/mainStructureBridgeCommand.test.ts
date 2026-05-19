@@ -25,7 +25,7 @@ describe("main.ts — W1 import-active-structure-note command", () => {
 
   it("imports createWritingProjectFromHandoff from structureBridge", () => {
     expect(mainSrc).toMatch(
-      /import.*createWritingProjectFromHandoff.*structureBridge/,
+      /import[\s\S]*createWritingProjectFromHandoff[\s\S]*structureBridge/,
     );
   });
 
@@ -36,5 +36,25 @@ describe("main.ts — W1 import-active-structure-note command", () => {
 
   it("checks path is under 3.Structure", () => {
     expect(mainSrc).toMatch(/3\.Structure|3\\.Structure/);
+  });
+});
+
+describe("main.ts — W3 writing-handoff JSON command", () => {
+  it("contains command id import-writing-handoff-json", () => {
+    expect(mainSrc).toContain("import-writing-handoff-json");
+  });
+
+  it("contains Korean command name for handoff JSON import", () => {
+    expect(mainSrc).toContain("원고실 handoff JSON 가져오기");
+  });
+
+  it("reads the singleton handoff path", () => {
+    expect(mainSrc).toContain("_index/writing-handoff.json");
+    expect(mainSrc).toMatch(/readFile\(WRITING_HANDOFF_JSON_PATH\)/);
+  });
+
+  it("imports parseWritingHandoffJson and handles missing JSON safely", () => {
+    expect(mainSrc).toMatch(/import[\s\S]*parseWritingHandoffJson[\s\S]*structureBridge/);
+    expect(mainSrc).toContain("handoff JSON을 읽을 수 없습니다");
   });
 });

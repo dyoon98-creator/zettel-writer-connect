@@ -29,7 +29,12 @@ import { ObsidianFrontmatterAdapter } from "./frontmatterAdapter";
 import { PLUGIN_ID } from "@ai-manuscript-studio/core/browser";
 import { QuickComposeModal } from "./QuickComposeModal";
 import { parseStructureNote } from "./structureBridge/parseStructureNote";
-import { createWritingProjectFromHandoff } from "./structureBridge/createWritingProjectFromHandoff";
+import {
+  createWritingProjectFromHandoff,
+  parseWritingHandoffJson,
+} from "./structureBridge/createWritingProjectFromHandoff";
+
+const WRITING_HANDOFF_JSON_PATH = "_index/writing-handoff.json";
 
 export default class AIManuscriptStudioPlugin extends Plugin {
   settings!: AIManuscriptStudioSettings;
@@ -115,6 +120,12 @@ export default class AIManuscriptStudioPlugin extends Plugin {
       id: "import-active-structure-note",
       name: "현재 구조노트를 원고 프로젝트로 가져오기",
       callback: () => void this.importActiveStructureNote(),
+    });
+
+    this.addCommand({
+      id: "import-writing-handoff-json",
+      name: "원고실 handoff JSON 가져오기",
+      callback: () => void this.importWritingHandoffJson(),
     });
 
     this.addSettingTab(new AIManuscriptStudioSettingTab(this.app, this));
@@ -245,6 +256,43 @@ export default class AIManuscriptStudioPlugin extends Plugin {
       this.noticeAdapter.error(`프로젝트 생성 실패: ${(err as Error).message}`);
       return;
     }
+    await this.refreshIndexer();
+    await this.openStudio(result.folderPath);
+  }
+
+  /** W3: _index/writing-handoff.json handoff contract를 원고 프로젝트로 가져온다. */
+  private async importWritingHandoffJson(): Promise<void> {
+    let raw: string;
+    try {
+      raw = await this.vaultAdapter.readFile(WRITING_HANDOFF_JSON_PATH);
+    } catch {
+      this.noticeAdapter.warn(
+        `handoff JSON을 읽을 수 없습니다: ${WRITING_HANDOFF_JSON_PATH}`,
+      );
+      return;
+    }
+
+    let handoff;
+    try {
+      handoff = parseWritingHandoffJson(raw, WRITING_HANDOFF_JSON_PATH);
+    } catch (err) {
+      this.noticeAdapter.error(`handoff JSON 파싱 실패: ${(err as Error).message}`);
+      return;
+    }
+
+    let result;
+    try {
+      result = await createWritingProjectFromHandoff({
+        vault: this.vaultAdapter,
+        notice: this.noticeAdapter,
+        writingFolder: this.settings.writingFolder ?? "4.Writing",
+        handoff,
+      });
+    } catch (err) {
+      this.noticeAdapter.error(`프로젝트 생성 실패: ${(err as Error).message}`);
+      return;
+    }
+
     await this.refreshIndexer();
     await this.openStudio(result.folderPath);
   }

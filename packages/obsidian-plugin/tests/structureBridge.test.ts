@@ -7,7 +7,10 @@ import {
 } from "@ai-manuscript-studio/core/adapters";
 import { isProjectMeta } from "@ai-manuscript-studio/core/browser";
 import { parseStructureNote } from "../src/structureBridge/parseStructureNote";
-import { createWritingProjectFromHandoff } from "../src/structureBridge/createWritingProjectFromHandoff";
+import {
+  createWritingProjectFromHandoff,
+  parseWritingHandoffJson,
+} from "../src/structureBridge/createWritingProjectFromHandoff";
 
 // ── parseStructureNote ────────────────────────────────────────────
 
@@ -142,6 +145,112 @@ describe("createWritingProjectFromHandoff", () => {
 
     expect(isProjectMeta(parsed)).toBe(true);
     expect(parsed.sourceNotes).toContain("3.Structure/strategy-note.md");
+  });
+
+  it("creates project from writing-handoff JSON with structure and picked source notes deduped", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+    const handoff = parseWritingHandoffJson(
+      JSON.stringify({
+        version: 1,
+        mode: "new-structure-to-writing",
+        structureNote: {
+          path: "3.Structure/example.md",
+          title: "Example Title",
+          id: "S-1",
+          claim: "핵심 주장",
+        },
+        picked: [
+          { path: "2.Permanent/A.md", id: "A", claim: "A claim" },
+          { path: "2.Permanent/B.md", id: "B", claim: "B claim" },
+          { path: "2.Permanent/A.md", id: "A-dup" },
+        ],
+        project: {
+          title: "Project Title",
+          genre: "column-essay",
+          wordGoal: 3000,
+          status: "planning",
+        },
+        targetWritingFolder: "4.Writing/Longform",
+      }),
+      "_index/writing-handoff.json",
+    );
+
+    const result = await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff,
+    });
+
+    expect(result.folderPath.startsWith("4.Writing/Longform/")).toBe(true);
+    const raw = await vault.readFile(`${result.folderPath}/project.json`);
+    const parsed = JSON.parse(raw);
+
+    expect(isProjectMeta(parsed)).toBe(true);
+    expect(parsed.title).toBe("Project Title");
+    expect(parsed.genre).toBe("column-essay");
+    expect(parsed.wordGoal).toBe(3000);
+    expect(parsed.sourceNotes).toEqual([
+      "3.Structure/example.md",
+      "2.Permanent/A.md",
+      "2.Permanent/B.md",
+    ]);
+    expect(parsed.customMetadata?.bridgeMode).toBe("new-structure-to-writing");
+    expect(parsed.customMetadata?.bridgeVersion).toBe("1");
+    expect(parsed.customMetadata?.handoffPath).toBe("_index/writing-handoff.json");
+  });
+
+  it("rejects unusable writing-handoff JSON before creating a project", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({ version: 1, picked: [{ path: "2.Permanent/A.md" }] }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/structureNote\.path/);
+    expect(() =>
+      parseWritingHandoffJson("{", "_index/writing-handoff.json"),
+    ).toThrow(/JSON/);
+  });
+
+  // ── path-rejection regression (Opus-Verify W3A) ──────────────────
+
+  it("rejects absolute path in structureNote.path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "/abs/secret.md", title: "T" },
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
+  });
+
+  it("rejects parent traversal in picked[].path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.md", title: "T" },
+          picked: [{ path: "../x.md" }],
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
+  });
+
+  it("rejects parent traversal in targetWritingFolder", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.md", title: "T" },
+          targetWritingFolder: "../Writing",
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
   });
 
   it("project.json coreMessage is set from claim", async () => {

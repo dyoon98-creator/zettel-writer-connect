@@ -1,8 +1,64 @@
 {
   "type": "baseline",
-  "label": "w2-source-notes-context-consumption-20260519",
+  "label": "w3b-evidence-count-sync-20260520",
   "root": "/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect",
-  "created_at": "2026-05-19T14:07:57.859093+00:00",
-  "paths": [],
-  "records": {}
+  "created_at": "2026-05-19T14:59:35.535056+00:00",
+  "paths": [
+    "docs/planning/06-tasks.md",
+    "packages/obsidian-plugin/src/main.ts",
+    "packages/obsidian-plugin/src/structureBridge/createWritingProjectFromHandoff.ts",
+    "packages/obsidian-plugin/src/structureBridge/types.ts",
+    "packages/obsidian-plugin/tests/mainStructureBridgeCommand.test.ts",
+    "packages/obsidian-plugin/tests/structureBridge.test.ts"
+  ],
+  "records": {
+    "docs/planning/06-tasks.md": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "68d2038f27350fc7a9d805c047faefb5b75ba7d04c543f35bcf578a9b3097b4f",
+        "size": 55736
+      }
+    },
+    "packages/obsidian-plugin/src/main.ts": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "60675921a3c1f560c09517ee2eeb580f10f6b93b92937e70fbb2ee1005421fea",
+        "size": 10388
+      }
+    },
+    "packages/obsidian-plugin/src/structureBridge/createWritingProjectFromHandoff.ts": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "dafeabe61a2e51f0a4352dd27e62beca4e1ce48d978ed5cdd3f433ad186cf7d3",
+        "size": 8052
+      }
+    },
+    "packages/obsidian-plugin/src/structureBridge/types.ts": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "59167d3d179c1ff69346c8787cc98f4fed04d52a4d10420b79324fe2816c5085",
+        "size": 1484
+      }
+    },
+    "packages/obsidian-plugin/tests/mainStructureBridgeCommand.test.ts": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "6ac13b39044543637072714845a056b00b424ef303c47f50085ae8e2bf63c1eb",
+        "size": 2169
+      }
+    },
+    "packages/obsidian-plugin/tests/structureBridge.test.ts": {
+      "status": " M",
+      "fingerprint": {
+        "kind": "file",
+        "sha256": "da1934b8f7f11b3c9e4056a7224a5fc95552895d3f555e35b85f9cf4375644f2",
+        "size": 11200
+      }
+    }
+  }
 }

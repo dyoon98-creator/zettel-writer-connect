@@ -1018,7 +1018,7 @@ node --check packages/obsidian-plugin/main.js
 
 ---
 
-### [ ] W3 Handoff JSON import
+### [x] W3 Handoff JSON import
 
 **Objective**: `_index/writing-handoff.json`에서 AI 원고실 프로젝트를 생성하는 command를 구현한다.
 
@@ -1037,6 +1037,12 @@ node --check packages/obsidian-plugin/main.js
 - pnpm test pass
 
 **Suggested lane**: GPT-Executor
+
+**Completion evidence** (2026-05-19, TDD RED→GREEN):
+- `parseWritingHandoffJson(raw, "_index/writing-handoff.json")` helper 추가: `structureNote.path`, `picked[].path`, `project`, `targetWritingFolder`, mode/version을 tolerant parse하며 absolute/parent path 저장을 거부.
+- `createWritingProjectFromHandoff`가 `sourceNotes = [structureNotePath, ...picked paths]`를 order-preserving de-dupe로 기록하고, `customMetadata.bridgeMode`, `bridgeVersion`, `handoffPath`를 보존.
+- `main.ts`에 `import-writing-handoff-json` / `원고실 handoff JSON 가져오기` command 추가. 정확히 `_index/writing-handoff.json`을 읽고, missing/unusable JSON은 안전한 Korean notice 후 no-op.
+- Verification: targeted structure bridge/main command 29/29 PASS (26/26 + 3 W3A path-rejection regression); full obsidian-plugin 268/268 PASS; obsidian build exit 0; `node --check packages/obsidian-plugin/main.js` exit 0.
 
 ---
 
