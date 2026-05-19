@@ -28,6 +28,8 @@ import { ObsidianNoticeAdapter } from "./noticeAdapter";
 import { ObsidianFrontmatterAdapter } from "./frontmatterAdapter";
 import { PLUGIN_ID } from "@ai-manuscript-studio/core/browser";
 import { QuickComposeModal } from "./QuickComposeModal";
+import { parseStructureNote } from "./structureBridge/parseStructureNote";
+import { createWritingProjectFromHandoff } from "./structureBridge/createWritingProjectFromHandoff";
 
 export default class AIManuscriptStudioPlugin extends Plugin {
   settings!: AIManuscriptStudioSettings;
@@ -107,6 +109,12 @@ export default class AIManuscriptStudioPlugin extends Plugin {
       callback: () => {
         new QuickComposeModal(this.app, this).open();
       },
+    });
+
+    this.addCommand({
+      id: "import-active-structure-note",
+      name: "현재 구조노트를 원고 프로젝트로 가져오기",
+      callback: () => void this.importActiveStructureNote(),
     });
 
     this.addSettingTab(new AIManuscriptStudioSettingTab(this.app, this));
@@ -195,6 +203,50 @@ export default class AIManuscriptStudioPlugin extends Plugin {
     if (!ours || !slug) return null;
     const root = this.settings.writingFolder.replace(/\/+$/, "");
     return `${root}/${slug}`;
+  }
+
+  /** W1: 현재 활성 3.Structure 노트를 원고 프로젝트로 가져온다. */
+  private async importActiveStructureNote(): Promise<void> {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      this.noticeAdapter.warn("열린 파일이 없습니다. 3.Structure 노트를 먼저 열어 주세요.");
+      return;
+    }
+    if (!file.path.startsWith("3.Structure/")) {
+      this.noticeAdapter.warn(
+        `'${file.path}'는 3.Structure 폴더 안의 파일이 아닙니다. 구조노트만 가져올 수 있습니다.`,
+      );
+      return;
+    }
+    let markdown: string;
+    try {
+      markdown = await this.vaultAdapter.readFile(file.path);
+    } catch {
+      this.noticeAdapter.error(`파일을 읽는 중 오류가 발생했습니다: ${file.path}`);
+      return;
+    }
+    let handoff;
+    try {
+      handoff = parseStructureNote(file.path, markdown);
+    } catch (err) {
+      this.noticeAdapter.error(`구조노트 파싱 실패: ${(err as Error).message}`);
+      return;
+    }
+    const writingFolder = this.settings.writingFolder ?? "4.Writing";
+    let result;
+    try {
+      result = await createWritingProjectFromHandoff({
+        vault: this.vaultAdapter,
+        notice: this.noticeAdapter,
+        writingFolder,
+        handoff,
+      });
+    } catch (err) {
+      this.noticeAdapter.error(`프로젝트 생성 실패: ${(err as Error).message}`);
+      return;
+    }
+    await this.refreshIndexer();
+    await this.openStudio(result.folderPath);
   }
 
   /**

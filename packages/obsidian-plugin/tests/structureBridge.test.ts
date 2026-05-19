@@ -1,0 +1,228 @@
+// structureBridge.test.ts — TDD: RED first, then GREEN after implementation.
+// Tests parseStructureNote and createWritingProjectFromHandoff.
+
+import {
+  InMemoryVaultAdapter,
+  InMemoryNoticeAdapter,
+} from "@ai-manuscript-studio/core/adapters";
+import { isProjectMeta } from "@ai-manuscript-studio/core/browser";
+import { parseStructureNote } from "../src/structureBridge/parseStructureNote";
+import { createWritingProjectFromHandoff } from "../src/structureBridge/createWritingProjectFromHandoff";
+
+// ── parseStructureNote ────────────────────────────────────────────
+
+describe("parseStructureNote", () => {
+  it("rejects non-3.Structure paths with a friendly error", () => {
+    expect(() =>
+      parseStructureNote("2.Permanent/some-note.md", "# title"),
+    ).toThrow(/3\.Structure/);
+  });
+
+  it("rejects vault-root md paths (not under 3.Structure)", () => {
+    expect(() =>
+      parseStructureNote("random-note.md", "# note"),
+    ).toThrow(/3\.Structure/);
+  });
+
+  it("extracts title from H1 in content", () => {
+    const result = parseStructureNote(
+      "3.Structure/헤지펀드-전략.md",
+      "# 헤지펀드 포트폴리오 전략\n\n본문",
+    );
+    expect(result.title).toBe("헤지펀드 포트폴리오 전략");
+  });
+
+  it("falls back to filename (without extension) when no H1", () => {
+    const result = parseStructureNote(
+      "3.Structure/헤지펀드-전략.md",
+      "본문만 있고 H1 없음",
+    );
+    expect(result.title).toBe("헤지펀드-전략");
+  });
+
+  it("extracts frontmatter id, topic, and claim", () => {
+    const md = `---
+id: hf-strategy-001
+topic: 포트폴리오 리밸런싱
+claim: 분기별 리밸런싱이 장기 수익률을 높인다
+---
+
+# 헤지펀드 전략
+`;
+    const result = parseStructureNote("3.Structure/hf-strategy.md", md);
+    expect(result.id).toBe("hf-strategy-001");
+    expect(result.claim).toBe("분기별 리밸런싱이 장기 수익률을 높인다");
+  });
+
+  it("extracts claim from ## 🗂 주장 blockquote fallback", () => {
+    const md = `# 분석 노트
+
+## 🗂 주장
+
+> 데이터 기반 의사결정이 직관보다 우수하다.
+
+본문
+`;
+    const result = parseStructureNote("3.Structure/analysis.md", md);
+    expect(result.claim).toBe("데이터 기반 의사결정이 직관보다 우수하다.");
+  });
+
+  it("sets structureNotePath as vault-relative path", () => {
+    const result = parseStructureNote(
+      "3.Structure/strategy-note.md",
+      "# Strategy",
+    );
+    expect(result.structureNotePath).toBe("3.Structure/strategy-note.md");
+  });
+
+  it("includes related_notes from frontmatter as relatedNotes array", () => {
+    const md = `---
+related_notes:
+  - "[[2.Permanent/some-note]]"
+  - "3.Structure/related.md"
+---
+# title
+`;
+    const result = parseStructureNote("3.Structure/note.md", md);
+    expect(result.relatedNotes).toBeDefined();
+    expect(result.relatedNotes!.length).toBe(2);
+  });
+});
+
+// ── createWritingProjectFromHandoff ──────────────────────────────
+
+describe("createWritingProjectFromHandoff", () => {
+  function makeHandoff(overrides?: object) {
+    return {
+      structureNotePath: "3.Structure/strategy-note.md",
+      title: "헤지펀드 전략 보고서",
+      id: "hf-strategy-001",
+      claim: "분기별 리밸런싱이 장기 수익률을 높인다",
+      relatedNotes: [],
+      ...overrides,
+    };
+  }
+
+  it("creates project.json, binder.json, planning.md under 4.Writing/<slug>/", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff(),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    expect(slugs.length).toBe(1);
+    const slug = slugs[0].name;
+    const folder = `4.Writing/${slug}`;
+
+    expect(await vault.fileExists(`${folder}/project.json`)).toBe(true);
+    expect(await vault.fileExists(`${folder}/binder.json`)).toBe(true);
+    expect(await vault.fileExists(`${folder}/planning.md`)).toBe(true);
+  });
+
+  it("project.json passes isProjectMeta and sourceNotes includes structure note path", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff(),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    const slug = slugs[0].name;
+    const raw = await vault.readFile(`4.Writing/${slug}/project.json`);
+    const parsed = JSON.parse(raw);
+
+    expect(isProjectMeta(parsed)).toBe(true);
+    expect(parsed.sourceNotes).toContain("3.Structure/strategy-note.md");
+  });
+
+  it("project.json coreMessage is set from claim", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff({ claim: "테스트 핵심 주장" }),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    const raw = await vault.readFile(`4.Writing/${slugs[0].name}/project.json`);
+    const parsed = JSON.parse(raw);
+    expect(parsed.coreMessage).toBe("테스트 핵심 주장");
+  });
+
+  it("project.json customMetadata includes bridgeVersion, bridgeMode, structureNotePath", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff(),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    const raw = await vault.readFile(`4.Writing/${slugs[0].name}/project.json`);
+    const parsed = JSON.parse(raw);
+    expect(parsed.customMetadata?.bridgeVersion).toBe("1");
+    expect(parsed.customMetadata?.bridgeMode).toBe("active-structure-note");
+    expect(parsed.customMetadata?.structureNotePath).toBe(
+      "3.Structure/strategy-note.md",
+    );
+  });
+
+  it("planning.md references structure note path and claim", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff({ claim: "리밸런싱 핵심 주장" }),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    const planning = await vault.readFile(
+      `4.Writing/${slugs[0].name}/planning.md`,
+    );
+    expect(planning).toContain("3.Structure/strategy-note.md");
+    expect(planning).toContain("리밸런싱 핵심 주장");
+  });
+
+  it("chooses slug-2 when slug already exists", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+    const handoff = makeHandoff({ title: "중복 테스트" });
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff,
+    });
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff,
+    });
+
+    const slugs = (await vault.listDir("4.Writing"))
+      .filter((e) => e.isDirectory)
+      .map((e) => e.name);
+    expect(slugs.length).toBe(2);
+    expect(slugs.some((s) => s.endsWith("-2"))).toBe(true);
+  });
+});

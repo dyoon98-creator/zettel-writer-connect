@@ -948,7 +948,7 @@ node -e "const m=JSON.parse(require('fs').readFileSync('_skillpacks/comms-studio
 
 ---
 
-### [ ] W1 Active structure note import command
+### [x] W1 Active structure note import command
 
 **Objective**: AI 원고실에 "현재 구조노트를 원고 프로젝트로 가져오기" Obsidian command를 구현한다.
 
@@ -979,6 +979,13 @@ node --check packages/obsidian-plugin/main.js
 ```
 
 **Suggested lane**: GPT-Executor → Sonnet-Executor (빌드 확인) → Opus-Verify (gate)
+
+**Completion evidence** (2026-05-19, TDD RED→GREEN):
+- 신규 파일: `packages/obsidian-plugin/src/structureBridge/types.ts`, `parseStructureNote.ts`, `createWritingProjectFromHandoff.ts`
+- `packages/obsidian-plugin/src/main.ts`에 `import-active-structure-note` 커맨드 등록 ("현재 구조노트를 원고 프로젝트로 가져오기")
+- 테스트 파일: `tests/structureBridge.test.ts` (15개), `tests/mainStructureBridgeCommand.test.ts` (6개) — 20/20 PASS (targeted), 256/256 PASS (full)
+- 빌드: `pnpm build` 성공, `node --check main.js` 통과, `git diff --check` 경고 없음
+- 허용 경로만 수정: 2.Permanent/**, 3.Structure/**, VAULT_INDEX, 13.zettel-connect 미수정 확인
 
 ---
 
