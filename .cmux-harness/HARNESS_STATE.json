@@ -1,0 +1,35 @@
+{
+  "active": true,
+  "mode": "core",
+  "cwd": "/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect",
+  "workspace_id": "512E4E1A-6ECD-472C-A1B7-4EE710F93269",
+  "main_surface": "D2C4B171-7702-44CC-BFEF-476B2A9BF7C5",
+  "main_family": "hermes",
+  "primary_verifier": "Opus-Verify",
+  "secondary_verifier": "GPT-Verify",
+  "secondary_gpt_verify_allowed": false,
+  "activated_at": "2026-05-18T04:59:37Z",
+  "updated_at": "2026-05-18T04:59:37Z",
+  "stop_requires_explicit_user_command": true,
+  "deactivate_phrases": [
+    "cmux 중단",
+    "하네스 끄기",
+    "혼자 해",
+    "cmux stop",
+    "disable harness"
+  ],
+  "pane_titles": {
+    "GPT-Executor": "surface:98",
+    "Opus-Verify": "surface:96",
+    "Planning Review": "surface:95",
+    "Sonnet-Executor": "surface:97"
+  },
+  "invalid_default_panes": [],
+  "required_panes": [
+    "Sonnet-Executor",
+    "GPT-Executor",
+    "Planning Review",
+    "Opus-Verify"
+  ],
+  "reason": "activated"
+}

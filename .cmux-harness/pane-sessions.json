@@ -1,0 +1,14 @@
+{
+  "Opus-Verify": {
+    "type": "claude",
+    "session": ""
+  },
+  "GPT-Executor": {
+    "type": "hermes",
+    "session": "/Users/dongchanyoon/.hermes/sessions/20260516_172329_ce83e3.jsonl"
+  },
+  "Sonnet-Executor": {
+    "type": "claude",
+    "session": ""
+  }
+}
