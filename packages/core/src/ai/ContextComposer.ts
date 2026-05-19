@@ -104,9 +104,9 @@ export class ContextComposer {
       ? sliceH2Section(projectBody, input.sectionAnchor)
       : "";
 
-    const sourceLinks: string[] = Array.isArray(fm.source_notes)
-      ? (fm.source_notes as string[])
-      : [];
+    const sourceLinks =
+      (await this.readSiblingProjectSourceNotes(input.projectPath)) ??
+      (Array.isArray(fm.source_notes) ? (fm.source_notes as string[]) : []);
 
     const sourcesResult = await this.readSourceNotes(
       sourceLinks,
@@ -147,6 +147,38 @@ export class ContextComposer {
     };
   }
 
+  private async readSiblingProjectSourceNotes(
+    projectPath: string,
+  ): Promise<string[] | null> {
+    const projectJsonPath = siblingProjectJsonPath(projectPath);
+    try {
+      const raw = await this.deps.vault.readFile(projectJsonPath);
+      const parsed = JSON.parse(raw) as { sourceNotes?: unknown };
+      if (
+        Array.isArray(parsed.sourceNotes) &&
+        parsed.sourceNotes.length > 0 &&
+        parsed.sourceNotes.every((x) => typeof x === "string")
+      ) {
+        return parsed.sourceNotes;
+      }
+    } catch {
+      // No sibling project.json, invalid JSON, or missing sourceNotes: fall back
+      // to legacy markdown frontmatter source_notes.
+    }
+    return null;
+  }
+
+  private async resolveSourcePath(raw: string): Promise<string | null> {
+    const target = parseWikiLink(raw);
+    if (!target) return null;
+
+    if (looksLikeVaultMarkdownPath(target)) {
+      return (await this.deps.vault.fileExists(target)) ? target : null;
+    }
+
+    return this.deps.resolveWiki(target);
+  }
+
   /** Read each link target, classify, truncate per-bucket, sum-cap. */
   private async readSourceNotes(
     links: string[],
@@ -159,10 +191,7 @@ export class ContextComposer {
     const basenameOf = this.deps.basenameOf ?? defaultBasenameOf;
 
     for (const raw of links) {
-      const target = parseWikiLink(raw);
-      if (!target) continue;
-
-      const resolved = this.deps.resolveWiki(target);
+      const resolved = await this.resolveSourcePath(raw);
       if (!resolved) continue;
       // Filter out files under excluded folder prefixes.
       if (matchesExcludedFolder(resolved, excludedFolders)) continue;
@@ -220,6 +249,21 @@ export function parseWikiLink(s: string): string {
   if (!trimmed) return "";
   const inner = trimmed.replace(/^\[\[|\]\]$/g, "");
   return inner.split("|")[0].split("#")[0].trim();
+}
+
+function siblingProjectJsonPath(projectPath: string): string {
+  const normalized = projectPath.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  if (lastSlash === -1) return "project.json";
+  return `${normalized.slice(0, lastSlash)}/project.json`;
+}
+
+function looksLikeVaultMarkdownPath(target: string): boolean {
+  return (
+    /\.md$/i.test(target) &&
+    !target.startsWith("/") &&
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(target)
+  );
 }
 
 /** Slice the body of a single H2 section by header text (e.g. "초안"). */

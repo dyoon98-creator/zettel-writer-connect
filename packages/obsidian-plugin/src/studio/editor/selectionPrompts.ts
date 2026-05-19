@@ -700,20 +700,36 @@ export function extractRefinedBlock(fullText: string): string | null {
   return inner || null;
 }
 
+export interface SelectionPromptContextOptions {
+  sourceNotesContext?: string;
+}
+
+function buildSourceNotesContextBlock(
+  options: SelectionPromptContextOptions,
+): string | null {
+  const sourceNotesContext = options.sourceNotesContext?.trim();
+  if (!sourceNotesContext) return null;
+  return `## 현재 프로젝트 컨텍스트\n${sourceNotesContext}`;
+}
+
 /** 액션 본문 + 분석할 선택 텍스트를 합성. */
 export function buildSelectionPrompt(
   action: SelectionActionDef,
   selection: string,
+  options: SelectionPromptContextOptions = {},
 ): string {
+  const contextBlock = buildSourceNotesContextBlock(options);
   let body: string;
   if (action.appendSelection === false) {
     // 함수형 replacement — selection 안 `$&` 같은 special 도 그대로 리터럴 삽입.
-    body = action.promptBody.replace(
+    const promptBody = action.promptBody.replace(
       new RegExp(SELECTION_TOKEN, "g"),
       () => selection,
     );
+    body = contextBlock ? `${contextBlock}\n\n${promptBody}` : promptBody;
   } else {
-    body = `${action.promptBody}
+    const contextPrefix = contextBlock ? `\n\n${contextBlock}` : "";
+    body = `${action.promptBody}${contextPrefix}
 
 분석할 글:
 """

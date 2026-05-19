@@ -122,6 +122,41 @@ describe("ContextComposer.compose", () => {
     expect(r.contextStats.sources).toBe(1); // note-B and note-C don't resolve
   });
 
+  it("uses sibling project.json sourceNotes as canonical v2 source over scene frontmatter", async () => {
+    const vault = new InMemoryVaultAdapter();
+    vault.setFile("2.Permanent/A.md", "---\ntag: keep\n---\nA note body");
+    vault.setFile("3.Structure/B.md", "B structure body");
+    vault.setFile("2.Permanent/legacy.md", "legacy body should not be used");
+    vault.setFile(
+      "4.Writing/p/scene.md",
+      "---\ntype: writing-scene\nsource_notes: [legacy]\n---\n# Scene\n\n## 초안\nScene draft",
+    );
+    vault.setFile(
+      "4.Writing/p/project.json",
+      JSON.stringify({ sourceNotes: ["[[A]]", "3.Structure/B.md"] }),
+    );
+
+    const notice = new InMemoryNoticeAdapter();
+    const composer = new ContextComposer({
+      vault,
+      notice,
+      frontmatter: new InMemoryFrontmatterAdapter(vault),
+      resolveWiki: (target) => ({ A: "2.Permanent/A.md", legacy: "2.Permanent/legacy.md" })[target] ?? null,
+    });
+
+    const r = await composer.compose({
+      projectPath: "4.Writing/p/scene.md",
+      projectTitle: "p",
+      sectionAnchor: "초안",
+      action,
+    });
+
+    expect(r.prompt).toContain("A note body");
+    expect(r.prompt).toContain("B structure body");
+    expect(r.prompt).not.toContain("legacy body should not be used");
+    expect(r.contextStats.sources).toBe(2);
+  });
+
   it("emits [누락: name] for missing placeholder", async () => {
     const vault = new InMemoryVaultAdapter();
     const action2 = {

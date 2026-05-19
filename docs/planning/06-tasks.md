@@ -989,7 +989,7 @@ node --check packages/obsidian-plugin/main.js
 
 ---
 
-### [ ] W2 sourceNotes context consumption fix
+### [x] W2 sourceNotes context consumption fix
 
 **Objective**: project.json.sourceNotes(camelCase)가 AI 코칭 컨텍스트에 실제로 주입되는지 확인하고 v1 snake_case 혼재를 정리한다.
 
@@ -1008,6 +1008,13 @@ node --check packages/obsidian-plugin/main.js
 - pnpm test pass
 
 **Suggested lane**: GPT-Executor
+
+**Completion evidence** (2026-05-19, TDD RED→GREEN):
+- `ContextComposer`가 scene markdown path의 sibling `project.json.sourceNotes`를 v2 canonical source list로 읽고, legacy frontmatter `source_notes`는 sibling sourceNotes가 없거나 unusable일 때 fallback으로 유지.
+- source note entry는 wikilink/bare target은 기존 `resolveWiki`, vault-relative `.md` path는 direct `fileExists/readFile`로 처리.
+- `buildSelectionPrompt`에 optional `sourceNotesContext` 인자를 추가해 기본 2-arg output은 유지하고 선택 시 selected text 앞에 현재 프로젝트 컨텍스트를 포함.
+- Regression tests: `ContextComposer.test.ts`, `selectionPrompts.test.ts`, `streamingChat.test.ts` 추가/갱신.
+- Verification: core targeted 10/10 PASS; obsidian targeted 3/3 PASS; core full 287 passed / 32 skipped; obsidian full 259/259 PASS; obsidian build exit 0; `node --check packages/obsidian-plugin/main.js` exit 0.
 
 ---
 
