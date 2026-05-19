@@ -24,6 +24,10 @@ function absToRel(p: string): string {
 
 const VOICE_FOLDER_DEFAULT_REL = "_attachments/voice";
 
+function isVisibleVoiceSampleFile(name: string): boolean {
+  return !name.startsWith(".");
+}
+
 /** AppSettings.voiceFolder 절대 경로를 읽음 (없거나 빈 문자열이면 null). */
 async function readVoiceFolderAbs(): Promise<string | null> {
   const plugin = getStudioPlugin();
@@ -234,7 +238,7 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
       if (loc.rel !== null) {
         const entries = await va.listDir(loc.rel);
         return entries
-          .filter((e) => !e.isDirectory)
+          .filter((e) => !e.isDirectory && isVisibleVoiceSampleFile(e.name))
           .map((e) => {
             const absPath = `${loc.abs}/${e.name}`;
             let modifiedMs = 0;
@@ -254,7 +258,7 @@ export async function invoke<T = unknown>(cmd: string, args?: any): Promise<T> {
       try {
         const names = fsNode.readdirSync(loc.abs, { withFileTypes: true });
         return names
-          .filter((d) => d.isFile())
+          .filter((d) => d.isFile() && isVisibleVoiceSampleFile(d.name))
           .map((d) => {
             const absPath = `${loc.abs}/${d.name}`;
             let modifiedMs = 0;

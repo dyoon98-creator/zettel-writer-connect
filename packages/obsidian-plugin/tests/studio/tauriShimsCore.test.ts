@@ -158,6 +158,16 @@ describe("tauriShims/core invoke()", () => {
       expect(typeof f!.modifiedMs).toBe("number");
       expect(typeof f!.size).toBe("number");
     });
+
+    test("voice_list_files 는 숨김 캐시 파일을 샘플 목록에서 제외한다", async () => {
+      const { adapter } = makePlugin();
+      adapter.__setDir("_attachments/voice");
+      adapter.__setFile("_attachments/voice/sample.md", "내 문체 학습 자료");
+      adapter.__setFile("_attachments/voice/.style-guide.json", "{}");
+
+      const list = await invoke<{ name: string }[]>("voice_list_files");
+      expect(list.map((e) => e.name).sort()).toEqual(["sample.md"]);
+    });
   });
 
   describe("에러 처리", () => {

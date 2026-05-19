@@ -53,7 +53,7 @@ cat /Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/manifest.json 
 
 ---
 
-### [ ] C0.2 Verify voice feature in Obsidian plugin mode after install approval (manual smoke checklist)
+### [x] C0.2 Verify voice feature in Obsidian plugin mode after install approval (manual smoke checklist)
 
 **Objective**: AI 원고실의 '내 문체(Voice)' 기능이 현재 Obsidian 플러그인 모드에서 작동하는지 수동 검증한다. 설치 승인 후에만 진행.
 
@@ -88,6 +88,16 @@ cat /Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/manifest.json 
 - `_attachments/voice` 및 `_voice-samples` 폴더 부재; voice 샘플 파일 수 0. 샘플 생성·재분석 미승인으로 체크리스트 항목 6–8 PASS 불가.
 - 소스·설치 번들 분석: VoicePane UI/버튼 및 picker fallback 코드 배선 확인됨. 그러나 런타임 전체 PASS는 전용 승인 윈도우 필요.
 - **다음 결정 필요**: Obsidian 재시작 + 임시 voice 샘플 1개 배치를 승인하여 C0.2 전체 런타임 스모크 진행, 또는 C0.2 열어둔 채로 추후 진행.
+
+**Completion evidence** (2026-05-19, 대표님 승인 후 Main CDP runtime smoke):
+- 현재 빌드 `pnpm deploy:ai-manuscript`로 활성 설치본에 배포됨. source/shared/vault symlink target `main.js`, `manifest.json`, `styles.css` SHA-256 모두 일치.
+- Obsidian을 `--remote-debugging-port=9222`로 재시작하여 실제 DOM에서 `ai-manuscript-studio`/`zettel-connect` 활성화와 `manuscript-studio-view` 렌더 확인.
+- VoicePane 렌더 PASS: 폴더 경로 `/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/_attachments/voice` 표시, 샘플 파일 목록 표시.
+- 폴더 선택 fallback PASS: Obsidian 모드에서 native picker 미지원 안내와 직접 경로 입력 fallback 표시.
+- Finder 버튼 PASS: `Finder 로 열기` 클릭 경로 호출 확인.
+- 샘플 생성/재분석 PASS: `hermes-c0-2-smoke-voice-sample.md`로 `codex` 분석 실행, `.style-guide.json` 생성, version 2, sampleCount 1, firstImpression 5개, compressedPromptLength 715 확인.
+- 런타임 중 발견한 cache 노출 버그 수정: `.style-guide.json`이 voice sample 목록에 포함되어 즉시 stale 처리되던 문제를 `voice_list_files` dotfile 제외로 해결하고 회귀 테스트 추가.
+- 수정 배포 후 재시작 smoke PASS: `.style-guide.json`은 파일 목록에서 제외, `가드가 최신입니다` 표시, `현재 가드`, `압축 문체 지침`, `클립보드에 복사` 버튼 및 복사 notice 확인.
 
 ---
 
