@@ -58,7 +58,9 @@ function isVaultRelativePath(path: string): boolean {
   return (
     path.length > 0 &&
     !path.startsWith("/") &&
+    !path.includes("\\") &&
     !path.includes("..") &&
+    !/^[a-z]:[\\/]/i.test(path) &&
     !/^[a-z][a-z0-9+.-]*:\/\//i.test(path)
   );
 }

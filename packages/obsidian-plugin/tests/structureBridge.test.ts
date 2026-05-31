@@ -240,6 +240,31 @@ describe("createWritingProjectFromHandoff", () => {
     ).toThrow(/vault-relative path/);
   });
 
+  it("rejects Windows drive absolute path in picked[].path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.md", title: "T" },
+          picked: [{ path: "C:\\Users\\me\\secret.md" }],
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
+  });
+
+  it("rejects backslash path separators in structureNote.path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure\\s.md", title: "T" },
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
+  });
+
   it("rejects parent traversal in targetWritingFolder", () => {
     expect(() =>
       parseWritingHandoffJson(
