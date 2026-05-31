@@ -39,6 +39,12 @@ describe("parseStructureNote", () => {
     ).toThrow(/vault-relative path/);
   });
 
+  it("rejects directory-like structure paths without markdown extension", () => {
+    expect(() =>
+      parseStructureNote("3.Structure/strategy-folder/", "# note"),
+    ).toThrow(/vault-relative path/);
+  });
+
   it("extracts title from H1 in content", () => {
     const result = parseStructureNote(
       "3.Structure/헤지펀드-전략.md",
@@ -275,6 +281,30 @@ describe("createWritingProjectFromHandoff", () => {
         "_index/writing-handoff.json",
       ),
     ).toThrow(/vault-relative path/);
+  });
+
+  it("rejects non-structure folder in structureNote.path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "2.Permanent/s.md", title: "T" },
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/3\.Structure/);
+  });
+
+  it("rejects non-markdown structureNote.path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.txt", title: "T" },
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/\.md path/);
   });
 
   it("rejects parent traversal in targetWritingFolder", () => {

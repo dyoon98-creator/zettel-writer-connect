@@ -72,6 +72,16 @@ function assertVaultRelativePath(path: string, field: string): string {
   return path;
 }
 
+function assertStructureNotePath(path: string): string {
+  assertVaultRelativePath(path, "structureNote.path");
+  if (!path.startsWith("3.Structure/") || !path.endsWith(".md")) {
+    throw new Error(
+      "writing-handoff JSON structureNote.path는 3.Structure/ 아래의 vault-relative .md path여야 합니다",
+    );
+  }
+  return path;
+}
+
 function normalizeGenre(v: unknown): Genre | undefined {
   const value = asString(v);
   if (!value) return undefined;
@@ -118,7 +128,7 @@ export function parseWritingHandoffJson(
   if (!structureNotePath) {
     throw new Error("writing-handoff JSON structureNote.path가 필요합니다");
   }
-  assertVaultRelativePath(structureNotePath, "structureNote.path");
+  assertStructureNotePath(structureNotePath);
 
   const picked = Array.isArray(parsed.picked) ? parsed.picked : [];
   const pickedPaths = picked
