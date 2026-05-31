@@ -345,6 +345,19 @@ describe("createWritingProjectFromHandoff", () => {
     ).toThrow(/vault-relative path/);
   });
 
+  it("rejects leading dot segments in picked[].path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.md", title: "T" },
+          picked: [{ path: "./2.Permanent/A.md" }],
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
+  });
+
   it("rejects absolute handoff metadata path", () => {
     expect(() =>
       parseWritingHandoffJson(
