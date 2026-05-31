@@ -121,6 +121,7 @@ export function parseWritingHandoffJson(
   if (!isRecord(parsed)) {
     throw new Error("writing-handoff JSON은 object여야 합니다");
   }
+  const safeHandoffPath = assertVaultRelativePath(handoffPath, "handoffPath");
 
   const structureNote = parsed.structureNote;
   if (!isRecord(structureNote)) {
@@ -162,7 +163,7 @@ export function parseWritingHandoffJson(
     sourceNotes: pickedPaths,
     bridgeMode: mode,
     bridgeVersion: version,
-    handoffPath,
+    handoffPath: safeHandoffPath,
     targetWritingFolder,
     project: project
       ? {
