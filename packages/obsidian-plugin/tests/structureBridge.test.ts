@@ -27,6 +27,18 @@ describe("parseStructureNote", () => {
     ).toThrow(/3\.Structure/);
   });
 
+  it("rejects parent traversal under 3.Structure", () => {
+    expect(() =>
+      parseStructureNote("3.Structure/../secret.md", "# note"),
+    ).toThrow(/vault-relative path/);
+  });
+
+  it("rejects backslash separators under 3.Structure", () => {
+    expect(() =>
+      parseStructureNote("3.Structure\\secret.md", "# note"),
+    ).toThrow(/vault-relative path/);
+  });
+
   it("extracts title from H1 in content", () => {
     const result = parseStructureNote(
       "3.Structure/헤지펀드-전략.md",

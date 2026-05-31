@@ -52,6 +52,15 @@ function extractClaimFromBody(body: string): string | null {
   return bqMatch ? bqMatch[1].trim() : null;
 }
 
+function isSafeStructurePath(vaultRelPath: string): boolean {
+  return (
+    vaultRelPath.startsWith("3.Structure/") &&
+    !vaultRelPath.includes("\\") &&
+    !vaultRelPath.includes("..") &&
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(vaultRelPath)
+  );
+}
+
 /**
  * Parse a vault-relative 3.Structure markdown note.
  * Throws a friendly Error if the path is not under 3.Structure/.
@@ -60,9 +69,9 @@ export function parseStructureNote(
   vaultRelPath: string,
   markdown: string,
 ): ParsedStructureNote {
-  if (!vaultRelPath.startsWith("3.Structure/")) {
+  if (!isSafeStructurePath(vaultRelPath)) {
     throw new Error(
-      `parseStructureNote: 경로가 3.Structure/ 아래여야 합니다. (받은 경로: "${vaultRelPath}")`,
+      `parseStructureNote: 경로가 안전한 3.Structure/ vault-relative path여야 합니다. (받은 경로: "${vaultRelPath}")`,
     );
   }
 
