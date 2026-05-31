@@ -56,6 +56,7 @@ function isSafeStructurePath(vaultRelPath: string): boolean {
   return (
     vaultRelPath.startsWith("3.Structure/") &&
     vaultRelPath.endsWith(".md") &&
+    !vaultRelPath.includes("\0") &&
     !vaultRelPath.includes("\\") &&
     !vaultRelPath.includes("..") &&
     !/^[a-z][a-z0-9+.-]*:\/\//i.test(vaultRelPath)

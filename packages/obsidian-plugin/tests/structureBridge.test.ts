@@ -45,6 +45,12 @@ describe("parseStructureNote", () => {
     ).toThrow(/vault-relative path/);
   });
 
+  it("rejects NUL characters under 3.Structure", () => {
+    expect(() =>
+      parseStructureNote("3.Structure/secret\0.md", "# note"),
+    ).toThrow(/vault-relative path/);
+  });
+
   it("extracts title from H1 in content", () => {
     const result = parseStructureNote(
       "3.Structure/헤지펀드-전략.md",
@@ -305,6 +311,19 @@ describe("createWritingProjectFromHandoff", () => {
         "_index/writing-handoff.json",
       ),
     ).toThrow(/\.md path/);
+  });
+
+  it("rejects NUL characters in picked[].path", () => {
+    expect(() =>
+      parseWritingHandoffJson(
+        JSON.stringify({
+          version: 1,
+          structureNote: { path: "3.Structure/s.md", title: "T" },
+          picked: [{ path: "2.Permanent/A\0.md" }],
+        }),
+        "_index/writing-handoff.json",
+      ),
+    ).toThrow(/vault-relative path/);
   });
 
   it("rejects parent traversal in targetWritingFolder", () => {
