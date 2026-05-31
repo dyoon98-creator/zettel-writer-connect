@@ -177,6 +177,34 @@ describe("createWritingProjectFromHandoff", () => {
     expect(parsed.sourceNotes).toContain("3.Structure/strategy-note.md");
   });
 
+  it("adds structure note related_notes to project sourceNotes after the structure note", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+
+    await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff: makeHandoff({
+        relatedNotes: [
+          "[[2.Permanent/시장-사이클]]",
+          "2.Permanent/risk-premium.md",
+          "3.Structure/strategy-note.md",
+        ],
+      }),
+    });
+
+    const slugs = (await vault.listDir("4.Writing")).filter((e) => e.isDirectory);
+    const raw = await vault.readFile(`4.Writing/${slugs[0].name}/project.json`);
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.sourceNotes).toEqual([
+      "3.Structure/strategy-note.md",
+      "[[2.Permanent/시장-사이클]]",
+      "2.Permanent/risk-premium.md",
+    ]);
+  });
+
   it("creates project from writing-handoff JSON with structure and picked source notes deduped", async () => {
     const vault = new InMemoryVaultAdapter();
     const notice = new InMemoryNoticeAdapter();

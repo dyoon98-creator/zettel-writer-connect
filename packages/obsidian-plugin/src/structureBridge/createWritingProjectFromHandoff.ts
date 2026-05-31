@@ -258,6 +258,7 @@ export async function createWritingProjectFromHandoff(
   const folderPath = `${root}/${slug}`;
   const sourceNotes = uniqueSourceNotes([
     handoff.structureNotePath,
+    ...(handoff.relatedNotes ?? []),
     ...(handoff.sourceNotes ?? []),
   ]);
 
