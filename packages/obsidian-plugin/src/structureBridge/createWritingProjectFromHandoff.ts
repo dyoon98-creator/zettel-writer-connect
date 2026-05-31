@@ -100,6 +100,17 @@ function normalizeStatus(v: unknown): ProjectStatus | undefined {
     : undefined;
 }
 
+function normalizeWordGoal(v: unknown): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+    return Math.floor(v);
+  }
+  if (typeof v === "string" && /^\d+$/.test(v.trim())) {
+    const parsed = Number(v.trim());
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }
+  return undefined;
+}
+
 function uniqueSourceNotes(paths: string[]): string[] {
   const out: string[] = [];
   for (const path of paths) {
@@ -170,10 +181,7 @@ export function parseWritingHandoffJson(
       ? {
           title: asString(project.title),
           genre: normalizeGenre(project.genre),
-          wordGoal:
-            typeof project.wordGoal === "number" && Number.isFinite(project.wordGoal)
-              ? project.wordGoal
-              : undefined,
+          wordGoal: normalizeWordGoal(project.wordGoal),
           status: normalizeStatus(project.status),
         }
       : undefined,

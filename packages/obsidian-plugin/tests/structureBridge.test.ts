@@ -259,6 +259,37 @@ describe("createWritingProjectFromHandoff", () => {
     expect(parsed.customMetadata?.handoffPath).toBe("_index/writing-handoff.json");
   });
 
+  it("coerces numeric-string handoff wordGoal into project wordGoal", async () => {
+    const vault = new InMemoryVaultAdapter();
+    const notice = new InMemoryNoticeAdapter();
+    const handoff = parseWritingHandoffJson(
+      JSON.stringify({
+        version: 1,
+        structureNote: {
+          path: "3.Structure/string-goal.md",
+          title: "String Goal",
+        },
+        project: {
+          title: "String Goal Draft",
+          wordGoal: "5000",
+        },
+      }),
+      "_index/writing-handoff.json",
+    );
+
+    const result = await createWritingProjectFromHandoff({
+      vault,
+      notice,
+      writingFolder: "4.Writing",
+      handoff,
+    });
+
+    const raw = await vault.readFile(`${result.folderPath}/project.json`);
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.wordGoal).toBe(5000);
+  });
+
   it("rejects unusable writing-handoff JSON before creating a project", () => {
     expect(() =>
       parseWritingHandoffJson(
