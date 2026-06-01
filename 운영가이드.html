@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14.zettel-writer-connect</title>
+    <link rel="stylesheet" href="../18.runbook_html/01.운영가이드/assets/runbook.css">
+    <meta name="source" content="/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/운영가이드.md">
+    <meta name="generated" content="2026-05-27T17:49:50+09:00">
+</head>
+<body>
+    <div class="container">
+        <header class="runbook-header">
+            <h1 class="runbook-title">14.zettel-writer-connect</h1>
+            <div class="metadata">
+                <div class="metadata-item">
+                    <span class="metadata-label">생성:</span>
+                    <span class="metadata-value">2026-05-27T17:49:50+09:00</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">소스:</span>
+                    <span class="metadata-value">/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/운영가이드.md</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="toc-container">
+            <h2>목차</h2>
+            <ul class="toc">
+<li class="toc-level-1"><a href="#14zettel-writer-connect-운영가이드">14.zettel-writer-connect 운영가이드</a></li>
+  <li class="toc-level-2"><a href="#1-현재-판단-왜-14번-폴더인가">1. 현재 판단: 왜 14번 폴더인가</a></li>
+  <li class="toc-level-2"><a href="#2-프로젝트-위치와-플러그인-id">2. 프로젝트 위치와 플러그인 ID</a></li>
+  <li class="toc-level-2"><a href="#3-패키지-구조">3. 패키지 구조</a></li>
+  <li class="toc-level-2"><a href="#4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</a></li>
+  <li class="toc-level-2"><a href="#5-indexwriting-handoffjson-계약">5. `_index/writing-handoff.json` 계약</a></li>
+  <li class="toc-level-2"><a href="#6-빌드테스트-명령">6. 빌드·테스트 명령</a></li>
+  <li class="toc-level-2"><a href="#7-배포-절차">7. 배포 절차</a></li>
+  <li class="toc-level-2"><a href="#8-완료-전-검증-체크리스트">8. 완료 전 검증 체크리스트</a></li>
+  <li class="toc-level-2"><a href="#9-git-pr-운영">9. Git / PR 운영</a></li>
+  <li class="toc-level-2"><a href="#10-자주-나는-문제">10. 자주 나는 문제</a></li>
+  <li class="toc-level-2"><a href="#11-현재-완료된-작업-기준">11. 현재 완료된 작업 기준</a></li>
+  <li class="toc-level-2"><a href="#12-운영-원칙-한-줄-요약">12. 운영 원칙 한 줄 요약</a></li>
+            </ul>
+        </nav>
+
+        <main class="runbook-body">
+<h1 id="14zettel-writer-connect-운영가이드">14.zettel-writer-connect 운영가이드</h1>
+
+<p>Version: v1.2 / 2026-05-20</p>
+
+<p>이 문서는 대표님 환경에서 AI 원고실 Obsidian 플러그인을 운영·수정·검증할 때의 기준 문서다. 핵심 원칙은 간단하다.</p>
+
+<li>14번 폴더는 AI 원고실을 안전하게 분석·개조하는 별도 작업장이다.</li>
+<li>13번 Zettel Connect는 기존 지식관리 엔진의 원본이므로 함부로 섞지 않는다.</li>
+<li>실제 Obsidian vault 쓰기, deploy, restart/reload는 대표님이 명시 요청할 때만 한다.</li>
+<li>완료 주장은 테스트·빌드·Git/PR 동기화까지 확인한 뒤에만 한다.</li>
+
+<hr>
+
+<h2 id="1-현재-판단-왜-14번-폴더인가">1. 현재 판단: 왜 14번 폴더인가</h2>
+
+<p>유료로 받은 Obsidian 글쓰기 플러그인은 독립된 제품 성격이 있다. 그래서 기존 13번 Zettel Connect에 바로 합치지 않고, 14번 프로젝트에서 분석·개조·검증한다.</p>
+
+<table>
+  <tr>
+    <th>항목</th>
+    <th>판단</th>
+  </tr>
+  <tr>
+    <td>13.zettel-connect</td>
+    <td>대표님 지식창고/Zettelkasten 연결 엔진의 기존 원본. 안정성이 우선이다.</td>
+  </tr>
+  <tr>
+    <td>14.zettel-writer-connect</td>
+    <td>AI 원고실, 글쓰기 작업실, Zettel 구조노트 handoff를 다루는 별도 작업장.</td>
+  </tr>
+  <tr>
+    <td>연결 방식</td>
+    <td>직접 내부 API 결합이 아니라 `_index/writing-handoff.json` 파일 handoff 방식.</td>
+  </tr>
+  <tr>
+    <td>향후 통합</td>
+    <td>W4처럼 명시 태스크가 있을 때만 13번에 “원고실로 보내기” 버튼을 추가한다.</td>
+  </tr>
+</table>
+
+<p>금지:</p>
+
+<pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**</code></pre>
+
+<p>위 경로는 별도 허가 없이 수정하지 않는다.</p>
+
+<hr>
+
+<h2 id="2-프로젝트-위치와-플러그인-id">2. 프로젝트 위치와 플러그인 ID</h2>
+
+<table>
+  <tr>
+    <th>항목</th>
+    <th>값</th>
+  </tr>
+  <tr>
+    <td>소스 루트</td>
+    <td>`/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect`</td>
+  </tr>
+  <tr>
+    <td>AI 원고실 plugin id</td>
+    <td>`ai-manuscript-studio`</td>
+  </tr>
+  <tr>
+    <td>Zettel Connect bundle plugin id</td>
+    <td>`zettel-connect`</td>
+  </tr>
+  <tr>
+    <td>대표님 주 vault</td>
+    <td>`/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고`</td>
+  </tr>
+  <tr>
+    <td>기본 공유 설치 루트</td>
+    <td>`~/.local/obsidian-plugins/&lt;plugin-id&gt;/`</td>
+  </tr>
+</table>
+
+<p>주의: deploy 스크립트의 기본 <code>OBSIDIAN<em>VAULT</em>PLUGINS_DIR</code>는 원 개발자 <code>futurewave</code> 경로다. 대표님 vault에 배포할 때는 반드시 환경 변수를 지정한다.</p>
+
+<hr>
+
+<h2 id="3-패키지-구조">3. 패키지 구조</h2>
+
+<pre><code class="language-text">packages/core/
+  AI 원고실 공통 로직: project.json, binder, sourceNotes, AI context composer.
+
+packages/obsidian-plugin/
+  실제 AI 원고실 Obsidian 플러그인.
+  manifest id: ai-manuscript-studio
+  main.ts에 Obsidian command가 등록된다.
+
+packages/zettel-connect/
+  이 repo 안에 들어 있는 Zettel Connect bundle 사본.
+  13.zettel-connect 원본을 대체하지 않는다.
+
+apps/desktop/
+  예전 Tauri 앱 잔존 코드. 현재 운영 대상 아님.</code></pre>
+
+<hr>
+
+<h2 id="4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</h2>
+
+<p>목표는 <code>/structure</code> 스킬로 만든 구조노트를 AI 원고실에서 곧바로 원고 프로젝트로 이어 쓰는 것이다.</p>
+
+<pre><code class="language-text">1. 지식창고에서 영구노트/문헌노트 축적
+   ↓
+2. /structure 스킬로 구조노트 작성
+   예: 3.Structure/투자전략-보고서.md
+   ↓
+3. Zettel Connect 또는 Hermes가 handoff 파일 생성
+   _index/writing-handoff.json
+   ↓
+4. AI 원고실 command 실행
+   원고실 handoff JSON 가져오기
+   ↓
+5. 4.Writing/&lt;slug&gt;/ 프로젝트 생성
+   project.json / binder.json / planning.md
+   ↓
+6. AI 원고실에서 장면별 작성·수정·코칭</code></pre>
+
+<p>현재 구현된 command:</p>
+
+<table>
+  <tr>
+    <th>단계</th>
+    <th>command id</th>
+    <th>Obsidian 표시명</th>
+    <th>상태</th>
+  </tr>
+  <tr>
+    <td>W1</td>
+    <td>`import-active-structure-note`</td>
+    <td>현재 구조노트를 원고 프로젝트로 가져오기</td>
+    <td>구현 완료</td>
+  </tr>
+  <tr>
+    <td>W3</td>
+    <td>`import-writing-handoff-json`</td>
+    <td>원고실 handoff JSON 가져오기</td>
+    <td>구현 완료</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2 id="5-indexwriting-handoffjson-계약">5. <code>_index/writing-handoff.json</code> 계약</h2>
+
+<p>AI 원고실은 vault 안의 정확히 이 파일을 읽는다.</p>
+
+<pre><code class="language-text">_index/writing-handoff.json</code></pre>
+
+<p>예시:</p>
+
+<pre><code class="language-json">{
+  &quot;version&quot;: 1,
+  &quot;mode&quot;: &quot;new-structure-to-writing&quot;,
+  &quot;structureNote&quot;: {
+    &quot;path&quot;: &quot;3.Structure/투자전략-보고서.md&quot;,
+    &quot;title&quot;: &quot;투자전략 보고서&quot;,
+    &quot;id&quot;: &quot;S-001&quot;,
+    &quot;claim&quot;: &quot;핵심 주장은 여기에 적는다&quot;
+  },
+  &quot;picked&quot;: [
+    { &quot;path&quot;: &quot;2.Permanent/시장-사이클.md&quot;, &quot;id&quot;: &quot;P-001&quot; },
+    { &quot;path&quot;: &quot;2.Permanent/리스크-프리미엄.md&quot;, &quot;id&quot;: &quot;P-002&quot; }
+  ],
+  &quot;project&quot;: {
+    &quot;title&quot;: &quot;투자전략 보고서 초안&quot;,
+    &quot;genre&quot;: &quot;investment-strategy-memo&quot;,
+    &quot;wordGoal&quot;: 5000,
+    &quot;status&quot;: &quot;planning&quot;
+  },
+  &quot;targetWritingFolder&quot;: &quot;4.Writing&quot;
+}</code></pre>
+
+<p>필수/검증 규칙:</p>
+
+<li><code>structureNote.path</code>는 필수다.</li>
+<li>모든 path는 vault-relative POSIX 경로여야 한다.</li>
+<li><code>/Users/...</code> 같은 절대 경로는 reject된다.</li>
+<li><code>../</code> parent traversal은 reject된다.</li>
+<li><code>picked</code>는 없을 수 있다.</li>
+<li><code>project</code>, <code>targetWritingFolder</code>도 선택 필드다.</li>
+
+<p>생성되는 <code>project.json.sourceNotes</code>는 다음 순서다.</p>
+
+<pre><code class="language-json">{
+  &quot;sourceNotes&quot;: [
+    &quot;3.Structure/투자전략-보고서.md&quot;,
+    &quot;2.Permanent/시장-사이클.md&quot;,
+    &quot;2.Permanent/리스크-프리미엄.md&quot;
+  ]
+}</code></pre>
+
+<p>첫 번째는 구조노트, 그 뒤는 picked 영구노트다. 중복은 순서를 보존하면서 제거한다.</p>
+
+<hr>
+
+<h2 id="6-빌드테스트-명령">6. 빌드·테스트 명령</h2>
+
+<p>소스 루트:</p>
+
+<pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect</code></pre>
+
+<p>의존성:</p>
+
+<pre><code class="language-bash">pnpm install</code></pre>
+
+<p>AI 원고실 targeted 테스트:</p>
+
+<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
+  --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts</code></pre>
+
+<p>현재 기준:</p>
+
+<pre><code class="language-text">29/29 PASS</code></pre>
+
+<p>AI 원고실 전체 테스트:</p>
+
+<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test</code></pre>
+
+<p>현재 기준:</p>
+
+<pre><code class="language-text">268/268 PASS</code></pre>
+
+<p>core 테스트:</p>
+
+<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/core test</code></pre>
+
+<p>AI 원고실 빌드:</p>
+
+<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin build
+node --check packages/obsidian-plugin/main.js</code></pre>
+
+<p>전체 플러그인 빌드:</p>
+
+<pre><code class="language-bash">pnpm build:plugins</code></pre>
+
+<hr>
+
+<h2 id="7-배포-절차">7. 배포 절차</h2>
+
+<p>배포는 실제 Obsidian 런타임에 영향을 준다. 대표님이 “배포해”, “설치해”, “옵시디언에 반영해”라고 명시할 때만 실행한다.</p>
+
+<p>대표님 vault에 AI 원고실만 배포:</p>
+
+<pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect
+
+OBSIDIAN_VAULT_PLUGINS_DIR=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins&quot; \
+  pnpm deploy:ai-manuscript</code></pre>
+
+<p>두 플러그인 모두 배포:</p>
+
+<pre><code class="language-bash">OBSIDIAN_VAULT_PLUGINS_DIR=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins&quot; \
+  pnpm deploy</code></pre>
+
+<p>배포 후 Obsidian에서 필요:</p>
+
+<pre><code class="language-text">Cmd+P → Reload app without saving 또는 개발자용 다시 로드
+또는 설정 → 커뮤니티 플러그인 → 해당 플러그인 off/on</code></pre>
+
+<p>단순 reload만 요청받은 경우에는 build/deploy를 실행하지 않는다. 먼저 현재 설치·활성 상태를 읽고, 앱만 새로고침한다.</p>
+
+<pre><code class="language-bash">VAULT=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고&quot;
+
+# Obsidian 실행 여부
+pgrep -fl Obsidian || true
+
+# 플러그인 설치 경로와 symlink 확인
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+vault=Path(&#x27;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고&#x27;)
+for pid in [&#x27;ai-manuscript-studio&#x27;,&#x27;zettel-connect&#x27;,&#x27;obsidian42-brat&#x27;]:
+    p=vault/&#x27;.obsidian/plugins&#x27;/pid
+    print(pid, &#x27;exists=&#x27;, p.exists(), &#x27;is_symlink=&#x27;, p.is_symlink(), &#x27;path=&#x27;, p)
+    if p.is_symlink():
+        print(&#x27;  -&gt;&#x27;, p.resolve())
+PY
+
+# 플러그인 활성화 여부 확인
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+import json
+p=Path(&#x27;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/community-plugins.json&#x27;)
+data=json.loads(p.read_text())
+for pid in [&#x27;ai-manuscript-studio&#x27;,&#x27;zettel-connect&#x27;]:
+    print(pid, pid in data)
+PY</code></pre>
+
+<p>가장 확실한 reload는 정상 종료 후 재실행이다. 강제 종료가 아니라 AppleScript quit를 사용한다.</p>
+
+<pre><code class="language-bash">BEFORE=$(pgrep -x Obsidian || true)
+printf &#x27;before_pid=%s\n&#x27; &quot;$BEFORE&quot;
+
+osascript -e &#x27;tell application &quot;Obsidian&quot; to quit&#x27; || true
+for i in $(seq 1 20); do
+  if ! pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;quit_confirmed_after=${i}s&quot;
+    break
+  fi
+  sleep 1
+done
+
+open -a Obsidian
+for i in $(seq 1 20); do
+  if pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;reopen_confirmed_after=${i}s&quot;
+    break
+  fi
+  sleep 1
+done
+
+AFTER=$(pgrep -x Obsidian || true)
+printf &#x27;after_pid=%s\n&#x27; &quot;$AFTER&quot;</code></pre>
+
+<p>배포 후 확인:</p>
+
+<pre><code class="language-bash">ls -l &quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins/ai-manuscript-studio&quot;</code></pre>
+
+<p>완료 주장 전에는 source bundle과 vault 설치 bundle의 <code>main.js</code>, <code>manifest.json</code>, <code>styles.css</code> 존재 및 SHA를 비교한다. reload만 수행한 경우에는 “deploy는 하지 않았다”고 명시한다.</p>
+
+<hr>
+
+<h2 id="8-완료-전-검증-체크리스트">8. 완료 전 검증 체크리스트</h2>
+
+<p>문서만 고친 경우:</p>
+
+<pre><code class="language-bash">git diff --check -- 운영가이드.md
+test -s 운영가이드.md</code></pre>
+
+<p>AI 원고실 코드/테스트를 고친 경우:</p>
+
+<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
+  --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts
+pnpm --filter @ai-manuscript-studio/obsidian-plugin test
+pnpm --filter @ai-manuscript-studio/obsidian-plugin build
+node --check packages/obsidian-plugin/main.js
+git diff --check</code></pre>
+
+<p>금지 경로 확인:</p>
+
+<pre><code class="language-bash">git status --short</code></pre>
+
+<p>다음이 의도 없이 보이면 중단하고 확인한다.</p>
+
+<pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**
+지식창고/.obsidian/**
+지식창고/_index/**
+지식창고/2.Permanent/**
+지식창고/3.Structure/**
+지식창고/4.Writing/**</code></pre>
+
+<hr>
+
+<h2 id="9-git-pr-운영">9. Git / PR 운영</h2>
+
+<p>현재 GitHub 권한 구조:</p>
+
+<table>
+  <tr>
+    <th>remote</th>
+    <th>의미</th>
+    <th>권한</th>
+  </tr>
+  <tr>
+    <td>origin</td>
+    <td>`vibelabs-web/zettel-writer-connect` upstream</td>
+    <td>현재 계정은 push 불가</td>
+  </tr>
+  <tr>
+    <td>fork</td>
+    <td>`dyoon98-creator/zettel-writer-connect`</td>
+    <td>push 가능</td>
+  </tr>
+</table>
+
+<p>퍼블리시 브랜치:</p>
+
+<pre><code class="language-text">feat/ai-manuscript-studio-workflow-20260519</code></pre>
+
+<p>PR:</p>
+
+<pre><code class="language-text">PR #2
+https://github.com/vibelabs-web/zettel-writer-connect/pull/2</code></pre>
+
+<p>커밋 후 push:</p>
+
+<pre><code class="language-bash">git push fork HEAD:feat/ai-manuscript-studio-workflow-20260519</code></pre>
+
+<p>동기화 확인:</p>
+
+<pre><code class="language-bash">git fetch fork feat/ai-manuscript-studio-workflow-20260519 --quiet
+git rev-list --left-right --count HEAD...fork/feat/ai-manuscript-studio-workflow-20260519
+# 기대: 0 0
+
+gh pr view 2 --repo vibelabs-web/zettel-writer-connect --json headRefOid --jq .headRefOid
+git rev-parse HEAD
+# 두 SHA가 같아야 한다.</code></pre>
+
+<p><code>git status</code>가 다음처럼 보여도 fork/PR이 맞으면 정상이다.</p>
+
+<pre><code class="language-text">## main...origin/main [ahead N]</code></pre>
+
+<p>이유: origin은 upstream이고 현재 계정에 push 권한이 없기 때문이다.</p>
+
+<hr>
+
+<h2 id="10-자주-나는-문제">10. 자주 나는 문제</h2>
+
+<table>
+  <tr>
+    <th>증상</th>
+    <th>판단 / 조치</th>
+  </tr>
+  <tr>
+    <td>`_index/writing-handoff.json` 없음</td>
+    <td>정상 no-op. handoff 생성 전 상태다.</td>
+  </tr>
+  <tr>
+    <td>`vault-relative path` 오류</td>
+    <td>handoff JSON 안에 절대경로 또는 `..`가 들어갔다. vault-relative로 고친다.</td>
+  </tr>
+  <tr>
+    <td>command가 Obsidian에서 안 보임</td>
+    <td>deploy 후 Obsidian reload/off-on이 안 됐을 가능성.</td>
+  </tr>
+  <tr>
+    <td>AI CLI가 작동하지 않음</td>
+    <td>Codex/Claude CLI 경로와 로그인 상태를 확인한다. API key를 repo에 넣지 않는다.</td>
+  </tr>
+  <tr>
+    <td>source 수정했는데 UI가 그대로임</td>
+    <td>build/deploy/reload가 안 된 상태다. source 변경만으로 live plugin은 바뀌지 않는다.</td>
+  </tr>
+  <tr>
+    <td>`styles.css`를 고쳐도 되나</td>
+    <td>직접 고치지 않는다. source CSS를 고치고 build한다.</td>
+  </tr>
+  <tr>
+    <td>`packages/zettel-connect`를 고쳐도 되나</td>
+    <td>원칙적으로 금지. 13번 원본과의 동기화 계획이 있을 때만 한다.</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2 id="11-현재-완료된-작업-기준">11. 현재 완료된 작업 기준</h2>
+
+<table>
+  <tr>
+    <th>ID</th>
+    <th>상태</th>
+    <th>의미</th>
+  </tr>
+  <tr>
+    <td>W1</td>
+    <td>완료</td>
+    <td>활성 구조노트에서 AI 원고실 프로젝트 생성</td>
+  </tr>
+  <tr>
+    <td>W2</td>
+    <td>완료</td>
+    <td>`project.json.sourceNotes`를 AI context에 실제 주입</td>
+  </tr>
+  <tr>
+    <td>W3</td>
+    <td>완료</td>
+    <td>`_index/writing-handoff.json`에서 AI 원고실 프로젝트 생성</td>
+  </tr>
+  <tr>
+    <td>W3A</td>
+    <td>완료</td>
+    <td>절대경로/parent traversal reject regression test</td>
+  </tr>
+  <tr>
+    <td>W4</td>
+    <td>미실행</td>
+    <td>13.zettel-connect에 “원고실로 보내기” 버튼 추가. 별도 허가 필요</td>
+  </tr>
+</table>
+
+<p>W4를 할 때만 13번 repo를 건드린다. 그 전까지는 14번에서 AI 원고실을 안정화한다.</p>
+
+<hr>
+
+<h2 id="12-운영-원칙-한-줄-요약">12. 운영 원칙 한 줄 요약</h2>
+
+<p>이 프로젝트는 “기존 Zettelkasten을 망가뜨리지 않고, 구조노트를 원고 프로젝트로 안전하게 넘기는 글쓰기 작업실”이다. 13번은 지식 연결 엔진, 14번은 원고 작성 엔진으로 분리해서 운영한다.</p>
+
+        </main>
+
+        <aside class="semantic-map">
+            <h2>HTML 변환용 의미덩어리 맵</h2>
+            <div class="semantic-map-content">
+
+이 운영가이드는 HTML 변환 시 원문 순서를 그대로 펼치기보다, 아래 의미덩어리로 묶어 보여준다. 이 맵은 내용 재작성용이 아니라 `운영가이드.html` 생성기가 사용할 구조 안내다.
+
+| 의미덩어리 | 포함 내용 |
+|---|---|
+| 빠른 시작 | 현재 판단, 프로젝트 위치, 빌드·테스트 명령 |
+| 운영 사이클 | 대표님 글쓰기 워크플로우, 배포 절차, Git/PR 운영 |
+| 명령 팔레트 | pnpm install/test/build/deploy 관련 명령 |
+| 시스템/문서 지도 | 패키지 구조, 플러그인 ID, 13번 zettel-connect와의 관계 |
+| 레퍼런스 검색기 | writing-handoff.json 계약, 현재 완료된 작업 기준 |
+| 문제 해결 트리 | 자주 나는 문제 |
+| 운영 원칙/사고 학습 | 14번 폴더 분리 원칙, 배포 금지/허용 기준 |
+
+
+
+            </div>
+        </aside>
+
+        <footer class="runbook-footer">
+            <p>자동 생성됨 | 운영가이드 HTML 변환 시스템</p>
+        </footer>
+    </div>
+
+    <script src="../18.runbook_html/01.운영가이드/assets/runbook.js"></script>
+</body>
+</html>
