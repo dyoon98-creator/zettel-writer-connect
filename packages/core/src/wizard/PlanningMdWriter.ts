@@ -329,11 +329,11 @@ function extractTranscript(body: string): WizardMessage[] {
   let counter = 0;
   // pattern: "- _<iso>_ **AI** (관율)"
   const headerRe = /^-\s+_(.+?)_\s+\*\*(AI|작가|시스템)\*\*\s+\(([^)]+)\)$/;
-  const stageByLabel: Record<string, WizardStageId> = {
-    [STAGE_LABEL_KO.motive]: "motive",
-    [STAGE_LABEL_KO["audience-message"]]: "audience-message",
-    [STAGE_LABEL_KO.tone]: "tone",
-  };
+  // 모든 단계를 WIZARD_STAGES에서 파생 — 단계 누락 시 잘못된 fallback 방지
+  // (이전: structure-pick 누락으로 해당 전사 메시지가 motive로 오복원됨)
+  const stageByLabel: Record<string, WizardStageId> = Object.fromEntries(
+    WIZARD_STAGES.map((s) => [STAGE_LABEL_KO[s], s]),
+  );
   for (const raw of lines) {
     const m = raw.match(headerRe);
     if (m) {
