@@ -1,10 +1,10 @@
-# Futurewave Obsidian Plugins
+# AI Manuscript Studio
 
 이 저장소가 정식 소스 위치입니다:
 
 `/Users/futurewave/Documents/dev/obsidian-plugins`
 
-AI 원고실과 Zettel Connect를 한 pnpm 모노레포에서 관리합니다.
+AI 원고실을 관리하는 pnpm 모노레포입니다. Zettel Connect 정본은 별도 `13.zettel-connect` 프로젝트에 있습니다.
 
 ## AI 원고실 (AI Manuscript Studio) — v0.1
 
@@ -43,17 +43,15 @@ AI 원고실과 Zettel Connect를 한 pnpm 모노레포에서 관리합니다.
 |---|---|---|
 | `packages/core/` | 순수 TS — 환경 중립 비즈니스 로직 | type-only |
 | `packages/obsidian-plugin/` | **통합 플러그인** (인덱서 + 작업실 view) | `main.js` 1.16 MB |
-| `packages/zettel-connect/` | Zettel Connect 옵시디언 플러그인 | `main.js` |
 | `apps/desktop/` | (검증 후 폐기 예정) Tauri 데스크톱 앱 | `.dmg` |
 
 ## 빌드 / 테스트
 
 ```bash
 pnpm install                                                # 한 번
-pnpm run deploy                                             # 두 옵시디언 플러그인 빌드 + 배포
+pnpm run deploy                                             # AI 원고실 빌드 + 배포
 pnpm plugins:deploy                                         # 위와 동일
-pnpm deploy:ai-manuscript                                   # AI 원고실만 빌드 + 배포
-pnpm deploy:zettel                                          # Zettel Connect만 빌드 + 배포
+pnpm deploy:ai-manuscript                                   # AI 원고실 빌드 + 배포
 pnpm --filter @ai-manuscript-studio/obsidian-plugin build   # 통합 플러그인
 pnpm --filter @ai-manuscript-studio/core test               # 코어 (251 pass)
 pnpm --filter @ai-manuscript-studio/obsidian-plugin test    # 플러그인 (40 pass)
@@ -102,35 +100,26 @@ export OBSIDIAN_VAULT_PLUGINS_DIR="/absolute/path/to/vault/.obsidian/plugins"
 /Users/futurewave/Library/CloudStorage/GoogleDrive-futurewave@gmail.com/내 드라이브/03 Resources/옵시디언 볼트/futurewave/.obsidian/plugins
 ```
 
+위 기본값은 더 이상 사용하지 않습니다. 배포 명령은 반드시
+`OBSIDIAN_VAULT_PLUGINS_DIR`를 명시해야 합니다.
+
 ### 3. 빌드 및 설치
 
-두 플러그인을 모두 설치:
-
-```bash
-pnpm run deploy
-```
-
-AI 원고실만 설치:
+AI 원고실 설치:
 
 ```bash
 pnpm deploy:ai-manuscript
 ```
 
-Zettel Connect만 설치:
-
-```bash
-pnpm deploy:zettel
-```
-
-배포 스크립트는 각 플러그인을 빌드한 뒤 `main.js`, `manifest.json`,
-`styles.css`를 설치 위치에 복사합니다. 기본 설치 루트는
-`~/.local/obsidian-plugins/<plugin-id>`이며, 볼트의
-`.obsidian/plugins/<plugin-id>`는 그 위치를 가리키는 symlink로 맞춥니다.
+배포 스크립트는 AI 원고실을 빌드한 뒤 Vault의 실제
+`.obsidian/plugins/<plugin-id>/` 안에서 `main.js`, `manifest.json`,
+`styles.css`를 소스 산출물로 심볼릭 링크합니다. `data.json`과 `cache/`는
+Vault에 보존됩니다. 따라서 이후 source build는 링크 대상에 즉시 반영됩니다.
 
 ### 4. Obsidian에서 활성화
 
 1. Obsidian을 재시작하거나 커뮤니티 플러그인을 reload합니다.
-2. `설정 -> 커뮤니티 플러그인`에서 `AI 원고실` 또는 `Zettel Connect`를 켭니다.
+2. `설정 -> 커뮤니티 플러그인`에서 `AI 원고실`을 켭니다.
 3. AI 원고실에서 AI 기능을 쓰려면 플러그인 설정에 로컬 CLI 경로를 입력합니다.
 
 지원하는 AI CLI:
@@ -148,7 +137,6 @@ AI 에이전트는 사용자의 CLI가 이미 로그인되어 있는지 확인�
 ```bash
 pnpm --filter @ai-manuscript-studio/obsidian-plugin test
 pnpm --filter @ai-manuscript-studio/core test
-pnpm --filter zettel-connect build
 ```
 
 설치 후 Obsidian에서 확인할 항목:
@@ -156,7 +144,6 @@ pnpm --filter zettel-connect build
 - 우측 사이드바에 `원고 프로젝트` 패널이 뜨는지
 - `+ 첫 원고 만들기` 버튼이 보이는지
 - 원고 에디터에서 텍스트 선택 시 AI 버튼이 에디터 근처에 뜨는지
-- Zettel Connect 명령/패널이 커뮤니티 플러그인 목록에서 활성화되는지
 
 ### 보안 주의
 
@@ -186,8 +173,8 @@ packages/obsidian-plugin/
 └─ styles.css    (인덱서 + 작업실 CSS 통합)
 ```
 
-이 3 파일은 `pnpm run deploy`가 `~/.local/obsidian-plugins/<plugin-id>/` 로
-복사하고, 볼트의 `.obsidian/plugins/<plugin-id>` symlink도 맞춥니다.
+이 3 파일은 Vault 플러그인 디렉터리에서 이 저장소 산출물을 가리키는
+심볼릭 링크입니다. Vault의 `data.json`·`cache/`는 링크하지 않습니다.
 
 설치 절차: `docs/install-guide.md`
 현재 로컬 개발 레이아웃: `docs/plugin-layout.md`

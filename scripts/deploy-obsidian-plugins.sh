@@ -2,8 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-INSTALL_ROOT="${OBSIDIAN_PLUGIN_INSTALL_ROOT:-$HOME/.local/obsidian-plugins}"
-VAULT_PLUGINS_DIR="${OBSIDIAN_VAULT_PLUGINS_DIR:-/Users/futurewave/Library/CloudStorage/GoogleDrive-futurewave@gmail.com/내 드라이브/03 Resources/옵시디언 볼트/futurewave/.obsidian/plugins}"
+VAULT_PLUGINS_DIR="${OBSIDIAN_VAULT_PLUGINS_DIR:-}"
 
 usage() {
   cat <<'EOF'
@@ -11,32 +10,42 @@ Usage:
   pnpm run deploy
   pnpm plugins:deploy
   pnpm deploy:ai-manuscript
-  pnpm deploy:zettel
 
-Environment overrides:
-  OBSIDIAN_PLUGIN_INSTALL_ROOT=/path/to/shared/install/root
+Required environment:
   OBSIDIAN_VAULT_PLUGINS_DIR=/path/to/vault/.obsidian/plugins
 EOF
 }
 
-copy_plugin_files() {
+link_plugin_bundle() {
   local plugin_id="$1"
   local package_dir="$2"
-  local install_dir="$INSTALL_ROOT/$plugin_id"
+  local plugin_dir="$VAULT_PLUGINS_DIR/$plugin_id"
+  local asset source destination temporary
 
-  mkdir -p "$install_dir"
-  cp "$ROOT_DIR/$package_dir/main.js" "$install_dir/main.js"
-  cp "$ROOT_DIR/$package_dir/manifest.json" "$install_dir/manifest.json"
-
-  if [[ -f "$ROOT_DIR/$package_dir/styles.css" ]]; then
-    cp "$ROOT_DIR/$package_dir/styles.css" "$install_dir/styles.css"
+  if [[ -L "$plugin_dir" ]]; then
+    echo "Refusing to replace plugin-directory symlink: $plugin_dir" >&2
+    echo "Migrate it once to a real directory that keeps data.json/cache, then rerun deploy." >&2
+    return 2
   fi
+  mkdir -p "$plugin_dir"
 
-  if [[ -d "$VAULT_PLUGINS_DIR" ]]; then
-    ln -sfn "$install_dir" "$VAULT_PLUGINS_DIR/$plugin_id"
-  fi
+  for asset in main.js manifest.json styles.css; do
+    source="$ROOT_DIR/$package_dir/$asset"
+    destination="$plugin_dir/$asset"
+    [[ -f "$source" ]] || continue
 
-  echo "Deployed $plugin_id -> $install_dir"
+    if [[ -e "$destination" && ! -L "$destination" ]]; then
+      echo "Refusing to replace regular bundle file: $destination" >&2
+      echo "Migrate it once to a symbolic link before rerunning deploy." >&2
+      return 2
+    fi
+    temporary="$plugin_dir/.$asset.link-$$"
+    rm -f "$temporary"
+    ln -s "$source" "$temporary"
+    mv -f "$temporary" "$destination"
+  done
+
+  echo "Linked $plugin_id bundle -> $plugin_dir"
 }
 
 build_ai_manuscript() {
@@ -44,30 +53,21 @@ build_ai_manuscript() {
   pnpm --dir "$ROOT_DIR" --filter @ai-manuscript-studio/obsidian-plugin build
 }
 
-build_zettel_connect() {
-  pnpm --dir "$ROOT_DIR" --filter zettel-connect build
-}
-
 deploy_ai_manuscript() {
+  if [[ -z "$VAULT_PLUGINS_DIR" ]]; then
+    echo "OBSIDIAN_VAULT_PLUGINS_DIR is required." >&2
+    exit 2
+  fi
   build_ai_manuscript
-  copy_plugin_files "ai-manuscript-studio" "packages/obsidian-plugin"
-}
-
-deploy_zettel_connect() {
-  build_zettel_connect
-  copy_plugin_files "zettel-connect" "packages/zettel-connect"
+  link_plugin_bundle "ai-manuscript-studio" "packages/obsidian-plugin"
 }
 
 case "${1:-all}" in
   all)
     deploy_ai_manuscript
-    deploy_zettel_connect
     ;;
   ai-manuscript-studio|ai-manuscript)
     deploy_ai_manuscript
-    ;;
-  zettel-connect|zettel)
-    deploy_zettel_connect
     ;;
   -h|--help|help)
     usage

@@ -1,566 +1,2191 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>14.zettel-writer-connect</title>
-    <link rel="stylesheet" href="../18.runbook_html/01.운영가이드/assets/runbook.css">
-    <meta name="source" content="/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/운영가이드.md">
-    <meta name="generated" content="2026-05-27T17:49:50+09:00">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="runbook-html builder">
+  <meta name="source-generator" content="runbook-html markdown-it-py+nh3">
+  <meta name="markdown-it-py" content="4.2.0">
+  <meta name="nh3" content="0.3.5">
+  <meta name="generated-at" content="2026-06-15T10:14:04+09:00">
+  <meta name="theme" content="indigo">
+  <meta name="structure" content="split-brief">
+  <meta name="artifact-type" content="report">
+  <meta name="preset" content="carbon-brief">
+  <meta name="preset-name" content="카본브리프">
+  <meta name="document-model" content="balanced-report">
+  <meta name="font-mode" content="system">
+  <title>14.zettel-writer-connect 운영가이드</title>
+  <!-- font_mode=system: 외부 @import 제거, 시스템 한글 폰트 폴백 사용 -->
+  <style>
+    /* source: design/base.css */
+
+    /* base.css — CSS SSOT: 공통 구조·레이아웃·컴포넌트 규칙. 색은 var()만 참조. */
+    /* 적용 순서: 1) base.css (공통 구조·기본값) → 2) tokens.css (테마·프리셋 덮어쓰기) → 3) component CSS. */
+    /* 구조 토큰 기본값 — 테마 tokens.css가 필요한 항목만 덮어씀 */
+    :root {
+      --font-sans-ko: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', 'Segoe UI', system-ui, sans-serif;
+      --font-serif-ko: 'Noto Serif KR', 'Apple SD Gothic Neo', 'Malgun Gothic', serif;
+      --font-mono: 'SFMono-Regular', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+      --fs-xs: 0.8rem;
+      --fs-base: 1rem;
+      --fs-lg: 1.25rem;
+      --fs-xl: 1.563rem;
+      --fs-2xl: 1.953rem;
+      --fs-3xl: 2.441rem;
+      --fs-4xl: 3.052rem;
+      --fs-5xl: 3.815rem;
+      --content-width: 960px;
+      --measure-width: 70ch;
+      --shell-max-width: calc(var(--content-width) + 96px);
+      --kicker-color: var(--accent-strong);
+      --h1-color: var(--ink);
+      --h1-max-width: 13.5em;
+      --h1-size: var(--fs-5xl);
+      --h1-weight: 760;
+      --h2-weight: 780;
+      --hero-padding: 32px 0 24px;
+      --hero-border: var(--line);
+      --theme-card-shadow: var(--shadow-card);
+    }
+
+    * { box-sizing: border-box; }
+    html { font-size: 16px; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-base);
+      line-height: 1.72;
+      letter-spacing: 0;
+      text-align: start;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      background: var(--page-bg);
+      color: var(--ink);
+    }
+    a { color: var(--accent-strong); text-underline-offset: 0.18em; }
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; box-shadow: 0 0 0 6px var(--accent-soft); }
+    .report-shell { max-width: var(--shell-max-width); margin: 0 auto; padding: 72px 32px 56px; }
+    .hero { margin: 0 0 48px; padding: var(--hero-padding); border-bottom: 1px solid var(--hero-border); }
+    .kicker { margin: 0 0 16px; color: var(--kicker-color); font-size: 0.8rem; font-weight: 800; letter-spacing: 0; text-transform: uppercase; }
+    h1, h2, h3, h4 { color: var(--ink); line-height: 1.28; letter-spacing: 0; }
+    h1 { max-width: var(--h1-max-width); margin: 0; font-size: var(--h1-size); font-weight: var(--h1-weight); letter-spacing: 0; color: var(--h1-color); }
+    h2 { margin: 0; font-size: var(--fs-2xl); font-weight: var(--h2-weight); }
+    .sub, .lede { max-width: var(--measure-width); color: var(--ink-soft); font-size: var(--fs-base); line-height: 1.78; }
+    .sub { margin: 24px 0 0; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; padding: 0; list-style: none; }
+    .badge, .tag, .spec { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 10px; border: 1px solid var(--badge-line); border-radius: 16px; background: var(--badge-bg); color: var(--badge-ink); font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0; }
+    article > section, .section-block { max-width: var(--content-width); margin: 0 auto 48px; }
+    .section-title { display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 16px; align-items: start; margin: 0 0 24px; }
+    .num { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 24px; background: var(--accent); color: white; font-size: 1rem; font-weight: 850; box-shadow: 0 10px 30px var(--accent-shadow); }
+    .section-rail { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 24px; align-items: stretch; }
+    .section-rail--semantic { grid-template-columns: 72px minmax(0, 1fr); column-gap: 16px; }
+    .rail-marker { position: relative; display: flex; justify-content: center; min-height: 100%; padding-top: 8px; }
+    .rail-marker::before { content: ""; position: absolute; top: 40px; bottom: 0; left: 8px; width: 4px; border-radius: 8px; background: var(--accent-soft); }
+    .rail-marker span { position: relative; z-index: 1; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 16px; background: var(--accent); color: white; font-size: var(--fs-xs); font-weight: 850; box-shadow: 0 8px 24px var(--accent-shadow); }
+    .rail-marker--semantic { align-items: flex-start; justify-content: flex-start; }
+    .rail-marker--semantic::before { left: 8px; }
+    .rail-marker--semantic span { width: auto; min-width: 56px; height: auto; min-height: 24px; padding: 8px; border: 1px solid var(--line); background: var(--accent-soft); color: var(--accent-strong); box-shadow: none; line-height: 1.2; text-align: center; }
+    .rail-content { min-width: 0; }
+    .section-compact { padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .compact-rule { width: 48px; height: 4px; margin: 0 0 16px; border-radius: 2px; background: var(--accent); }
+    .compact-content { min-width: 0; }
+    .section-compact h2:first-child { font-size: var(--fs-xl); }
+    .section-compact p:last-child { margin-bottom: 0; }
+    .report-shell.structure-compact { max-width: 1008px; padding: 48px 24px 40px; }
+    .report-shell.structure-compact .hero { margin: 0 0 24px; }
+    .report-shell.structure-compact .section-block { max-width: none; margin: 0 auto 24px; }
+    .report-shell.structure-compact .section-compact { padding: 16px; border-radius: 8px; }
+    .report-shell.structure-compact .compact-rule { width: 32px; margin: 0 0 8px; }
+    .report-shell.structure-compact .box { margin: 0; padding: 16px; border-radius: 8px; }
+    .report-shell.structure-compact .kpi-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 0; }
+    .report-shell.structure-compact .kpi-card { padding: 8px; border-radius: 8px; }
+    .report-shell.structure-compact .kpi-label { margin: 0 0 8px; }
+    .report-shell.structure-compact .kpi-value { font-size: var(--fs-lg); }
+    .report-shell.structure-compact .kpi-sub { margin: 8px 0 0; }
+    .report-shell.structure-compact .data-table-wrap,
+    .report-shell.structure-compact .chart-wrap { margin: 0; }
+    .report-shell.structure-compact caption { padding: 8px 16px 0; }
+    .report-shell.structure-compact th,
+    .report-shell.structure-compact td { padding: 8px 16px; }
+    .report-shell.structure-compact .charts-css { margin: 8px 0; }
+    body.model-orthodox-ir .report-shell.structure-compact .section-compact--metric-source { padding: 8px 16px; box-shadow: none; }
+    body.model-orthodox-ir .report-shell.structure-compact .section-compact--metric-source .compact-rule { width: 24px; height: 2px; background: var(--line); }
+    body.model-orthodox-ir .report-shell.structure-compact .section-compact--metric-source .compact-content > ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+    body.model-orthodox-ir .report-shell.structure-compact .section-compact--metric-source .compact-content > ul > li { margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-soft); font-size: var(--fs-xs); font-weight: 800; }
+    .section-numbered-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 16px; align-items: start; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .numbered-card-marker { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 16px; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; font-variant-numeric: tabular-nums; }
+    .numbered-card-content { min-width: 0; }
+    .section-band { display: grid; grid-template-columns: minmax(96px, 128px) minmax(0, 1fr); column-gap: 24px; align-items: stretch; border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; box-shadow: var(--theme-card-shadow); }
+    .section-band-label { display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 850; font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+    .section-band-content { min-width: 0; padding: 24px; }
+    .section-band-content p:last-child { margin-bottom: 0; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands { max-width: 1088px; padding: 44px 28px 40px; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .hero { margin: 0 0 24px; padding: 16px 0; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .sub { margin: 16px 0 0; line-height: 1.5; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .meta { margin: 16px 0 0; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-block { max-width: none; margin: 0 auto 16px; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-band { display: block; border-left: 4px solid var(--accent); border-radius: 8px; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-band-label--semantic { justify-content: flex-start; padding: 8px 24px; border-bottom: 1px solid var(--line); background: transparent; font-size: var(--fs-xs); }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-band-content { padding: 16px 24px; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-band-content h2 { margin: 0 0 8px; font-size: var(--fs-xl); }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .section-band-content p { margin: 0 0 8px; line-height: 1.5; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .data-table-wrap,
+    body.model-comparison-scorecard .report-shell.structure-section-bands .chart-wrap { margin: 0; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands caption { padding: 8px 16px 0; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands th,
+    body.model-comparison-scorecard .report-shell.structure-section-bands td { padding: 8px 16px; line-height: 1.35; }
+    body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td:last-child { background: var(--accent-soft); color: var(--accent-strong); font-weight: 850; text-align: center; }
+    body.model-operating-runbook .report-shell.structure-compact,
+    body.model-reader-manual .report-shell.structure-compact { max-width: 960px; padding: 40px 32px 32px; }
+    body.model-operating-runbook .report-shell.structure-compact .hero,
+    body.model-reader-manual .report-shell.structure-compact .hero { margin: 0 0 24px; padding-bottom: 24px; }
+    body.model-operating-runbook .report-shell.structure-compact h1,
+    body.model-reader-manual .report-shell.structure-compact h1 { font-size: var(--fs-3xl); line-height: 1.18; }
+    body.model-operating-runbook .report-shell.structure-compact .sub,
+    body.model-reader-manual .report-shell.structure-compact .sub { margin: 8px 0 0; line-height: 1.5; }
+    body.model-operating-runbook .report-shell.structure-compact .meta,
+    body.model-reader-manual .report-shell.structure-compact .meta { margin: 16px 0 0; }
+    body.model-operating-runbook .report-shell.structure-compact .section-block,
+    body.model-reader-manual .report-shell.structure-compact .section-block { max-width: none; margin: 0 auto 12px; }
+    body.model-operating-runbook .report-shell.structure-compact .section-compact,
+    body.model-reader-manual .report-shell.structure-compact .section-compact { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 16px; padding: 16px; }
+    body.model-operating-runbook .report-shell.structure-compact .compact-rule,
+    body.model-reader-manual .report-shell.structure-compact .compact-rule { width: 8px; height: auto; margin: 0; align-self: stretch; border-radius: 8px; }
+    body.model-operating-runbook .report-shell.structure-compact .compact-content h2,
+    body.model-reader-manual .report-shell.structure-compact .compact-content h2 { margin: 0 0 8px; font-size: var(--fs-lg); line-height: 1.25; }
+    body.model-operating-runbook .report-shell.structure-compact .compact-content p,
+    body.model-reader-manual .report-shell.structure-compact .compact-content p { margin: 0 0 8px; line-height: 1.55; }
+    body.model-operating-runbook .report-shell.structure-compact .compact-content ul,
+    body.model-operating-runbook .report-shell.structure-compact .compact-content ol,
+    body.model-reader-manual .report-shell.structure-compact .compact-content ul,
+    body.model-reader-manual .report-shell.structure-compact .compact-content ol { margin: 0; padding-left: 20px; }
+    body.model-operating-runbook .report-shell.structure-compact .compact-content li,
+    body.model-reader-manual .report-shell.structure-compact .compact-content li { margin: 0 0 8px; }
+    .section-index-rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 24px; align-items: start; }
+    .section-index-note { position: sticky; top: 24px; display: grid; gap: 8px; padding: 16px 0 16px 16px; border-left: 4px solid var(--accent); color: var(--accent-strong); }
+    .section-index-number { font-size: var(--fs-xl); font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+    .section-index-label { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0; }
+    .section-index-content { min-width: 0; }
+    .section-chapter-spread { display: grid; grid-template-columns: 160px minmax(0, 1fr); column-gap: 32px; align-items: start; padding: 32px 0; border-top: 1px solid var(--line); }
+    .chapter-spread-marker { display: grid; gap: 8px; color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0; }
+    .chapter-spread-marker strong { display: block; color: var(--accent-strong); font-size: var(--fs-3xl); line-height: 1; font-weight: 850; font-variant-numeric: tabular-nums; }
+    .chapter-spread-content { min-width: 0; line-height: 1.8; }
+    .report-shell.structure-chapter-spread > section:first-of-type .chapter-spread-content > p:first-of-type::first-letter { float: left; margin: 0 8px 0 0; color: var(--accent-strong); font-family: var(--font-serif-ko); font-size: var(--fs-4xl); line-height: 0.9; font-weight: 700; }
+    .report-shell.structure-chapter-spread .chapter-spread-content blockquote { max-width: none; margin: 24px 0; padding: 24px 32px; border-top: 1px solid var(--line); border-right: 0; border-bottom: 1px solid var(--line); border-left: 0; border-radius: 0; background: transparent; color: var(--ink); font-family: var(--font-serif-ko); font-size: var(--fs-lg); line-height: 1.8; }
+    .report-shell.structure-chapter-spread .chapter-spread-content blockquote p { max-width: none; margin-bottom: 0; }
+    .report-shell.structure-longform-flow { max-width: 976px; }
+    .section-longform-flow { padding: 32px 0; border-top: 1px solid var(--line); }
+    .longform-flow-content { max-width: 78ch; margin: 0 auto; color: var(--ink); font-family: var(--font-serif-ko); font-size: var(--fs-md); line-height: 1.9; }
+    .longform-flow-sections { display: grid; gap: 32px; }
+    .longform-flow-section { min-width: 0; break-inside: avoid; }
+    .longform-flow-section > *:last-child { margin-bottom: 0; }
+    .report-shell.structure-longform-flow > section:first-of-type .longform-flow-section:first-child > p:first-of-type::first-letter { float: left; margin: 0 8px 0 0; color: var(--accent-strong); font-size: var(--fs-4xl); line-height: 0.9; font-weight: 700; }
+    html[lang="ko"] .report-shell.structure-longform-flow > section:first-of-type .longform-flow-section:first-child > p:first-of-type::first-letter { float: none; margin: 0; color: inherit; font-size: inherit; line-height: inherit; font-weight: inherit; }
+    .report-shell.structure-longform-flow .longform-flow-content blockquote { max-width: none; margin: 32px 0; padding: 24px 0; border-top: 1px solid var(--line); border-right: 0; border-bottom: 1px solid var(--line); border-left: 0; border-radius: 0; background: transparent; color: var(--ink); font-family: var(--font-serif-ko); font-size: var(--fs-lg); line-height: 1.85; }
+    .report-shell.structure-longform-flow .longform-flow-content blockquote p { max-width: none; margin-bottom: 0; }
+    .section-summary-stack { display: grid; gap: 16px; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .summary-stack-marker { display: inline-flex; width: fit-content; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 16px; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; font-variant-numeric: tabular-nums; }
+    .summary-stack-marker strong { color: inherit; font-size: var(--fs-xs); font-weight: 850; }
+    .summary-stack-content { min-width: 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: stretch; max-width: 1008px; padding: 32px 32px 24px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .hero { grid-column: 1 / -1; margin: 0 0 8px; padding: 0 0 16px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack h1 { font-size: var(--fs-3xl); line-height: 1.18; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .sub { margin: 8px 0 0; line-height: 1.5; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .meta { margin: 16px 0 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack > .section-block { max-width: none; margin: 0; grid-column: 1 / -1; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack > .one-pager-decision-strip { grid-column: auto; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .section-summary-stack { grid-template-columns: 104px minmax(0, 1fr); gap: 16px; padding: 16px; border-radius: 8px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .one-pager-decision-strip .section-summary-stack { height: 100%; grid-template-columns: 1fr; align-content: start; gap: 8px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-marker { align-self: start; justify-content: center; min-width: 88px; padding: 8px 16px; border-radius: 16px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .one-pager-decision-strip .summary-stack-marker { min-width: 0; width: fit-content; justify-content: flex-start; padding: 8px 16px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-marker--semantic { font-variant-numeric: normal; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-content h2 { margin: 0 0 8px; font-size: var(--fs-lg); }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-content p { margin: 0 0 8px; line-height: 1.5; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-content p:last-child { margin-bottom: 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-card { padding: 8px 16px; border-radius: 8px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-label { margin: 0 0 8px; font-size: var(--fs-xs); }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-value { font-size: var(--fs-xl); line-height: 1.18; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-delta,
+    body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-sub { margin: 8px 0 0; font-size: var(--fs-xs); line-height: 1.35; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .box { margin: 0; padding: 16px; border-radius: 8px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .box-label { margin: 0 0 8px; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .data-table-wrap { margin: 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack caption { padding: 8px 16px 0; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack th,
+    body.model-executive-one-pager .report-shell.structure-summary-stack td { padding: 8px 16px; line-height: 1.35; }
+    body.model-executive-one-pager .report-shell.structure-summary-stack .document-footer { grid-column: 1 / -1; margin-top: 16px; }
+    .section-briefing-cover { display: grid; gap: 24px; padding: 32px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .briefing-cover-marker { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); color: var(--accent-strong); }
+    .briefing-cover-marker span { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; }
+    .briefing-cover-marker strong { color: var(--accent-strong); font-size: var(--fs-4xl); line-height: 1; font-weight: 850; font-variant-numeric: tabular-nums; }
+    .briefing-cover-content { min-width: 0; }
+    .section-split-brief { display: grid; grid-template-columns: minmax(96px, 136px) minmax(0, 1fr); column-gap: 24px; align-items: stretch; padding: 24px 0; border-top: 1px solid var(--line); }
+    .split-brief-aside { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 0 0 0 16px; border: 0; border-left: 4px solid var(--accent); border-radius: 0; background: transparent; color: var(--accent-strong); }
+    .split-brief-aside span { color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; line-height: 1.4; letter-spacing: 0; }
+    .split-brief-aside strong { display: none; }
+    .split-brief-content { min-width: 0; }
+    body.model-balanced-report .report-shell.structure-split-brief { max-width: 1088px; padding: 44px 28px 40px; }
+    body.model-balanced-report .report-shell.structure-split-brief .hero { margin: 0 0 24px; padding: 20px 0 18px; }
+    body.model-balanced-report .report-shell.structure-split-brief h1 { font-size: var(--fs-4xl); line-height: 1.14; }
+    body.model-balanced-report .report-shell.structure-split-brief .sub { margin: 16px 0 0; line-height: 1.5; }
+    body.model-balanced-report .report-shell.structure-split-brief .meta { margin: 16px 0 0; }
+    body.model-balanced-report .report-shell.structure-split-brief .section-block { max-width: none; margin: 0 auto 18px; }
+    body.model-balanced-report .report-shell.structure-split-brief .section-split-brief { grid-template-columns: 136px minmax(0, 1fr); column-gap: 16px; padding: 16px 0; }
+    body.model-balanced-report .report-shell.structure-split-brief .split-brief-aside { padding: 0 0 0 16px; }
+    body.model-balanced-report .report-shell.structure-split-brief .split-brief-content h2 { margin: 0 0 8px; font-size: var(--fs-xl); }
+    body.model-balanced-report .report-shell.structure-split-brief .split-brief-content p { margin: 0 0 8px; line-height: 1.54; }
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-card { padding: 8px 16px; border-radius: 8px; }
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-label { margin: 0 0 8px; font-size: var(--fs-xs); }
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-value { font-size: var(--fs-2xl); line-height: 1.12; }
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-delta,
+    body.model-balanced-report .report-shell.structure-split-brief .kpi-sub { margin: 8px 0 0; font-size: var(--fs-xs); line-height: 1.35; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail { max-width: 1088px; padding: 44px 32px 40px; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .hero { margin: 0 0 24px; padding: 16px 0; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail h1 { font-size: var(--fs-4xl); line-height: 1.14; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .sub { margin: 16px 0 0; line-height: 1.5; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .meta { margin: 16px 0 0; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .section-block { max-width: none; margin: 0 auto 24px; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .section-evidence-rail { padding: 24px 0; column-gap: 24px; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .evidence-rail-content h2 { margin: 0 0 8px; font-size: var(--fs-xl); }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .evidence-rail-content p { margin: 0 0 8px; line-height: 1.58; }
+    body.model-evidence-dossier .report-shell.structure-evidence-rail .data-table-wrap { margin: 0; }
+    .section-dossier-stack { display: grid; grid-template-columns: minmax(112px, 152px) minmax(0, 1fr); column-gap: 24px; align-items: start; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .dossier-rail { display: grid; gap: 8px; align-content: start; min-width: 0; padding-right: 16px; border-right: 4px solid var(--accent-soft); color: var(--accent-strong); }
+    .dossier-tab { display: inline-grid; width: fit-content; gap: 4px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--page-bg); color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; font-variant-numeric: tabular-nums; }
+    .dossier-tab span { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; }
+    .dossier-tab strong { color: inherit; font-size: var(--fs-xl); line-height: 1; font-weight: 850; }
+    .dossier-rail-label { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; }
+    .dossier-ref-list { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+    .dossier-ref-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid var(--accent-soft); border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+    .dossier-content { min-width: 0; }
+    .section-evidence-rail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(184px, 264px); column-gap: 32px; align-items: start; padding: 32px 0; border-top: 1px solid var(--line); }
+    .evidence-rail-content { min-width: 0; }
+    .evidence-source-rail { position: sticky; top: 24px; display: grid; gap: 8px; min-width: 0; padding-left: 16px; border-left: 4px solid var(--accent-soft); color: var(--accent-strong); }
+    .evidence-source-title { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; }
+    .evidence-source-list { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+    .evidence-source-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid var(--accent-soft); border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+    .section-folio-strip { display: grid; grid-template-columns: minmax(112px, 144px) minmax(0, 1fr); column-gap: 32px; align-items: start; padding: 24px 0; border-top: 1px solid var(--line); }
+    .folio-strip-index { display: grid; gap: 8px; color: var(--accent-strong); }
+    .folio-strip-index span { color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; }
+    .folio-strip-index strong { color: var(--accent-strong); font-size: var(--fs-3xl); line-height: 1; font-weight: 850; font-variant-numeric: tabular-nums; }
+    .folio-strip-content { min-width: 0; padding-left: 24px; border-left: 4px solid var(--accent-soft); }
+    .report-shell.structure-two-column, .report-shell.structure-two-column-numbered, .report-shell.structure-two-column-rail { max-width: 1184px; }
+    .report-shell.structure-two-column .section-block, .report-shell.structure-two-column-numbered .section-block, .report-shell.structure-two-column-rail .section-block { max-width: none; }
+    .two-column-layout { display: grid; gap: 0; }
+    .two-column-pane { min-width: 0; }
+    .two-column-pane .section-block { margin-left: 0; margin-right: 0; }
+    body.preset-data .report-shell.structure-two-column { max-width: 1248px; padding: 56px 24px 48px; }
+    body.preset-data .report-shell.structure-two-column .hero { margin-bottom: 32px; }
+    body.preset-data .report-shell.structure-two-column .two-column-layout { column-gap: 24px; }
+    body.preset-data .report-shell.structure-two-column .section-block { margin-bottom: 24px; }
+    body.preset-data .report-shell.structure-two-column .data-table-wrap { margin: 0; border-top: 4px solid var(--accent); background: var(--card); }
+    body.preset-data .report-shell.structure-two-column table { min-width: 100%; }
+    body.preset-data .report-shell.structure-two-column caption { padding: 8px 16px; border-bottom: 1px solid var(--line); color: var(--ink); }
+    body.preset-data .report-shell.structure-two-column th,
+    body.preset-data .report-shell.structure-two-column td { padding: 8px 16px; }
+    body.preset-data .report-shell.structure-two-column .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+    body.preset-data .report-shell.structure-two-column .kpi-card { padding: 8px; border-radius: 8px; }
+    body.preset-data .report-shell.structure-two-column .chart-wrap { margin: 0; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .data-table-wrap > table { min-width: 100%; table-layout: fixed; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .data-table-wrap th,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .data-table-wrap td { padding: 8px; overflow-wrap: anywhere; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .data-table-wrap .num-cell { white-space: nowrap; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk th:first-child,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk td:first-child { width: 18%; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk th:last-child,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk td:last-child { width: 34%; overflow-wrap: normal; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk { overflow-x: visible; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk table,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tr,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk th,
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk td { display: block; width: 100%; min-width: 0; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk caption { display: block; width: 100%; box-sizing: border-box; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk thead { display: none; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody { display: grid; gap: 8px; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody tr { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 16px; row-gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody tr:last-child { border-bottom: 0; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody th[scope="row"] { grid-row: 1 / -1; padding: 8px; border-bottom: 0; border-radius: 8px; background: var(--table-head); overflow-wrap: normal; word-break: keep-all; white-space: nowrap; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody td { grid-column: 2; display: grid; grid-template-columns: minmax(48px, max-content) minmax(0, 1fr); column-gap: 8px; align-items: baseline; padding: 0; border-bottom: 0; overflow-wrap: normal; word-break: keep-all; text-align: start; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk tbody td::before { content: attr(data-label); display: inline-block; min-width: 0; margin: 0; color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; white-space: nowrap; }
+    body.preset-finance-dark .report-shell.structure-two-column-rail .table-variant-risk .num-cell { white-space: normal; text-align: start; }
+    body.preset-evidence-brief .report-shell.structure-evidence-rail .data-table-wrap > table { min-width: 100%; table-layout: fixed; }
+    body.preset-evidence-brief .report-shell.structure-evidence-rail .data-table-wrap th,
+    body.preset-evidence-brief .report-shell.structure-evidence-rail .data-table-wrap td { padding: 8px; overflow-wrap: anywhere; }
+    .h2-sub, .section-subtitle { margin: 8px 0 0; color: var(--ink-muted); font-size: var(--fs-base); line-height: 1.62; }
+    p { max-width: var(--measure-width); margin: 0 0 1.05rem; }
+    strong { font-weight: 650; color: var(--ink); }
+    em.t { font-style: normal; display: inline-flex; padding: 0.05em 0.38em; border-radius: 0.42em; background: var(--accent-soft); color: var(--accent-strong); font-weight: 750; }
+    code { font-family: var(--font-mono); font-size: 0.92em; padding: 0.08em 0.34em; border: 1px solid var(--code-line); border-radius: 0.35em; background: var(--code-bg); color: var(--code-ink); }
+    .hl, mark.highlight { --hl-c: var(--hl-yellow); padding: 0.02em 0.24em; border-radius: 0.28em; color: inherit; background-image: linear-gradient(transparent 63%, var(--hl-c) 63%); background-repeat: no-repeat; background-size: 0% 100%; animation: hl-sweep 1.05s ease-out 0.2s forwards; }
+    .hl.blue { --hl-c: var(--hl-blue); }
+    .hl.pink { --hl-c: var(--hl-pink); }
+    @keyframes hl-sweep { to { background-size: 100% 100%; } }
+    @media (prefers-reduced-motion: reduce) { .hl, mark.highlight { animation: none; background-size: 100% 100%; } * { scroll-behavior: auto; } }
+    ul, ol { padding-left: 1.35rem; margin: 0 0 1.2rem; }
+    li + li { margin-top: 0.38rem; }
+    .box, .term, .analogy, .good, .danger, .callout { margin: 24px 0; padding: 24px; border: 1px solid var(--callout-line); border-left: 5px solid var(--callout-accent); border-radius: 16px; background: var(--callout-bg); }
+    .box h4, .term h4, .analogy h4, .good h4, .danger h4 { margin: 0 0 8px; font-size: var(--fs-base); font-weight: 820; }
+    .box p:last-child, .term p:last-child, .analogy p:last-child, .good p:last-child, .danger p:last-child { margin-bottom: 0; }
+    .box-label, .callout-label, .label { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 8px; font-size: var(--fs-xs); font-weight: 850; color: var(--callout-title); }
+    .box-info { --callout-bg: var(--info-bg); --callout-line: var(--info-line); --callout-accent: var(--info); --callout-title: var(--info-ink); }
+    .box-tip { --callout-bg: var(--tip-bg); --callout-line: var(--tip-line); --callout-accent: var(--tip); --callout-title: var(--tip-ink); }
+    .box-warn { --callout-bg: var(--warn-bg); --callout-line: var(--warn-line); --callout-accent: var(--warn); --callout-title: var(--warn-ink); }
+    .box-danger, .danger { --callout-bg: var(--danger-bg); --callout-line: var(--danger-line); --callout-accent: var(--danger); --callout-title: var(--danger-ink); }
+    .box-key { --callout-bg: var(--key-bg); --callout-line: var(--key-line); --callout-accent: var(--key); --callout-title: var(--key-ink); }
+    .term { --callout-bg: var(--term-bg); --callout-line: var(--term-line); --callout-accent: var(--term-accent); --callout-title: var(--term-ink); }
+    .analogy { --callout-bg: var(--analogy-bg); --callout-line: var(--analogy-line); --callout-accent: var(--analogy-accent); --callout-title: var(--analogy-ink); }
+    .good { --callout-bg: var(--good-bg); --callout-line: var(--good-line); --callout-accent: var(--good); --callout-title: var(--good-ink); }
+    .hero-analogy { margin: 32px 0 16px; padding: 32px; border: 1px solid var(--line); border-left: 8px solid var(--accent); border-radius: 16px; background: var(--card); box-shadow: var(--shadow-soft); }
+    .hero-analogy .tag { margin-bottom: 16px; }
+    .hero-analogy p { margin-bottom: 0; font-size: var(--fs-base); }
+    .card-block, .step-card, .skill-card, .road-week, .compare > div { border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .card-block { margin: 16px 0; padding: 24px; }
+    .case-label { display: block; margin-bottom: 8px; color: var(--accent-strong); font-size: var(--fs-xs); font-weight: 850; letter-spacing: 0; text-transform: uppercase; }
+    .steps, .skill-grid, .road { display: grid; gap: 16px; margin: 24px 0; padding: 0; list-style: none; }
+    .step-card { position: relative; min-height: 80px; padding: 24px 24px 24px 72px; }
+    .num-circle, .step-number { position: absolute; left: 24px; top: 24px; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 16px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 850; }
+    .step-card h3, .skill-card h3, .road-week h4 { margin: 0 0 8px; font-size: var(--fs-base); }
+    .step-card p, .skill-card p, .road-week p { margin: 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: 1.68; }
+    .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .skill-card { padding: 24px; }
+    .skill-card .tag { margin-bottom: 8px; }
+    .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+    .compare > div { padding: 24px; }
+    .compare h3 { margin: 0 0 8px; font-size: 1rem; }
+    .compare .left { background: var(--compare-left); border-color: var(--compare-left-line); }
+    .compare .right { background: var(--compare-right); border-color: var(--compare-right-line); }
+    .road-week { padding: 24px; border-left: 8px solid var(--accent); }
+    .table-wrap { margin: 24px 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+    table { width: 100%; border-collapse: collapse; min-width: 640px; }
+    caption { padding: 16px 16px 0; color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 700; text-align: start; }
+    th, td { padding: 16px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: top; }
+    th { background: var(--table-head); color: var(--ink); font-size: var(--fs-xs); font-weight: 850; }
+    tr:last-child td { border-bottom: 0; }
+    .num-cell { text-align: end; font-variant-numeric: tabular-nums; }
+    .data-table-wrap { margin: 24px 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--theme-card-shadow); }
+    .data-table-wrap table { min-width: 680px; }
+    .data-table-wrap thead th { padding: 8px 16px; background: var(--table-head); color: var(--ink); line-height: 1.35; }
+    .data-table-wrap thead th:first-child { border-left: 4px solid var(--accent); }
+    .data-table-wrap tbody tr:nth-child(even) th[scope="row"],
+    .data-table-wrap tbody tr:nth-child(even) td { background: var(--page-bg); }
+    .data-table-wrap thead th:first-child,
+    .data-table-wrap tbody th[scope="row"],
+    .data-table-wrap tbody td:first-child { position: sticky; left: 0; min-width: 12rem; background: var(--card); z-index: 1; }
+    .data-table-wrap tbody tr:nth-child(even) th[scope="row"],
+    .data-table-wrap tbody tr:nth-child(even) td:first-child { background: var(--page-bg); }
+    .data-table-wrap thead th:first-child { z-index: 2; background: var(--table-head); }
+    .change-cell { font-weight: 820; }
+    .change-positive { color: var(--good); }
+    .change-negative { color: var(--danger); }
+    .table-variant-comparison,
+    .table-variant-ledger,
+    .table-variant-evidence,
+    .table-variant-risk,
+    .table-variant-decision { border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+    .table-variant-comparison table,
+    .table-variant-ledger table,
+    .table-variant-evidence table,
+    .table-variant-risk table,
+    .table-variant-decision table { min-width: 680px; }
+    .table-variant-comparison caption,
+    .table-variant-ledger caption,
+    .table-variant-evidence caption,
+    .table-variant-risk caption,
+    .table-variant-decision caption { padding: 16px 16px 0; font-weight: 760; }
+    .table-variant-comparison tbody th,
+    .table-variant-evidence tbody th,
+    .table-variant-risk tbody th,
+    .table-variant-decision tbody th { color: var(--accent-strong); font-weight: 850; }
+    .table-variant-ledger tbody th { color: var(--ink); font-weight: 820; }
+    .table-variant-ledger td { vertical-align: middle; }
+    .table-variant-ledger td:nth-child(2),
+    .table-variant-ledger td:nth-child(3),
+    .table-variant-ledger td:nth-child(4) { text-align: end; font-variant-numeric: tabular-nums; }
+    .table-variant-ledger td:last-child,
+    .table-variant-comparison td:last-child,
+    .table-variant-evidence td:last-child,
+    .table-variant-risk td:last-child,
+    .table-variant-decision td:last-child { color: var(--accent-strong); font-weight: 820; }
+    .table-variant-risk td:nth-child(2),
+    .table-variant-risk td:nth-child(3) { color: var(--ink); font-weight: 760; }
+    .table-variant-decision td:nth-child(2),
+    .table-variant-decision td:nth-child(3) { color: var(--ink); font-weight: 760; }
+    .data-table-wrap td.change-positive { color: var(--good); }
+    .data-table-wrap td.change-negative { color: var(--danger); }
+    .chart-wrap { margin: 24px 0; }
+    .chart-note { margin: 0 0 8px; color: var(--ink-muted); font-weight: 600; font-size: var(--fs-xs); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 24px 0; }
+    .kpi-card { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--card); }
+    .kpi-label { margin: 0 0 8px; font-size: var(--fs-xs); color: var(--ink-muted); }
+    .kpi-value { margin: 0; font-size: var(--fs-xl); font-weight: 800; letter-spacing: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .kpi-delta { margin: 0; display: inline-flex; gap: 8px; align-items: center; font-size: var(--fs-xs); font-weight: 760; }
+    /* 색은 방향(up/down)이 아니라 감정(tone)이 결정한다 — 비용률 하락처럼 '내려서 좋은' 지표를 위험색으로 칠하지 않기 위함. */
+    .kpi-delta.tone-good { color: var(--good); }
+    .kpi-delta.tone-bad { color: var(--danger); }
+    .kpi-delta.tone-neutral { color: var(--ink-muted); }
+    .kpi-sub { margin: 8px 0 0; font-size: 0.8rem; color: var(--ink-muted); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    pre { margin: 24px 0; padding: 24px; border-radius: 16px; overflow-x: auto; background: var(--code-block-bg); color: var(--code-block-ink); font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.55; white-space: pre; }
+    .ascii { background: var(--ascii-bg); color: var(--ascii-ink); border: 1px solid var(--ascii-line); }
+    .prompt-box, .quote-block, blockquote { margin: 16px 0; padding: 16px; border-left: 4px solid var(--accent); border-radius: 16px; background: var(--quote-bg); color: var(--ink-soft); font-style: normal; }
+    .try, .takeaway { margin: 48px 0 0; padding: 32px; border-radius: 16px; background: var(--takeaway-bg); color: var(--takeaway-ink); }
+    .try .label, .takeaway .label { color: var(--takeaway-label); }
+    .try h3, .takeaway h3 { margin: 0 0 8px; color: inherit; font-size: 1.25rem; }
+    .try p, .takeaway p { margin-bottom: 0; color: inherit; }
+    .document-footer { max-width: var(--content-width); margin: 48px auto 0; padding-top: 24px; border-top: 1px solid var(--line); color: var(--ink-muted); font-size: var(--fs-xs); }
+    @media (max-width: 760px) {
+      .report-shell { padding: 48px 16px; overflow-x: hidden; }
+      h1 { max-width: 100%; font-size: var(--fs-3xl); line-height: 1.16; overflow-wrap: anywhere; }
+      p, li, .box, .callout, .compact-content, .summary-stack-content, .kpi-card { overflow-wrap: anywhere; }
+      .section-block, .section-compact, .section-summary-stack, .box, .callout, .data-table-wrap, .table-wrap, .kpi-grid { max-width: 100%; min-width: 0; }
+      table,
+      .table-variant-comparison table,
+      .table-variant-ledger table,
+      .table-variant-evidence table,
+      .table-variant-risk table,
+      .table-variant-decision table { width: 100%; min-width: 100%; table-layout: fixed; }
+      th, td { padding: 8px; overflow-wrap: anywhere; }
+      .num-cell { white-space: normal; }
+      .data-table-wrap thead { display: none; }
+      .data-table-wrap table,
+      .data-table-wrap tbody,
+      .data-table-wrap tr,
+      .data-table-wrap th,
+      .data-table-wrap td { display: block; width: 100%; }
+      .data-table-wrap thead th:first-child,
+      .data-table-wrap tbody th[scope="row"],
+      .data-table-wrap tbody td:first-child { position: static; left: auto; z-index: auto; min-width: 0; }
+      .data-table-wrap caption { display: block; width: 100%; text-align: start; }
+      .data-table-wrap tbody tr { padding: 8px 0; border-bottom: 1px solid var(--line); }
+      .data-table-wrap tbody tr:last-child { border-bottom: 0; }
+      .data-table-wrap tbody th,
+      .data-table-wrap tbody td { border-bottom: 0; text-align: start; }
+      .data-table-wrap tbody th[scope="row"] { background: var(--table-head); font-weight: 850; }
+      .data-table-wrap tbody td::before { content: attr(data-label); display: block; margin: 0 0 8px; color: var(--ink-muted); font-size: var(--fs-xs); font-weight: 850; }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody th[scope="row"] { grid-column: 1 / -1; width: auto; min-width: 0; padding: 8px; border-bottom: 0; border-radius: 8px; background: var(--table-head); }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td { width: auto; min-width: 0; padding: 8px; border-bottom: 0; border-radius: 8px; background: var(--page-bg); }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td::before { margin: 0 0 8px; }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td:nth-child(2) { grid-column: 1; }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td:nth-child(3) { grid-column: 2; text-align: center; }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td:nth-child(4) { grid-column: 3; text-align: end; }
+      body.model-comparison-scorecard .report-shell.structure-section-bands .table-variant-comparison tbody td:nth-child(5) { grid-column: 1 / -1; text-align: center; background: var(--accent-soft); color: var(--accent-strong); font-weight: 850; }
+      .section-title { grid-template-columns: 40px minmax(0, 1fr); }
+      .num { width: 40px; height: 40px; }
+      .section-numbered-card { grid-template-columns: 40px minmax(0, 1fr); padding: 24px; }
+      .numbered-card-marker { width: 32px; height: 32px; border-radius: 16px; }
+      .section-rail { grid-template-columns: 1fr; row-gap: 16px; }
+      .rail-marker { justify-content: flex-start; min-height: 24px; padding-top: 0; }
+      .rail-marker::before { top: 8px; right: 0; bottom: auto; left: 32px; width: auto; height: 4px; }
+      .section-band, .section-index-rail, .section-chapter-spread, .section-split-brief, .section-dossier-stack, .section-folio-strip { grid-template-columns: 1fr; }
+      .section-band-label { justify-content: flex-start; padding: 16px 24px; }
+      .section-index-note { position: static; top: auto; grid-template-columns: auto auto; width: fit-content; padding: 0 0 0 16px; }
+      .section-chapter-spread { row-gap: 16px; padding: 24px 0; }
+      .longform-flow-content { max-width: none; }
+      body.preset-editorial-serif .report-shell.structure-longform-flow > section:first-of-type .longform-flow-section:first-child > p:first-of-type::first-letter { float: none; margin: 0; color: inherit; font-size: inherit; line-height: inherit; font-weight: inherit; }
+      .report-shell.structure-compact .section-compact { padding: 16px; }
+      .report-shell.structure-compact .box { padding: 16px; }
+      .report-shell.structure-compact .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .section-briefing-cover { padding: 24px; }
+      .briefing-cover-marker { align-items: start; flex-direction: column; gap: 8px; }
+      .section-split-brief, .section-dossier-stack, .section-folio-strip { row-gap: 16px; }
+      .split-brief-aside { padding-left: 0; padding-top: 14px; border-left: 0; border-top: 4px solid var(--accent); }
+      body.model-balanced-report .report-shell.structure-split-brief .section-split-brief { grid-template-columns: 1fr; }
+      body.model-balanced-report .report-shell.structure-split-brief .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      body.model-evidence-dossier .report-shell.structure-evidence-rail { padding: 32px 16px 24px; }
+      .dossier-rail { padding-right: 0; padding-bottom: 16px; border-right: 0; border-bottom: 4px solid var(--accent-soft); }
+      .section-evidence-rail { grid-template-columns: 1fr; row-gap: 16px; }
+      .evidence-source-rail { position: static; padding-left: 0; padding-top: 14px; border-left: 0; border-top: 4px solid var(--accent-soft); }
+      body.model-evidence-dossier .report-shell.structure-evidence-rail .section-evidence-rail { row-gap: 8px; }
+      body.model-evidence-dossier .report-shell.structure-evidence-rail .evidence-source-rail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; border-left: 4px solid var(--accent-soft); border-top: 0; border-radius: 8px; background: var(--card); }
+      body.model-evidence-dossier .report-shell.structure-evidence-rail .evidence-source-title { margin-right: 8px; }
+      body.model-evidence-dossier .report-shell.structure-evidence-rail .evidence-source-list { gap: 8px; }
+      .folio-strip-content { padding-left: 16px; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack { padding: 32px 16px 24px; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack { grid-template-columns: 1fr; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack > .one-pager-decision-strip { grid-column: 1; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack .section-summary-stack { grid-template-columns: 1fr; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack .summary-stack-marker { min-width: 0; width: fit-content; justify-content: flex-start; }
+      body.model-executive-one-pager .report-shell.structure-summary-stack .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      body.preset-finance-dark .report-shell.structure-two-column-rail .data-table-wrap .num-cell { white-space: normal; }
+      .skill-grid, .compare { grid-template-columns: 1fr; }
+      .step-card { padding-left: 64px; }
+    }
+    @media (min-width: 960px) {
+      .report-shell.structure-two-column .two-column-layout, .report-shell.structure-two-column-numbered .two-column-layout, .report-shell.structure-two-column-rail .two-column-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; align-items: start; }
+      .report-shell.structure-longform-flow .longform-flow-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 0; align-items: start; }
+      .report-shell.structure-longform-flow .longform-flow-section:nth-child(2n+1) { padding-right: 40px; }
+      .report-shell.structure-longform-flow .longform-flow-section:nth-child(2n) { padding-left: 40px; border-left: 1px solid var(--line); }
+    }
+    @media print {
+      body { background: var(--print-page-bg); color: var(--print-ink); }
+      .report-shell { max-width: 784px; padding: 32px 0; }
+      .hero, .section-block, .section-compact, .section-longform-flow, .section-briefing-cover, .section-evidence-rail,
+      .card-block, .step-card, .skill-card, .box, .term, .analogy, .good, .danger,
+      .kpi-card, .chart-wrap, .composition-panel, .table-wrap, .data-table-wrap,
+      .diagram-wrap, .diagram-fallback-table-wrap, blockquote {
+        break-inside: avoid;
+        box-shadow: none;
+      }
+    }
+
+    /* source: design/presets/carbon-brief/tokens.css */
+
+    /* presets/carbon-brief/tokens.css — 카본브리프 프리셋. 기업형 데이터 제품 문서 톤으로 렌더한다. */
+    /* IBM Plex Sans KR는 assets/fonts/ibm-plex-sans-kr 근거를 폰트 스택에만 연결하고, 폰트 파일 임베드는 별도 font-mode에서 다룬다. */
+    :root {
+      --font-sans-ko: 'IBM Plex Sans KR', 'IBM Plex Sans', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', 'Segoe UI', system-ui, sans-serif;
+
+      /* 색 팔레트 */
+      --page-bg: #f4f4f4;
+      --card: #ffffff;
+      --print-page-bg: #ffffff;
+      --print-ink: #161616;
+      --ink: #161616;
+      --ink-soft: #525252;
+      --ink-muted: #6f6f6f;
+      --line: #c6c6c6;
+      --accent: #0043ce;
+      --accent-strong: #002d9c;
+      --accent-soft: #edf5ff;
+      --accent-shadow: rgba(0, 67, 206, 0.14);
+      --badge-bg: #edf5ff;
+      --badge-line: #a6c8ff;
+      --badge-ink: #002d9c;
+      --code-bg: #f2f4f8;
+      --code-line: #c1c7cd;
+      --code-ink: #002d9c;
+      --code-block-bg: #161616;
+      --code-block-ink: #f4f4f4;
+      --ascii-bg: #161616;
+      --ascii-ink: #f4f4f4;
+      --ascii-line: #525252;
+      --shadow-soft: none;
+      --shadow-card: none;
+      --hl-yellow: #fddc69;
+      --hl-blue: #d0e2ff;
+      --hl-pink: #ffd6e8;
+      --info: #00539a; --info-bg: #e5f6ff; --info-line: #82cfff; --info-ink: #003a6d;
+      --tip: #0e6027; --tip-bg: #defbe6; --tip-line: #6fdc8c; --tip-ink: #044317;
+      --warn: #8a3800; --warn-bg: #fff4ce; --warn-line: #f1c21b; --warn-ink: #684e00;
+      --danger: #a2191f; --danger-bg: #fff1f1; --danger-line: #ffb3b8; --danger-ink: #750e13;
+      --key: #491d8b; --key-bg: #f6f2ff; --key-line: #d4bbff; --key-ink: #31135e;
+      --term-accent: #00539a; --term-bg: #e5f6ff; --term-line: #82cfff; --term-ink: #003a6d;
+      --analogy-accent: #491d8b; --analogy-bg: #f6f2ff; --analogy-line: #d4bbff; --analogy-ink: #31135e;
+      --good: #0e6027; --good-bg: #defbe6; --good-line: #6fdc8c; --good-ink: #044317;
+      --compare-left: #fff1f1; --compare-left-line: #ffb3b8;
+      --compare-right: #e5f6ff; --compare-right-line: #82cfff;
+      --table-head: #e0e0e0;
+      --quote-bg: #ffffff;
+      --takeaway-bg: #161616;
+      --takeaway-ink: #f4f4f4;
+      --takeaway-label: #78a9ff;
+
+      /* 카본브리프 구조 토큰 */
+      --shell-max-width: 1040px;
+      --content-width: 960px;
+      --measure-width: 72ch;
+      --kicker-color: var(--accent-strong);
+      --h1-color: var(--ink);
+      --h1-max-width: 18em;
+      --h1-size: var(--fs-3xl);
+      --h1-weight: 700;
+      --h2-weight: 700;
+      --hero-padding: 16px 0 24px;
+      --hero-border: #c6c6c6;
+      --theme-card-shadow: none;
+      --radius-card: 4px;
+      --radius-small: 2px;
+      --radius-pill: 4px;
+
+      /* 차트 시리즈 색 — Carbon 데이터 시각화 categorical/sequential 방향 */
+      --chart-1: #6929c4;
+      --chart-2: #1192e8;
+      --chart-3: #005d5d;
+      --chart-4: #9f1853;
+      --chart-5: #fa4d56;
+      --chart-6: #198038;
+      --chart-grid: #c6c6c6;
+      --chart-muted: #6f6f6f;
+      --chart-positive: #198038;
+      --chart-negative: #a2191f;
+    }
+
+    /* source: design/components/chart/charts.css */
+
+    /* charts.css — Charts.css 방식 인디고 토큰 기반 순수 CSS 차트 subset */
+    /* MIT: 방식 참조 from Charts.css (https://chartscss.org) © Rami Yushuvaev, MIT License */
+    /* Asset provenance: assets/charting/charts-css/npm/MANIFEST.json */
+    /* 색은 전부 --chart-1..4 토큰 참조. 스크립트 태그 없음. */
+
+    .charts-css {
+      display: block;
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+    }
+    .charts-css caption {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .charts-css thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .charts-css tbody { display: flex; }
+    .charts-css tbody tr { position: relative; display: flex; }
+    .charts-css tbody td {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .charts-css tbody td::before {
+      content: '';
+      display: block;
+      background: var(--chart-1);
+    }
+    /* 시리즈 색 자동 배정 */
+    .charts-css.multi-series tbody tr:nth-child(2) td::before { background: var(--chart-2); }
+    .charts-css.multi-series tbody tr:nth-child(3) td::before { background: var(--chart-3); }
+    .charts-css.multi-series tbody tr:nth-child(4) td::before { background: var(--chart-4); }
+    .charts-css tbody td:nth-child(2)::before { background: var(--chart-2); }
+    .charts-css tbody td:nth-child(3)::before { background: var(--chart-3); }
+    .charts-css tbody td:nth-child(4)::before { background: var(--chart-4); }
+
+    /* 데이터 라벨 */
+    .charts-css .data-label {
+      position: absolute;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .chart-fallback-sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .chart-svg-panel {
+      margin: 0 0 16px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--card) 92%, var(--accent-soft));
+    }
+    .chart-svg {
+      display: block;
+      width: 100%;
+      max-height: 240px;
+    }
+    .chart-axis {
+      stroke: var(--line);
+      stroke-width: 2;
+    }
+    .chart-line-path {
+      fill: none;
+      stroke: var(--chart-1);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .chart-area-fill {
+      fill: color-mix(in srgb, var(--chart-1) 18%, transparent);
+    }
+    .chart-point {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 3;
+    }
+    .chart-reference-line {
+      stroke: var(--chart-negative);
+      stroke-width: 2;
+      stroke-dasharray: 7 7;
+    }
+    .chart-reference-label {
+      fill: var(--chart-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .chart-reference-note {
+      margin: -6px 0 12px;
+      color: var(--chart-muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .chart-cumulative-bars {
+      min-height: 176px;
+    }
+    .chart-zero-baseline {
+      stroke: var(--line);
+      stroke-width: 2;
+    }
+    .chart-cumulative-bar {
+      fill: var(--bar-color, var(--chart-1));
+      opacity: var(--bar-opacity, 1);
+      filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--bar-color, var(--chart-1)) 20%, transparent));
+    }
+    .chart-bar-value {
+      fill: var(--ink);
+      font-family: var(--font-sans-ko);
+      font-size: 0.8rem;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+    .chart-bar-label {
+      fill: var(--ink-muted);
+      font-family: var(--font-sans-ko);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    /* ── Bar (가로 막대) ── */
+    .charts-css.bar tbody {
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    .charts-css.bar tbody tr {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+    }
+    .charts-css.bar tbody th {
+      width: 104px;
+      min-width: 104px;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 760;
+      color: var(--ink-soft);
+      padding: 6px 10px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      box-sizing: border-box;
+    }
+    .charts-css.bar tbody tr.chart-bar-row--top th.chart-bar-label-box {
+      color: var(--ink);
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+      background: color-mix(in srgb, var(--accent-soft) 52%, transparent);
+      font-weight: 850;
+    }
+    .charts-css.bar tbody td {
+      flex: 1;
+      height: 32px;
+      background: color-mix(in srgb, var(--line) 24%, transparent);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 42%, transparent);
+    }
+    .charts-css.bar tbody td::before {
+      height: 100%;
+      width: calc(var(--size, 0) * 100%);
+      border-radius: inherit;
+      background: color-mix(in srgb, var(--chart-muted) 34%, var(--line));
+      transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
+    }
+    .charts-css.bar tbody td.chart-bar-cell--top::before {
+      background: var(--accent);
+      box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+    .charts-css.bar tbody td .chart-bar-value-label {
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      min-width: 4ch;
+      text-align: end;
+      color: var(--ink-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .charts-css.bar tbody td.chart-bar-cell--top .chart-bar-value-label {
+      color: var(--ink);
+      font-weight: 850;
+    }
+
+    /* ── Column (세로 막대) ── */
+    .charts-css.column {
+      height: 200px;
+    }
+    .charts-css.column tbody {
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 6px;
+      height: 100%;
+      padding: 0 8px;
+      border-bottom: 2px solid var(--line);
+    }
+    .charts-css.column tbody tr {
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+    }
+    .charts-css.column tbody th {
+      order: 2;
+      font-size: 0.77rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-top: 6px;
+      text-align: center;
+    }
+    .charts-css.column tbody td {
+      order: 1;
+      width: 100%;
+      height: 100%;
+      align-items: flex-end;
+    }
+    .charts-css.column tbody td::before {
+      width: 100%;
+      height: calc(var(--size, 0) * 100%);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.45s cubic-bezier(0.4,0,0.2,1);
+    }
+    .charts-css.column tbody td .data-label {
+      bottom: calc(var(--size, 0) * 100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* ── Line ── */
+    .charts-css.line tbody {
+      flex-direction: row;
+      align-items: stretch;
+      height: 160px;
+      border-bottom: 2px solid var(--line);
+      border-left: 2px solid var(--line);
+      padding: 0;
+      position: relative;
+    }
+    .charts-css.line tbody tr {
+      position: relative;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+    }
+    .charts-css.line tbody th {
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
+    .charts-css.line tbody td {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--chart-1);
+      border: 2px solid var(--card);
+      box-shadow: 0 0 0 2px var(--chart-1);
+      bottom: calc(var(--size, 0) * 100%);
+      left: 50%;
+      transform: translate(-50%, 50%);
+    }
+    .charts-css.line tbody td::before { display: none; }
+
+    /* ── Area ── */
+    .charts-css.area tbody {
+      flex-direction: row;
+      align-items: stretch;
+      height: 160px;
+      border-bottom: 2px solid var(--line);
+      border-left: 2px solid var(--line);
+    }
+    .charts-css.area tbody tr {
+      flex: 1;
+      position: relative;
+      flex-direction: column;
+    }
+    .charts-css.area tbody th {
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
+    .charts-css.area tbody td {
+      position: absolute;
+      inset: 0;
+      bottom: 0;
+      background: none;
+    }
+    .charts-css.area tbody td::before {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: calc(var(--size, 0) * 100%);
+      background: linear-gradient(to top, color-mix(in srgb, var(--chart-1) 22%, transparent), color-mix(in srgb, var(--chart-1) 6%, transparent));
+      border-top: 2px solid var(--chart-1);
+    }
+
+    /* ── Composition SVG charts ── */
+    .composition-panel {
+      display: grid;
+      grid-template-columns: minmax(184px, 248px) 1fr;
+      gap: 24px;
+      align-items: center;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: var(--theme-card-shadow);
+    }
+    .composition-chart-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .composition-slice {
+      stroke-linecap: butt;
+    }
+    .chart-stroke-1 { stroke: var(--chart-1); }
+    .chart-stroke-2 { stroke: var(--chart-2); }
+    .chart-stroke-3 { stroke: var(--chart-3); }
+    .chart-stroke-4 { stroke: var(--chart-4); }
+    .donut-hole { fill: var(--card); }
+    .donut-center {
+      fill: var(--accent);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-lg);
+      font-weight: 800;
+    }
+    .donut-sub {
+      fill: var(--ink-muted);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-xs);
+    }
+    .composition-data figcaption {
+      margin: 0 0 16px;
+      color: var(--ink);
+      font-weight: 760;
+    }
+    .composition-legend {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 16px;
+      padding: 0;
+      list-style: none;
+    }
+    .composition-legend li {
+      display: grid;
+      grid-template-columns: 16px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      color: var(--ink-soft);
+      font-size: var(--fs-sm);
+    }
+    .composition-legend .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 8px;
+    }
+    .chart-color-1 { background: var(--chart-1); }
+    .chart-color-2 { background: var(--chart-2); }
+    .chart-color-3 { background: var(--chart-3); }
+    .chart-color-4 { background: var(--chart-4); }
+    .chart-composition-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+    .chart-composition-table caption {
+      caption-side: bottom;
+      padding: 8px 0 0;
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: start;
+    }
+    .chart-composition-table th,
+    .chart-composition-table td {
+      padding: 8px;
+      border-top: 1px solid var(--line);
+      text-align: start;
+    }
+    .chart-composition-table td {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    /* ── Scatter / Heatmap static charts ── */
+    .chart-scatter figcaption,
+    .chart-heatmap caption {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-weight: 760;
+    }
+    .scatter-panel,
+    .heatmap-table-wrap {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      overflow-x: auto;
+    }
+    .scatter-svg {
+      display: block;
+      width: 100%;
+      min-width: 360px;
+      max-height: 280px;
+    }
+    .chart-grid {
+      stroke: var(--chart-grid, var(--line));
+      stroke-width: 1;
+      stroke-dasharray: 4 5;
+    }
+    .chart-axis-label {
+      fill: var(--ink-muted);
+      font-family: var(--font-sans-ko);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .scatter-point {
+      fill: var(--chart-1);
+      stroke: var(--card);
+      stroke-width: 2;
+    }
+    .chart-scatter-table {
+      margin-top: 12px;
+    }
+    .chart-scatter-table caption {
+      caption-side: bottom;
+      padding: 8px 0 0;
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: start;
+    }
+    .chart-scatter-table,
+    .chart-heatmap-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+    .chart-scatter-table th,
+    .chart-scatter-table td,
+    .chart-heatmap-table th,
+    .chart-heatmap-table td {
+      padding: 8px;
+      border-top: 1px solid var(--line);
+      text-align: start;
+    }
+    .chart-scatter-table td,
+    .chart-heatmap-table td {
+      font-variant-numeric: tabular-nums;
+    }
+    .chart-heatmap-table td {
+      min-width: 72px;
+      text-align: center;
+      border: 1px solid color-mix(in srgb, var(--chart-1) calc(var(--heat, .2) * 48%), var(--line));
+      background: color-mix(in srgb, var(--chart-1) calc(var(--heat, .2) * 62%), var(--card));
+      font-weight: 720;
+    }
+
+    /* ── Diagram timeline ── */
+    .diagram-wrap {
+      margin: 18px 0;
+    }
+    .diagram-wrap figcaption {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-weight: 760;
+    }
+    .diagram-svg-panel {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: var(--theme-card-shadow);
+      overflow-x: auto;
+    }
+    .diagram-svg {
+      display: block;
+      width: 100%;
+      min-width: 520px;
+      height: auto;
+    }
+    .diagram-axis,
+    .diagram-tick {
+      stroke: var(--line);
+      stroke-width: 2;
+    }
+    .diagram-node {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 3;
+    }
+    .diagram-flow-node {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-node--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+    }
+    .diagram-flow-node--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+    }
+    .diagram-arrow {
+      stroke: var(--line);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+    .diagram-arrow-head {
+      fill: var(--line);
+    }
+    .diagram-gridline,
+    .diagram-connector {
+      stroke: var(--line);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 4;
+    }
+    .diagram-gridline {
+      opacity: .65;
+    }
+    .diagram-waterfall-bar {
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .diagram-waterfall-bar--positive {
+      fill: var(--accent-strong);
+    }
+    .diagram-waterfall-bar--negative {
+      fill: var(--ink-muted);
+    }
+    .diagram-waterfall-bar--total {
+      fill: var(--ink-soft);
+    }
+    .diagram-waterfall-bar--focal {
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-quadrant-frame {
+      fill: var(--card);
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .diagram-quadrant-focus {
+      fill: var(--accent-soft);
+      opacity: .72;
+    }
+    .diagram-quadrant-point {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-quadrant-point--focal {
+      fill: var(--accent-strong);
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-swimlane-lane {
+      fill: color-mix(in srgb, var(--card) 94%, var(--accent-soft));
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .diagram-swimlane-lane--alt {
+      fill: color-mix(in srgb, var(--card) 82%, var(--line));
+    }
+    .diagram-swimlane-lane-label {
+      fill: var(--ink-soft);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-xs);
+      font-weight: 820;
+    }
+    .diagram-swimlane-node {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-swimlane-node--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-swimlane-arrow {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    .diagram-swimlane-arrow--focal {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+    }
+    .diagram-swimlane-arrow-head {
+      fill: var(--line);
+    }
+    .diagram-swimlane-arrow-head--focal {
+      fill: var(--accent);
+    }
+    .diagram-architecture-frame {
+      fill: color-mix(in srgb, var(--card) 92%, var(--accent-soft));
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .diagram-architecture-node {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-architecture-node--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-architecture-link {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    .diagram-architecture-link--focal {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+    }
+    .diagram-architecture-link-label {
+      fill: var(--ink-muted);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-xs);
+      font-weight: 760;
+    }
+    .diagram-architecture-arrow-head {
+      fill: var(--line);
+    }
+    .diagram-architecture-arrow-head--focal {
+      fill: var(--accent);
+    }
+    .diagram-layer-card {
+      fill: var(--card);
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .diagram-layer-card--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 2.5;
+    }
+    .diagram-layer-card--foundation {
+      fill: color-mix(in srgb, var(--card) 82%, var(--line));
+    }
+    .diagram-layer-flow {
+      fill: none;
+      stroke: var(--ink-muted);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .diagram-layer-flow--focal {
+      stroke: var(--accent);
+    }
+    .diagram-tree-link {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    .diagram-tree-link--focal {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+    }
+    .diagram-tree-node {
+      fill: var(--card);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-tree-node--root {
+      stroke: var(--ink-soft);
+    }
+    .diagram-tree-node--leaf {
+      fill: color-mix(in srgb, var(--card) 92%, var(--line));
+    }
+    .diagram-tree-node--focal {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-venn-set {
+      fill: color-mix(in srgb, var(--chart-1) 24%, transparent);
+      stroke: var(--chart-1);
+      stroke-width: 2.5;
+    }
+    .diagram-venn-set--2 {
+      fill: color-mix(in srgb, var(--chart-2) 24%, transparent);
+      stroke: var(--chart-2);
+    }
+    .diagram-venn-set--focal {
+      fill: color-mix(in srgb, var(--accent) 20%, transparent);
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+    .diagram-venn-set-label,
+    .diagram-venn-label {
+      fill: var(--ink);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-sm);
+      font-weight: 820;
+    }
+    .diagram-venn-label--focal {
+      fill: var(--accent-strong);
+    }
+    .diagram-node-label {
+      fill: var(--ink-muted);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-xs);
+      font-weight: 760;
+    }
+    .diagram-node-label--focal,
+    .diagram-node-title--focal {
+      fill: var(--accent-strong);
+    }
+    .diagram-node-title {
+      fill: var(--ink);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-sm);
+      font-weight: 820;
+    }
+    .diagram-node-body {
+      fill: var(--ink-soft);
+      font-family: var(--font-sans-ko);
+      font-size: var(--fs-xs);
+    }
+    .diagram-fallback-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .diagram-event {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--card) 94%, var(--accent-soft));
+    }
+    .diagram-event--focal {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .diagram-event__label {
+      display: block;
+      margin: 0 0 4px;
+      color: var(--ink-muted);
+      font-size: var(--fs-xs);
+      font-weight: 760;
+    }
+    .diagram-event strong {
+      display: block;
+      color: var(--ink);
+    }
+    .diagram-event p {
+      margin: 4px 0 0;
+      color: var(--ink-soft);
+      font-size: var(--fs-sm);
+    }
+    .diagram-fallback-table-wrap {
+      margin: 12px 0 0;
+      overflow-x: auto;
+    }
+    .diagram-fallback-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      background: var(--card);
+      font-size: var(--fs-sm);
+    }
+    .diagram-fallback-table th,
+    .diagram-fallback-table td {
+      padding: 8px 10px;
+      border-top: 1px solid var(--line);
+      text-align: start;
+    }
+    .diagram-fallback-table thead th {
+      color: var(--ink-muted);
+      font-size: var(--fs-xs);
+      font-weight: 760;
+    }
+    .diagram-fallback-table .num-cell {
+      text-align: end;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .charts-css tbody td::before { transition: none; }
+    }
+    @media (max-width:640px) {
+      .composition-panel { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .charts-css tbody td::before { transition: none; }
+      .composition-panel { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
 </head>
-<body>
-    <div class="container">
-        <header class="runbook-header">
-            <h1 class="runbook-title">14.zettel-writer-connect</h1>
-            <div class="metadata">
-                <div class="metadata-item">
-                    <span class="metadata-label">생성:</span>
-                    <span class="metadata-value">2026-05-27T17:49:50+09:00</span>
-                </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">소스:</span>
-                    <span class="metadata-value">/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/운영가이드.md</span>
-                </div>
-            </div>
-        </header>
-
-        <nav class="toc-container">
-            <h2>목차</h2>
-            <ul class="toc">
-<li class="toc-level-1"><a href="#14zettel-writer-connect-운영가이드">14.zettel-writer-connect 운영가이드</a></li>
-  <li class="toc-level-2"><a href="#1-현재-판단-왜-14번-폴더인가">1. 현재 판단: 왜 14번 폴더인가</a></li>
-  <li class="toc-level-2"><a href="#2-프로젝트-위치와-플러그인-id">2. 프로젝트 위치와 플러그인 ID</a></li>
-  <li class="toc-level-2"><a href="#3-패키지-구조">3. 패키지 구조</a></li>
-  <li class="toc-level-2"><a href="#4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</a></li>
-  <li class="toc-level-2"><a href="#5-indexwriting-handoffjson-계약">5. `_index/writing-handoff.json` 계약</a></li>
-  <li class="toc-level-2"><a href="#6-빌드테스트-명령">6. 빌드·테스트 명령</a></li>
-  <li class="toc-level-2"><a href="#7-배포-절차">7. 배포 절차</a></li>
-  <li class="toc-level-2"><a href="#8-완료-전-검증-체크리스트">8. 완료 전 검증 체크리스트</a></li>
-  <li class="toc-level-2"><a href="#9-git-pr-운영">9. Git / PR 운영</a></li>
-  <li class="toc-level-2"><a href="#10-자주-나는-문제">10. 자주 나는 문제</a></li>
-  <li class="toc-level-2"><a href="#11-현재-완료된-작업-기준">11. 현재 완료된 작업 기준</a></li>
-  <li class="toc-level-2"><a href="#12-운영-원칙-한-줄-요약">12. 운영 원칙 한 줄 요약</a></li>
-            </ul>
-        </nav>
-
-        <main class="runbook-body">
-<h1 id="14zettel-writer-connect-운영가이드">14.zettel-writer-connect 운영가이드</h1>
-
-<p>Version: v1.2 / 2026-05-20</p>
-
-<p>이 문서는 대표님 환경에서 AI 원고실 Obsidian 플러그인을 운영·수정·검증할 때의 기준 문서다. 핵심 원칙은 간단하다.</p>
-
-<li>14번 폴더는 AI 원고실을 안전하게 분석·개조하는 별도 작업장이다.</li>
-<li>13번 Zettel Connect는 기존 지식관리 엔진의 원본이므로 함부로 섞지 않는다.</li>
-<li>실제 Obsidian vault 쓰기, deploy, restart/reload는 대표님이 명시 요청할 때만 한다.</li>
-<li>완료 주장은 테스트·빌드·Git/PR 동기화까지 확인한 뒤에만 한다.</li>
-
-<hr>
-
-<h2 id="1-현재-판단-왜-14번-폴더인가">1. 현재 판단: 왜 14번 폴더인가</h2>
-
-<p>유료로 받은 Obsidian 글쓰기 플러그인은 독립된 제품 성격이 있다. 그래서 기존 13번 Zettel Connect에 바로 합치지 않고, 14번 프로젝트에서 분석·개조·검증한다.</p>
-
-<table>
-  <tr>
-    <th>항목</th>
-    <th>판단</th>
-  </tr>
-  <tr>
-    <td>13.zettel-connect</td>
-    <td>대표님 지식창고/Zettelkasten 연결 엔진의 기존 원본. 안정성이 우선이다.</td>
-  </tr>
-  <tr>
-    <td>14.zettel-writer-connect</td>
-    <td>AI 원고실, 글쓰기 작업실, Zettel 구조노트 handoff를 다루는 별도 작업장.</td>
-  </tr>
-  <tr>
-    <td>연결 방식</td>
-    <td>직접 내부 API 결합이 아니라 `_index/writing-handoff.json` 파일 handoff 방식.</td>
-  </tr>
-  <tr>
-    <td>향후 통합</td>
-    <td>W4처럼 명시 태스크가 있을 때만 13번에 “원고실로 보내기” 버튼을 추가한다.</td>
-  </tr>
-</table>
-
-<p>금지:</p>
-
-<pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**</code></pre>
-
-<p>위 경로는 별도 허가 없이 수정하지 않는다.</p>
-
-<hr>
-
-<h2 id="2-프로젝트-위치와-플러그인-id">2. 프로젝트 위치와 플러그인 ID</h2>
-
-<table>
-  <tr>
-    <th>항목</th>
-    <th>값</th>
-  </tr>
-  <tr>
-    <td>소스 루트</td>
-    <td>`/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect`</td>
-  </tr>
-  <tr>
-    <td>AI 원고실 plugin id</td>
-    <td>`ai-manuscript-studio`</td>
-  </tr>
-  <tr>
-    <td>Zettel Connect bundle plugin id</td>
-    <td>`zettel-connect`</td>
-  </tr>
-  <tr>
-    <td>대표님 주 vault</td>
-    <td>`/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고`</td>
-  </tr>
-  <tr>
-    <td>기본 공유 설치 루트</td>
-    <td>`~/.local/obsidian-plugins/&lt;plugin-id&gt;/`</td>
-  </tr>
-</table>
-
-<p>주의: deploy 스크립트의 기본 <code>OBSIDIAN<em>VAULT</em>PLUGINS_DIR</code>는 원 개발자 <code>futurewave</code> 경로다. 대표님 vault에 배포할 때는 반드시 환경 변수를 지정한다.</p>
-
-<hr>
-
-<h2 id="3-패키지-구조">3. 패키지 구조</h2>
-
-<pre><code class="language-text">packages/core/
-  AI 원고실 공통 로직: project.json, binder, sourceNotes, AI context composer.
-
-packages/obsidian-plugin/
-  실제 AI 원고실 Obsidian 플러그인.
-  manifest id: ai-manuscript-studio
-  main.ts에 Obsidian command가 등록된다.
-
-packages/zettel-connect/
-  이 repo 안에 들어 있는 Zettel Connect bundle 사본.
-  13.zettel-connect 원본을 대체하지 않는다.
-
-apps/desktop/
-  예전 Tauri 앱 잔존 코드. 현재 운영 대상 아님.</code></pre>
-
-<hr>
-
-<h2 id="4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</h2>
-
-<p>목표는 <code>/structure</code> 스킬로 만든 구조노트를 AI 원고실에서 곧바로 원고 프로젝트로 이어 쓰는 것이다.</p>
-
-<pre><code class="language-text">1. 지식창고에서 영구노트/문헌노트 축적
-   ↓
-2. /structure 스킬로 구조노트 작성
-   예: 3.Structure/투자전략-보고서.md
-   ↓
-3. Zettel Connect 또는 Hermes가 handoff 파일 생성
-   _index/writing-handoff.json
-   ↓
-4. AI 원고실 command 실행
-   원고실 handoff JSON 가져오기
-   ↓
-5. 4.Writing/&lt;slug&gt;/ 프로젝트 생성
-   project.json / binder.json / planning.md
-   ↓
-6. AI 원고실에서 장면별 작성·수정·코칭</code></pre>
-
-<p>현재 구현된 command:</p>
-
-<table>
-  <tr>
-    <th>단계</th>
-    <th>command id</th>
-    <th>Obsidian 표시명</th>
-    <th>상태</th>
-  </tr>
-  <tr>
-    <td>W1</td>
-    <td>`import-active-structure-note`</td>
-    <td>현재 구조노트를 원고 프로젝트로 가져오기</td>
-    <td>구현 완료</td>
-  </tr>
-  <tr>
-    <td>W3</td>
-    <td>`import-writing-handoff-json`</td>
-    <td>원고실 handoff JSON 가져오기</td>
-    <td>구현 완료</td>
-  </tr>
-</table>
-
-<hr>
-
-<h2 id="5-indexwriting-handoffjson-계약">5. <code>_index/writing-handoff.json</code> 계약</h2>
-
-<p>AI 원고실은 vault 안의 정확히 이 파일을 읽는다.</p>
-
-<pre><code class="language-text">_index/writing-handoff.json</code></pre>
-
-<p>예시:</p>
-
-<pre><code class="language-json">{
-  &quot;version&quot;: 1,
-  &quot;mode&quot;: &quot;new-structure-to-writing&quot;,
-  &quot;structureNote&quot;: {
-    &quot;path&quot;: &quot;3.Structure/투자전략-보고서.md&quot;,
-    &quot;title&quot;: &quot;투자전략 보고서&quot;,
-    &quot;id&quot;: &quot;S-001&quot;,
-    &quot;claim&quot;: &quot;핵심 주장은 여기에 적는다&quot;
-  },
-  &quot;picked&quot;: [
-    { &quot;path&quot;: &quot;2.Permanent/시장-사이클.md&quot;, &quot;id&quot;: &quot;P-001&quot; },
-    { &quot;path&quot;: &quot;2.Permanent/리스크-프리미엄.md&quot;, &quot;id&quot;: &quot;P-002&quot; }
-  ],
-  &quot;project&quot;: {
-    &quot;title&quot;: &quot;투자전략 보고서 초안&quot;,
-    &quot;genre&quot;: &quot;investment-strategy-memo&quot;,
-    &quot;wordGoal&quot;: 5000,
-    &quot;status&quot;: &quot;planning&quot;
-  },
-  &quot;targetWritingFolder&quot;: &quot;4.Writing&quot;
-}</code></pre>
-
-<p>필수/검증 규칙:</p>
-
-<li><code>structureNote.path</code>는 필수다.</li>
-<li>모든 path는 vault-relative POSIX 경로여야 한다.</li>
-<li><code>/Users/...</code> 같은 절대 경로는 reject된다.</li>
-<li><code>../</code> parent traversal은 reject된다.</li>
-<li><code>picked</code>는 없을 수 있다.</li>
-<li><code>project</code>, <code>targetWritingFolder</code>도 선택 필드다.</li>
-
-<p>생성되는 <code>project.json.sourceNotes</code>는 다음 순서다.</p>
-
-<pre><code class="language-json">{
-  &quot;sourceNotes&quot;: [
-    &quot;3.Structure/투자전략-보고서.md&quot;,
-    &quot;2.Permanent/시장-사이클.md&quot;,
-    &quot;2.Permanent/리스크-프리미엄.md&quot;
-  ]
-}</code></pre>
-
-<p>첫 번째는 구조노트, 그 뒤는 picked 영구노트다. 중복은 순서를 보존하면서 제거한다.</p>
-
-<hr>
-
-<h2 id="6-빌드테스트-명령">6. 빌드·테스트 명령</h2>
-
-<p>소스 루트:</p>
-
-<pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect</code></pre>
-
-<p>의존성:</p>
-
-<pre><code class="language-bash">pnpm install</code></pre>
-
-<p>AI 원고실 targeted 테스트:</p>
-
-<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
-  --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts</code></pre>
-
-<p>현재 기준:</p>
-
-<pre><code class="language-text">29/29 PASS</code></pre>
-
-<p>AI 원고실 전체 테스트:</p>
-
-<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test</code></pre>
-
-<p>현재 기준:</p>
-
-<pre><code class="language-text">268/268 PASS</code></pre>
-
-<p>core 테스트:</p>
-
-<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/core test</code></pre>
-
-<p>AI 원고실 빌드:</p>
-
-<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin build
-node --check packages/obsidian-plugin/main.js</code></pre>
-
-<p>전체 플러그인 빌드:</p>
-
-<pre><code class="language-bash">pnpm build:plugins</code></pre>
-
-<hr>
-
-<h2 id="7-배포-절차">7. 배포 절차</h2>
-
-<p>배포는 실제 Obsidian 런타임에 영향을 준다. 대표님이 “배포해”, “설치해”, “옵시디언에 반영해”라고 명시할 때만 실행한다.</p>
-
-<p>대표님 vault에 AI 원고실만 배포:</p>
-
-<pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect
-
-OBSIDIAN_VAULT_PLUGINS_DIR=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins&quot; \
-  pnpm deploy:ai-manuscript</code></pre>
-
-<p>두 플러그인 모두 배포:</p>
-
-<pre><code class="language-bash">OBSIDIAN_VAULT_PLUGINS_DIR=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins&quot; \
-  pnpm deploy</code></pre>
-
-<p>배포 후 Obsidian에서 필요:</p>
-
-<pre><code class="language-text">Cmd+P → Reload app without saving 또는 개발자용 다시 로드
-또는 설정 → 커뮤니티 플러그인 → 해당 플러그인 off/on</code></pre>
-
-<p>단순 reload만 요청받은 경우에는 build/deploy를 실행하지 않는다. 먼저 현재 설치·활성 상태를 읽고, 앱만 새로고침한다.</p>
-
-<pre><code class="language-bash">VAULT=&quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고&quot;
-
-# Obsidian 실행 여부
-pgrep -fl Obsidian || true
-
-# 플러그인 설치 경로와 symlink 확인
-python3 - &lt;&lt;&#x27;PY&#x27;
-from pathlib import Path
-vault=Path(&#x27;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고&#x27;)
-for pid in [&#x27;ai-manuscript-studio&#x27;,&#x27;zettel-connect&#x27;,&#x27;obsidian42-brat&#x27;]:
-    p=vault/&#x27;.obsidian/plugins&#x27;/pid
-    print(pid, &#x27;exists=&#x27;, p.exists(), &#x27;is_symlink=&#x27;, p.is_symlink(), &#x27;path=&#x27;, p)
-    if p.is_symlink():
-        print(&#x27;  -&gt;&#x27;, p.resolve())
-PY
-
-# 플러그인 활성화 여부 확인
-python3 - &lt;&lt;&#x27;PY&#x27;
-from pathlib import Path
-import json
-p=Path(&#x27;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/community-plugins.json&#x27;)
-data=json.loads(p.read_text())
-for pid in [&#x27;ai-manuscript-studio&#x27;,&#x27;zettel-connect&#x27;]:
-    print(pid, pid in data)
-PY</code></pre>
-
-<p>가장 확실한 reload는 정상 종료 후 재실행이다. 강제 종료가 아니라 AppleScript quit를 사용한다.</p>
-
-<pre><code class="language-bash">BEFORE=$(pgrep -x Obsidian || true)
-printf &#x27;before_pid=%s\n&#x27; &quot;$BEFORE&quot;
-
-osascript -e &#x27;tell application &quot;Obsidian&quot; to quit&#x27; || true
-for i in $(seq 1 20); do
-  if ! pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
-    echo &quot;quit_confirmed_after=${i}s&quot;
-    break
-  fi
-  sleep 1
-done
-
-open -a Obsidian
-for i in $(seq 1 20); do
-  if pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
-    echo &quot;reopen_confirmed_after=${i}s&quot;
-    break
-  fi
-  sleep 1
-done
-
-AFTER=$(pgrep -x Obsidian || true)
-printf &#x27;after_pid=%s\n&#x27; &quot;$AFTER&quot;</code></pre>
-
-<p>배포 후 확인:</p>
-
-<pre><code class="language-bash">ls -l &quot;/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins/ai-manuscript-studio&quot;</code></pre>
-
-<p>완료 주장 전에는 source bundle과 vault 설치 bundle의 <code>main.js</code>, <code>manifest.json</code>, <code>styles.css</code> 존재 및 SHA를 비교한다. reload만 수행한 경우에는 “deploy는 하지 않았다”고 명시한다.</p>
-
-<hr>
-
-<h2 id="8-완료-전-검증-체크리스트">8. 완료 전 검증 체크리스트</h2>
-
-<p>문서만 고친 경우:</p>
-
-<pre><code class="language-bash">git diff --check -- 운영가이드.md
-test -s 운영가이드.md</code></pre>
-
-<p>AI 원고실 코드/테스트를 고친 경우:</p>
-
-<pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
-  --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts
-pnpm --filter @ai-manuscript-studio/obsidian-plugin test
-pnpm --filter @ai-manuscript-studio/obsidian-plugin build
-node --check packages/obsidian-plugin/main.js
-git diff --check</code></pre>
-
-<p>금지 경로 확인:</p>
-
-<pre><code class="language-bash">git status --short</code></pre>
-
-<p>다음이 의도 없이 보이면 중단하고 확인한다.</p>
-
-<pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**
-지식창고/.obsidian/**
-지식창고/_index/**
-지식창고/2.Permanent/**
-지식창고/3.Structure/**
-지식창고/4.Writing/**</code></pre>
-
-<hr>
-
-<h2 id="9-git-pr-운영">9. Git / PR 운영</h2>
-
-<p>현재 GitHub 권한 구조:</p>
-
-<table>
-  <tr>
-    <th>remote</th>
-    <th>의미</th>
-    <th>권한</th>
-  </tr>
-  <tr>
-    <td>origin</td>
-    <td>`vibelabs-web/zettel-writer-connect` upstream</td>
-    <td>현재 계정은 push 불가</td>
-  </tr>
-  <tr>
-    <td>fork</td>
-    <td>`dyoon98-creator/zettel-writer-connect`</td>
-    <td>push 가능</td>
-  </tr>
-</table>
-
-<p>퍼블리시 브랜치:</p>
-
-<pre><code class="language-text">feat/ai-manuscript-studio-workflow-20260519</code></pre>
-
-<p>PR:</p>
-
-<pre><code class="language-text">PR #2
-https://github.com/vibelabs-web/zettel-writer-connect/pull/2</code></pre>
-
-<p>커밋 후 push:</p>
-
-<pre><code class="language-bash">git push fork HEAD:feat/ai-manuscript-studio-workflow-20260519</code></pre>
-
-<p>동기화 확인:</p>
-
-<pre><code class="language-bash">git fetch fork feat/ai-manuscript-studio-workflow-20260519 --quiet
-git rev-list --left-right --count HEAD...fork/feat/ai-manuscript-studio-workflow-20260519
-# 기대: 0 0
-
-gh pr view 2 --repo vibelabs-web/zettel-writer-connect --json headRefOid --jq .headRefOid
-git rev-parse HEAD
-# 두 SHA가 같아야 한다.</code></pre>
-
-<p><code>git status</code>가 다음처럼 보여도 fork/PR이 맞으면 정상이다.</p>
-
-<pre><code class="language-text">## main...origin/main [ahead N]</code></pre>
-
-<p>이유: origin은 upstream이고 현재 계정에 push 권한이 없기 때문이다.</p>
-
-<hr>
-
-<h2 id="10-자주-나는-문제">10. 자주 나는 문제</h2>
-
-<table>
-  <tr>
-    <th>증상</th>
-    <th>판단 / 조치</th>
-  </tr>
-  <tr>
-    <td>`_index/writing-handoff.json` 없음</td>
-    <td>정상 no-op. handoff 생성 전 상태다.</td>
-  </tr>
-  <tr>
-    <td>`vault-relative path` 오류</td>
-    <td>handoff JSON 안에 절대경로 또는 `..`가 들어갔다. vault-relative로 고친다.</td>
-  </tr>
-  <tr>
-    <td>command가 Obsidian에서 안 보임</td>
-    <td>deploy 후 Obsidian reload/off-on이 안 됐을 가능성.</td>
-  </tr>
-  <tr>
-    <td>AI CLI가 작동하지 않음</td>
-    <td>Codex/Claude CLI 경로와 로그인 상태를 확인한다. API key를 repo에 넣지 않는다.</td>
-  </tr>
-  <tr>
-    <td>source 수정했는데 UI가 그대로임</td>
-    <td>build/deploy/reload가 안 된 상태다. source 변경만으로 live plugin은 바뀌지 않는다.</td>
-  </tr>
-  <tr>
-    <td>`styles.css`를 고쳐도 되나</td>
-    <td>직접 고치지 않는다. source CSS를 고치고 build한다.</td>
-  </tr>
-  <tr>
-    <td>`packages/zettel-connect`를 고쳐도 되나</td>
-    <td>원칙적으로 금지. 13번 원본과의 동기화 계획이 있을 때만 한다.</td>
-  </tr>
-</table>
-
-<hr>
-
-<h2 id="11-현재-완료된-작업-기준">11. 현재 완료된 작업 기준</h2>
-
-<table>
-  <tr>
-    <th>ID</th>
-    <th>상태</th>
-    <th>의미</th>
-  </tr>
-  <tr>
-    <td>W1</td>
-    <td>완료</td>
-    <td>활성 구조노트에서 AI 원고실 프로젝트 생성</td>
-  </tr>
-  <tr>
-    <td>W2</td>
-    <td>완료</td>
-    <td>`project.json.sourceNotes`를 AI context에 실제 주입</td>
-  </tr>
-  <tr>
-    <td>W3</td>
-    <td>완료</td>
-    <td>`_index/writing-handoff.json`에서 AI 원고실 프로젝트 생성</td>
-  </tr>
-  <tr>
-    <td>W3A</td>
-    <td>완료</td>
-    <td>절대경로/parent traversal reject regression test</td>
-  </tr>
-  <tr>
-    <td>W4</td>
-    <td>미실행</td>
-    <td>13.zettel-connect에 “원고실로 보내기” 버튼 추가. 별도 허가 필요</td>
-  </tr>
-</table>
-
-<p>W4를 할 때만 13번 repo를 건드린다. 그 전까지는 14번에서 AI 원고실을 안정화한다.</p>
-
-<hr>
-
-<h2 id="12-운영-원칙-한-줄-요약">12. 운영 원칙 한 줄 요약</h2>
-
-<p>이 프로젝트는 “기존 Zettelkasten을 망가뜨리지 않고, 구조노트를 원고 프로젝트로 안전하게 넘기는 글쓰기 작업실”이다. 13번은 지식 연결 엔진, 14번은 원고 작성 엔진으로 분리해서 운영한다.</p>
-
-        </main>
-
-        <aside class="semantic-map">
-            <h2>HTML 변환용 의미덩어리 맵</h2>
-            <div class="semantic-map-content">
-
-이 운영가이드는 HTML 변환 시 원문 순서를 그대로 펼치기보다, 아래 의미덩어리로 묶어 보여준다. 이 맵은 내용 재작성용이 아니라 `운영가이드.html` 생성기가 사용할 구조 안내다.
-
-| 의미덩어리 | 포함 내용 |
-|---|---|
-| 빠른 시작 | 현재 판단, 프로젝트 위치, 빌드·테스트 명령 |
-| 운영 사이클 | 대표님 글쓰기 워크플로우, 배포 절차, Git/PR 운영 |
-| 명령 팔레트 | pnpm install/test/build/deploy 관련 명령 |
-| 시스템/문서 지도 | 패키지 구조, 플러그인 ID, 13번 zettel-connect와의 관계 |
-| 레퍼런스 검색기 | writing-handoff.json 계약, 현재 완료된 작업 기준 |
-| 문제 해결 트리 | 자주 나는 문제 |
-| 운영 원칙/사고 학습 | 14번 폴더 분리 원칙, 배포 금지/허용 기준 |
-
-
-
-            </div>
-        </aside>
-
-        <footer class="runbook-footer">
-            <p>자동 생성됨 | 운영가이드 HTML 변환 시스템</p>
-        </footer>
+<body class="preset-carbon-brief model-balanced-report">
+  <main class="report-shell structure-split-brief">
+    <header class="hero">
+      <p class="kicker">균형 보고 HTML</p>
+      <h1>14.zettel-writer-connect 운영가이드</h1>
+      <p class="sub">구조화 IR 기반 문서 HTML</p>
+      <ul class="meta"><li class="badge">프리셋: 카본브리프</li><li class="badge">생성: 2026.06.15 10:14 KST</li></ul>
+    </header>
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-001">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>개요</span>
+      </aside>
+      <div class="split-brief-content">
+        <p><em>Version: v1.0 (2026-06-15)</em> — 원문 보존본. 상위 <code>운영가이드.md</code>의 트리거 색인에서 참조한다.</p>
+      </div>
     </div>
+    </section>
 
-    <script src="../18.runbook_html/01.운영가이드/assets/runbook.js"></script>
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-002">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>핵심 지표</span>
+      </aside>
+      <div class="split-brief-content">
+        <p>Version: v1.2 / 2026-05-20</p>
+        <p>이 문서는 대표님 환경에서 AI 원고실 Obsidian 플러그인을 운영·수정·검증할 때의 기준 문서다. 핵심 원칙은 간단하다.</p>
+        <ul>
+        <li>14번 폴더는 AI 원고실을 안전하게 분석·개조하는 별도 작업장이다.</li>
+        <li>13번 Zettel Connect는 기존 지식관리 엔진의 원본이므로 함부로 섞지 않는다.</li>
+        <li>실제 Obsidian vault 쓰기, deploy, restart/reload는 대표님이 명시 요청할 때만 한다.</li>
+        <li>완료 주장은 테스트·빌드·Git/PR 동기화까지 확인한 뒤에만 한다.</li>
+        </ul>
+        <hr>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-003">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-003-data-table-table-wrap">
+          <table id="block-003-data-table-table" aria-labelledby="block-003-data-table-table-caption">
+              <caption id="block-003-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">의미덩어리</th>
+                <th scope="col">포함 내용</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">빠른 시작</th>
+                <td data-label="포함 내용">현재 판단, 프로젝트 위치, 빌드·테스트 명령</td>
+              </tr>
+              <tr>
+                <th scope="row">운영 사이클</th>
+                <td data-label="포함 내용">대표님 글쓰기 워크플로우, 배포 절차, Git/PR 운영</td>
+              </tr>
+              <tr>
+                <th scope="row">명령 팔레트</th>
+                <td data-label="포함 내용">pnpm install/test/build/deploy 관련 명령</td>
+              </tr>
+              <tr>
+                <th scope="row">시스템/문서 지도</th>
+                <td data-label="포함 내용">패키지 구조, 플러그인 ID, 13번 zettel-connect와의 관계</td>
+              </tr>
+              <tr>
+                <th scope="row">레퍼런스 검색기</th>
+                <td data-label="포함 내용">writing-handoff.json 계약, 현재 완료된 작업 기준</td>
+              </tr>
+              <tr>
+                <th scope="row">문제 해결 트리</th>
+                <td data-label="포함 내용">자주 나는 문제</td>
+              </tr>
+              <tr>
+                <th scope="row">운영 원칙/사고 학습</th>
+                <td data-label="포함 내용">14번 폴더 분리 원칙, 배포 금지/허용 기준</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-004">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>운용 현황</span>
+      </aside>
+      <div class="split-brief-content">
+        <h2 id="block-004-markdown-1-현재-판단-왜-14번-폴더인가">1. 현재 판단: 왜 14번 폴더인가</h2>
+        <p>유료로 받은 Obsidian 글쓰기 플러그인은 독립된 제품 성격이 있다. 그래서 기존 13번 Zettel Connect에 바로 합치지 않고, 14번 프로젝트에서 분석·개조·검증한다.</p>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-005">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-005-data-table-table-wrap">
+          <table id="block-005-data-table-table" aria-labelledby="block-005-data-table-table-caption">
+              <caption id="block-005-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">항목</th>
+                <th scope="col">판단</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">13.zettel-connect</th>
+                <td data-label="판단">대표님 지식창고/Zettelkasten 연결 엔진의 기존 원본. 안정성이 우선이다.</td>
+              </tr>
+              <tr>
+                <th scope="row">14.zettel-writer-connect</th>
+                <td data-label="판단">AI 원고실, 글쓰기 작업실, Zettel 구조노트 handoff를 다루는 별도 작업장.</td>
+              </tr>
+              <tr>
+                <th scope="row">연결 방식</th>
+                <td data-label="판단">직접 내부 API 결합이 아니라 _index/writing-handoff.json 파일 handoff 방식.</td>
+              </tr>
+              <tr>
+                <th scope="row">향후 통합</th>
+                <td data-label="판단">W4처럼 명시 태스크가 있을 때만 13번에 “원고실로 보내기” 버튼을 추가한다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-006">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>조건부 해석</span>
+      </aside>
+      <div class="split-brief-content">
+        <p>금지:</p>
+        <pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**
+        </code></pre>
+        <p>위 경로는 별도 허가 없이 수정하지 않는다.</p>
+        <hr>
+        <h2 id="block-006-markdown-2-프로젝트-위치와-플러그인-id">2. 프로젝트 위치와 플러그인 ID</h2>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-007">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-007-data-table-table-wrap">
+          <table id="block-007-data-table-table" aria-labelledby="block-007-data-table-table-caption">
+              <caption id="block-007-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">항목</th>
+                <th scope="col">값</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">소스 루트</th>
+                <td data-label="값">/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect</td>
+              </tr>
+              <tr>
+                <th scope="row">AI 원고실 plugin id</th>
+                <td data-label="값">ai-manuscript-studio</td>
+              </tr>
+              <tr>
+                <th scope="row">Zettel Connect bundle plugin id</th>
+                <td data-label="값">zettel-connect</td>
+              </tr>
+              <tr>
+                <th scope="row">대표님 주 vault</th>
+                <td data-label="값">/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고</td>
+              </tr>
+              <tr>
+                <th scope="row">기본 공유 설치 루트</th>
+                <td data-label="값">~/.local/obsidian-plugins/&lt;plugin-id&gt;/</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-008">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>결론</span>
+      </aside>
+      <div class="split-brief-content">
+        <p>주의: deploy 스크립트의 기본 <code>OBSIDIAN_VAULT_PLUGINS_DIR</code>는 원 개발자 <code>futurewave</code> 경로다. 대표님 vault에 배포할 때는 반드시 환경 변수를 지정한다.</p>
+        <hr>
+        <h2 id="block-008-markdown-3-패키지-구조">3. 패키지 구조</h2>
+        <pre><code class="language-text">packages/core/
+          AI 원고실 공통 로직: project.json, binder, sourceNotes, AI context composer.
+
+        packages/obsidian-plugin/
+          실제 AI 원고실 Obsidian 플러그인.
+          manifest id: ai-manuscript-studio
+          main.ts에 Obsidian command가 등록된다.
+
+        packages/zettel-connect/
+          이 repo 안에 들어 있는 Zettel Connect bundle 사본.
+          13.zettel-connect 원본을 대체하지 않는다.
+
+        apps/desktop/
+          예전 Tauri 앱 잔존 코드. 현재 운영 대상 아님.
+        </code></pre>
+        <hr>
+        <h2 id="block-008-markdown-4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</h2>
+        <p>목표는 <code>/structure</code> 스킬로 만든 구조노트를 AI 원고실에서 곧바로 원고 프로젝트로 이어 쓰는 것이다.</p>
+        <pre><code class="language-text">1. 지식창고에서 영구노트/문헌노트 축적
+           ↓
+        2. /structure 스킬로 구조노트 작성
+           예: 3.Structure/투자전략-보고서.md
+           ↓
+        3. Zettel Connect 또는 Hermes가 handoff 파일 생성
+           _index/writing-handoff.json
+           ↓
+        4. AI 원고실 command 실행
+           원고실 handoff JSON 가져오기
+           ↓
+        5. 4.Writing/&lt;slug&gt;/ 프로젝트 생성
+           project.json / binder.json / planning.md
+           ↓
+        6. AI 원고실에서 장면별 작성·수정·코칭
+        </code></pre>
+        <p>현재 구현된 command:</p>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-009">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>주의</span>
+      </aside>
+      <div class="split-brief-content">
+        <aside class="box box-warn" role="alert" aria-label="경고 알림" aria-labelledby="block-009-callout-callout-title" aria-describedby="block-009-callout-callout-body">
+          <p class="box-label" id="block-009-callout-callout-title">
+            <svg class="callout-icon lucide lucide-triangle-alert" data-asset-source="assets/icons/lucide/static/selected/triangle-alert.svg" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+            <strong>경고 · 주의</strong>
+          </p>
+          <div id="block-009-callout-callout-body" class="callout-body">
+            <p>deploy 스크립트의 기본 <code>OBSIDIAN_VAULT_PLUGINS_DIR</code>는 원 개발자 <code>futurewave</code> 경로다. 대표님 vault에 배포할 때는 반드시 환경 변수를 지정한다.</p>
+            <hr>
+            <h2 id="block-009-callout-body-3-패키지-구조">3. 패키지 구조</h2>
+            <pre><code class="language-text">packages/core/
+              AI 원고실 공통 로직: project.json, binder, sourceNotes, AI context composer.
+
+            packages/obsidian-plugin/
+              실제 AI 원고실 Obsidian 플러그인.
+              manifest id: ai-manuscript-studio
+              main.ts에 Obsidian command가 등록된다.
+
+            packages/zettel-connect/
+              이 repo 안에 들어 있는 Zettel Connect bundle 사본.
+              13.zettel-connect 원본을 대체하지 않는다.
+
+            apps/desktop/
+              예전 Tauri 앱 잔존 코드. 현재 운영 대상 아님.
+            </code></pre>
+            <hr>
+            <h2 id="block-009-callout-body-4-대표님-글쓰기-워크플로우">4. 대표님 글쓰기 워크플로우</h2>
+            <p>목표는 <code>/structure</code> 스킬로 만든 구조노트를 AI 원고실에서 곧바로 원고 프로젝트로 이어 쓰는 것이다.</p>
+            <pre><code class="language-text">1. 지식창고에서 영구노트/문헌노트 축적
+               ↓
+            2. /structure 스킬로 구조노트 작성
+               예: 3.Structure/투자전략-보고서.md
+               ↓
+            3. Zettel Connect 또는 Hermes가 handoff 파일 생성
+               _index/writing-handoff.json
+               ↓
+            4. AI 원고실 command 실행
+               원고실 handoff JSON 가져오기
+               ↓
+            5. 4.Writing/&lt;slug&gt;/ 프로젝트 생성
+               project.json / binder.json / planning.md
+               ↓
+            6. AI 원고실에서 장면별 작성·수정·코칭
+            </code></pre>
+            <p>현재 구현된 command:</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-010">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-010-data-table-table-wrap">
+          <table id="block-010-data-table-table" aria-labelledby="block-010-data-table-table-caption">
+              <caption id="block-010-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">단계</th>
+                <th scope="col">command id</th>
+                <th scope="col">Obsidian 표시명</th>
+                <th scope="col">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">W1</th>
+                <td data-label="command id">import-active-structure-note</td>
+                <td data-label="Obsidian 표시명">현재 구조노트를 원고 프로젝트로 가져오기</td>
+                <td data-label="상태">구현 완료</td>
+              </tr>
+              <tr>
+                <th scope="row">W3</th>
+                <td data-label="command id">import-writing-handoff-json</td>
+                <td data-label="Obsidian 표시명">원고실 handoff JSON 가져오기</td>
+                <td data-label="상태">구현 완료</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-011">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>결론</span>
+      </aside>
+      <div class="split-brief-content">
+        <hr>
+        <h2 id="block-011-markdown-5-_indexwriting-handoffjson-계약">5. <code>_index/writing-handoff.json</code> 계약</h2>
+        <p>AI 원고실은 vault 안의 정확히 이 파일을 읽는다.</p>
+        <pre><code class="language-text">_index/writing-handoff.json
+        </code></pre>
+        <p>예시:</p>
+        <pre><code class="language-json">{
+          "version": 1,
+          "mode": "new-structure-to-writing",
+          "structureNote": {
+            "path": "3.Structure/투자전략-보고서.md",
+            "title": "투자전략 보고서",
+            "id": "S-001",
+            "claim": "핵심 주장은 여기에 적는다"
+          },
+          "picked": [
+            { "path": "2.Permanent/시장-사이클.md", "id": "P-001" },
+            { "path": "2.Permanent/리스크-프리미엄.md", "id": "P-002" }
+          ],
+          "project": {
+            "title": "투자전략 보고서 초안",
+            "genre": "investment-strategy-memo",
+            "wordGoal": 5000,
+            "status": "planning"
+          },
+          "targetWritingFolder": "4.Writing"
+        }
+        </code></pre>
+        <p>필수/검증 규칙:</p>
+        <ul>
+        <li><code>structureNote.path</code>는 필수다.</li>
+        <li>모든 path는 vault-relative POSIX 경로여야 한다.</li>
+        <li><code>/Users/...</code> 같은 절대 경로는 reject된다.</li>
+        <li><code>../</code> parent traversal은 reject된다.</li>
+        <li><code>picked</code>는 없을 수 있다.</li>
+        <li><code>project</code>, <code>targetWritingFolder</code>도 선택 필드다.</li>
+        </ul>
+        <p>생성되는 <code>project.json.sourceNotes</code>는 다음 순서다.</p>
+        <pre><code class="language-json">{
+          "sourceNotes": [
+            "3.Structure/투자전략-보고서.md",
+            "2.Permanent/시장-사이클.md",
+            "2.Permanent/리스크-프리미엄.md"
+          ]
+        }
+        </code></pre>
+        <p>첫 번째는 구조노트, 그 뒤는 picked 영구노트다. 중복은 순서를 보존하면서 제거한다.</p>
+        <hr>
+        <h2 id="block-011-markdown-6-빌드테스트-명령">6. 빌드·테스트 명령</h2>
+        <p>소스 루트:</p>
+        <pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect
+        </code></pre>
+        <p>의존성:</p>
+        <pre><code class="language-bash">pnpm install
+        </code></pre>
+        <p>AI 원고실 targeted 테스트:</p>
+        <pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
+          --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts
+        </code></pre>
+        <p>현재 기준:</p>
+        <pre><code class="language-text">29/29 PASS
+        </code></pre>
+        <p>AI 원고실 전체 테스트:</p>
+        <pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test
+        </code></pre>
+        <p>현재 기준:</p>
+        <pre><code class="language-text">268/268 PASS
+        </code></pre>
+        <p>core 테스트:</p>
+        <pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/core test
+        </code></pre>
+        <p>AI 원고실 빌드:</p>
+        <pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin build
+        node --check packages/obsidian-plugin/main.js
+        </code></pre>
+        <p>전체 플러그인 빌드:</p>
+        <pre><code class="language-bash">pnpm build:plugins
+        </code></pre>
+        <hr>
+        <h2 id="block-011-markdown-7-배포-절차">7. 배포 절차</h2>
+        <p>배포는 실제 Obsidian 런타임에 영향을 준다. 대표님이 “배포해”, “설치해”, “옵시디언에 반영해”라고 명시할 때만 실행한다.</p>
+        <p>대표님 vault에 AI 원고실만 배포:</p>
+        <pre><code class="language-bash">cd /Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect
+
+        OBSIDIAN_VAULT_PLUGINS_DIR="/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins" \
+          pnpm deploy:ai-manuscript
+        </code></pre>
+        <p>두 플러그인 모두 배포:</p>
+        <pre><code class="language-bash">OBSIDIAN_VAULT_PLUGINS_DIR="/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins" \
+          pnpm deploy
+        </code></pre>
+        <p>배포 후 Obsidian에서 필요:</p>
+        <pre><code class="language-text">Cmd+P → Reload app without saving 또는 개발자용 다시 로드
+        또는 설정 → 커뮤니티 플러그인 → 해당 플러그인 off/on
+        </code></pre>
+        <p>단순 reload만 요청받은 경우에는 build/deploy를 실행하지 않는다. 먼저 현재 설치·활성 상태를 읽고, 앱만 새로고침한다.</p>
+        <pre><code class="language-bash">VAULT="/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고"
+
+        # Obsidian 실행 여부
+        pgrep -fl Obsidian || true
+
+        # 플러그인 설치 경로와 symlink 확인
+        python3 - &lt;&lt;'PY'
+        from pathlib import Path
+        vault=Path('/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고')
+        for pid in ['ai-manuscript-studio','zettel-connect','obsidian42-brat']:
+            p=vault/'.obsidian/plugins'/pid
+            print(pid, 'exists=', p.exists(), 'is_symlink=', p.is_symlink(), 'path=', p)
+            if p.is_symlink():
+                print('  -&gt;', p.resolve())
+        PY
+
+        # 플러그인 활성화 여부 확인
+        python3 - &lt;&lt;'PY'
+        from pathlib import Path
+        import json
+        p=Path('/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/community-plugins.json')
+        data=json.loads(p.read_text())
+        for pid in ['ai-manuscript-studio','zettel-connect']:
+            print(pid, pid in data)
+        PY
+        </code></pre>
+        <p>가장 확실한 reload는 정상 종료 후 재실행이다. 강제 종료가 아니라 AppleScript quit를 사용한다.</p>
+        <pre><code class="language-bash">BEFORE=$(pgrep -x Obsidian || true)
+        printf 'before_pid=%s\n' "$BEFORE"
+
+        osascript -e 'tell application "Obsidian" to quit' || true
+        for i in $(seq 1 20); do
+          if ! pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
+            echo "quit_confirmed_after=${i}s"
+            break
+          fi
+          sleep 1
+        done
+
+        open -a Obsidian
+        for i in $(seq 1 20); do
+          if pgrep -x Obsidian &gt;/dev/null 2&gt;&amp;1; then
+            echo "reopen_confirmed_after=${i}s"
+            break
+          fi
+          sleep 1
+        done
+
+        AFTER=$(pgrep -x Obsidian || true)
+        printf 'after_pid=%s\n' "$AFTER"
+        </code></pre>
+        <p>배포 후 확인:</p>
+        <pre><code class="language-bash">ls -l "/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins/ai-manuscript-studio"
+        </code></pre>
+        <p>완료 주장 전에는 source bundle과 vault 설치 bundle의 <code>main.js</code>, <code>manifest.json</code>, <code>styles.css</code> 존재 및 SHA를 비교한다. reload만 수행한 경우에는 “deploy는 하지 않았다”고 명시한다.</p>
+        <hr>
+        <h2 id="block-011-markdown-8-완료-전-검증-체크리스트">8. 완료 전 검증 체크리스트</h2>
+        <p>문서만 고친 경우:</p>
+        <pre><code class="language-bash">git diff --check -- 운영가이드.md
+        test -s 운영가이드.md
+        </code></pre>
+        <p>AI 원고실 코드/테스트를 고친 경우:</p>
+        <pre><code class="language-bash">pnpm --filter @ai-manuscript-studio/obsidian-plugin test -- \
+          --runTestsByPath tests/structureBridge.test.ts tests/mainStructureBridgeCommand.test.ts
+        pnpm --filter @ai-manuscript-studio/obsidian-plugin test
+        pnpm --filter @ai-manuscript-studio/obsidian-plugin build
+        node --check packages/obsidian-plugin/main.js
+        git diff --check
+        </code></pre>
+        <p>금지 경로 확인:</p>
+        <pre><code class="language-bash">git status --short
+        </code></pre>
+        <p>다음이 의도 없이 보이면 중단하고 확인한다.</p>
+        <pre><code class="language-text">/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/**
+        지식창고/.obsidian/**
+        지식창고/_index/**
+        지식창고/2.Permanent/**
+        지식창고/3.Structure/**
+        지식창고/4.Writing/**
+        </code></pre>
+        <hr>
+        <h2 id="block-011-markdown-9-git-pr-운영">9. Git / PR 운영</h2>
+        <p>현재 GitHub 권한 구조:</p>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-012">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-012-data-table-table-wrap">
+          <table id="block-012-data-table-table" aria-labelledby="block-012-data-table-table-caption">
+              <caption id="block-012-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">remote</th>
+                <th scope="col">의미</th>
+                <th scope="col">권한</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">origin</th>
+                <td data-label="의미">vibelabs-web/zettel-writer-connect upstream</td>
+                <td data-label="권한">현재 계정은 push 불가</td>
+              </tr>
+              <tr>
+                <th scope="row">fork</th>
+                <td data-label="의미">dyoon98-creator/zettel-writer-connect</td>
+                <td data-label="권한">push 가능</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-013">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>결론</span>
+      </aside>
+      <div class="split-brief-content">
+        <p>퍼블리시 브랜치:</p>
+        <pre><code class="language-text">feat/ai-manuscript-studio-workflow-20260519
+        </code></pre>
+        <p>PR:</p>
+        <pre><code class="language-text">PR #2
+        https://github.com/vibelabs-web/zettel-writer-connect/pull/2
+        </code></pre>
+        <p>커밋 후 push:</p>
+        <pre><code class="language-bash">git push fork HEAD:feat/ai-manuscript-studio-workflow-20260519
+        </code></pre>
+        <p>동기화 확인:</p>
+        <pre><code class="language-bash">git fetch fork feat/ai-manuscript-studio-workflow-20260519 --quiet
+        git rev-list --left-right --count HEAD...fork/feat/ai-manuscript-studio-workflow-20260519
+        # 기대: 0 0
+
+        gh pr view 2 --repo vibelabs-web/zettel-writer-connect --json headRefOid --jq .headRefOid
+        git rev-parse HEAD
+        # 두 SHA가 같아야 한다.
+        </code></pre>
+        <p><code>git status</code>가 다음처럼 보여도 fork/PR이 맞으면 정상이다.</p>
+        <pre><code class="language-text">## main...origin/main [ahead N]
+        </code></pre>
+        <p>이유: origin은 upstream이고 현재 계정에 push 권한이 없기 때문이다.</p>
+        <hr>
+        <h2 id="block-013-markdown-10-자주-나는-문제">10. 자주 나는 문제</h2>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-014">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-014-data-table-table-wrap">
+          <table id="block-014-data-table-table" aria-labelledby="block-014-data-table-table-caption">
+              <caption id="block-014-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">증상</th>
+                <th scope="col">판단 / 조치</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">_index/writing-handoff.json 없음</th>
+                <td data-label="판단 / 조치">정상 no-op. handoff 생성 전 상태다.</td>
+              </tr>
+              <tr>
+                <th scope="row">vault-relative path 오류</th>
+                <td data-label="판단 / 조치">handoff JSON 안에 절대경로 또는 ..가 들어갔다. vault-relative로 고친다.</td>
+              </tr>
+              <tr>
+                <th scope="row">command가 Obsidian에서 안 보임</th>
+                <td data-label="판단 / 조치">deploy 후 Obsidian reload/off-on이 안 됐을 가능성.</td>
+              </tr>
+              <tr>
+                <th scope="row">AI CLI가 작동하지 않음</th>
+                <td data-label="판단 / 조치">Codex/Claude CLI 경로와 로그인 상태를 확인한다. API key를 repo에 넣지 않는다.</td>
+              </tr>
+              <tr>
+                <th scope="row">source 수정했는데 UI가 그대로임</th>
+                <td data-label="판단 / 조치">build/deploy/reload가 안 된 상태다. source 변경만으로 live plugin은 바뀌지 않는다.</td>
+              </tr>
+              <tr>
+                <th scope="row">styles.css를 고쳐도 되나</th>
+                <td data-label="판단 / 조치">직접 고치지 않는다. source CSS를 고치고 build한다.</td>
+              </tr>
+              <tr>
+                <th scope="row">packages/zettel-connect를 고쳐도 되나</th>
+                <td data-label="판단 / 조치">원칙적으로 금지. 13번 원본과의 동기화 계획이 있을 때만 한다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-015">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>결론</span>
+      </aside>
+      <div class="split-brief-content">
+        <hr>
+        <h2 id="block-015-markdown-11-현재-완료된-작업-기준">11. 현재 완료된 작업 기준</h2>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-016">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>표 근거</span>
+      </aside>
+      <div class="split-brief-content">
+        <div class="data-table-wrap" id="block-016-data-table-table-wrap">
+          <table id="block-016-data-table-table" aria-labelledby="block-016-data-table-table-caption">
+              <caption id="block-016-data-table-table-caption">데이터 표</caption>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">상태</th>
+                <th scope="col">의미</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">W1</th>
+                <td data-label="상태">완료</td>
+                <td data-label="의미">활성 구조노트에서 AI 원고실 프로젝트 생성</td>
+              </tr>
+              <tr>
+                <th scope="row">W2</th>
+                <td data-label="상태">완료</td>
+                <td data-label="의미">project.json.sourceNotes를 AI context에 실제 주입</td>
+              </tr>
+              <tr>
+                <th scope="row">W3</th>
+                <td data-label="상태">완료</td>
+                <td data-label="의미">_index/writing-handoff.json에서 AI 원고실 프로젝트 생성</td>
+              </tr>
+              <tr>
+                <th scope="row">W3A</th>
+                <td data-label="상태">완료</td>
+                <td data-label="의미">절대경로/parent traversal reject regression test</td>
+              </tr>
+              <tr>
+                <th scope="row">W4</th>
+                <td data-label="상태">미실행</td>
+                <td data-label="의미">13.zettel-connect에 “원고실로 보내기” 버튼 추가. 별도 허가 필요</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section class="section-block" id="section-14zettel-writer-connect-운영가이드-017">
+    <div class="section-split-brief">
+      <aside class="split-brief-aside split-brief-context" aria-label="숫자와 서술 문맥">
+        <span>결론</span>
+      </aside>
+      <div class="split-brief-content">
+        <p>W4를 할 때만 13번 repo를 건드린다. 그 전까지는 14번에서 AI 원고실을 안정화한다.</p>
+        <hr>
+        <h2 id="block-017-markdown-12-운영-원칙-한-줄-요약">12. 운영 원칙 한 줄 요약</h2>
+        <p>이 프로젝트는 “기존 Zettelkasten을 망가뜨리지 않고, 구조노트를 원고 프로젝트로 안전하게 넘기는 글쓰기 작업실”이다. 13번은 지식 연결 엔진, 14번은 원고 작성 엔진으로 분리해서 운영한다.</p>
+      </div>
+    </div>
+    </section>
+    <footer class="document-footer">오프라인 열람과 인쇄를 위해 한 파일로 보관되는 문서입니다.</footer>
+  </main>
 </body>
 </html>

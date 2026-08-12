@@ -1,0 +1,28 @@
+*Version: v1.0 (2026-07-14)* — 13·14·Vault 구자료 외장 이동 manifest.
+
+archive root: /Volumes/PAUL4TB_DATA/Mac_Backup_Archive/2026-07-14
+copy: rsync -aHR --inplace
+verification: verify-file-deltas.sh (rsync -aHRcni)
+result: 17/17 source 묶음 verified, file-level delta 0
+
+source | destination | reason | checksum result | local action
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/.cmux-harness | archive root 아래 절대경로 보존 | 완료된 2026-05 harness 기록 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/plugins/zettel-connect | archive root 아래 절대경로 보존 | 정본과 불일치한 stale staging | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/docs/archive | archive root 아래 절대경로 보존 | 구 session archive | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/handoff_260502.md | archive root 아래 절대경로 보존 | 구 경로를 지시하는 handoff | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/docs/zc-verify-checklist_260425.md | archive root 아래 절대경로 보존 | 구 bundle 검증 문서 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/이전/20260615-graphic-html | archive root 아래 절대경로 보존 | 구 운영가이드 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/이전/20260615-운영가이드-trigger-split | archive root 아래 절대경로 보존 | 구 운영가이드 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect/이전/구_운영가이드보조문서_archived_20260629 | archive root 아래 절대경로 보존 | 구 보조문서 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/.cmux-harness | archive root 아래 절대경로 보존 | 완료된 harness 기록의 외장 사본 | verified | 활성 planning refer 때문에 로컬 유지
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/plugins/ai-manuscript-studio | archive root 아래 절대경로 보존 | 정본과 불일치한 stale staging | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/packages/zettel-connect | archive root 아래 절대경로 보존 | 삭제 패키지의 node_modules 잔재 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/LOCAL_KW_INSTALL_REVIEW_20260518.md | archive root 아래 절대경로 보존 | 제거된 구조를 전제한 구 검토서 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/이전/20260615-graphic-html | archive root 아래 절대경로 보존 | 구 운영가이드 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/이전/20260615-운영가이드-trigger-split | archive root 아래 절대경로 보존 | 구 운영가이드 | verified | 제거
+/Users/dongchanyoon/Documents/Work/Projects/14.zettel-writer-connect/이전/구_운영가이드보조문서_archived_20260629 | archive root 아래 절대경로 보존 | 구 보조문서 | verified | 제거
+/Users/dongchanyoon/Library/CloudStorage/OneDrive-개인/지식창고/.obsidian/plugins/이전 | archive root 아래 절대경로 보존 | 2026-07-14 링크 이관 전 bundle | verified | 제거
+/Users/dongchanyoon/.local/obsidian-plugins | archive root 아래 절대경로 보존 | 현재 Vault가 참조하지 않는 구 shared runtime | verified | 제거
+
+강제 제외: 13·14 정본 source/build output, Vault의 현재 plugin directory·data.json·cache, 14 apps/desktop, 14 .omx.
+로컬 최신 SSOT 백업: 양 repo의 이전/20260714-runtime-ssot-update/.

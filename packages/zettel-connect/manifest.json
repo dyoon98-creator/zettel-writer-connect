@@ -1,9 +1,0 @@
-{
-  "id": "zettel-connect",
-  "name": "Zettel Connect",
-  "version": "0.1.0",
-  "minAppVersion": "1.5.0",
-  "description": "Hybrid structural + semantic connection recommender for Zettelkasten vaults.",
-  "author": "futurewave",
-  "isDesktopOnly": true
-}

@@ -2,15 +2,15 @@
   "name": "obsidian-plugins-monorepo",
   "version": "0.0.1",
   "private": true,
-  "description": "Futurewave Obsidian plugin monorepo: AI Manuscript Studio and Zettel Connect.",
+  "description": "AI Manuscript Studio Obsidian plugin monorepo.",
   "scripts": {
-    "test": "pnpm -r test",
+    "test": "pnpm run test:deploy-contract && pnpm -r test",
+    "test:deploy-contract": "node tests/deploy-contract.mjs",
     "build": "pnpm -r build",
-    "build:plugins": "pnpm --filter @ai-manuscript-studio/core build && pnpm --filter @ai-manuscript-studio/obsidian-plugin build && pnpm --filter zettel-connect build",
+    "build:plugins": "pnpm --filter @ai-manuscript-studio/core build && pnpm --filter @ai-manuscript-studio/obsidian-plugin build",
     "deploy": "bash scripts/deploy-obsidian-plugins.sh",
     "plugins:deploy": "bash scripts/deploy-obsidian-plugins.sh",
     "deploy:ai-manuscript": "bash scripts/deploy-obsidian-plugins.sh ai-manuscript-studio",
-    "deploy:zettel": "bash scripts/deploy-obsidian-plugins.sh zettel-connect",
     "typecheck": "pnpm -r exec tsc -noEmit"
   },
   "devDependencies": {

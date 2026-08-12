@@ -1,14 +1,15 @@
-# Futurewave Obsidian Plugins — 작업 규칙
+# AI 원고실 — 작업 규칙
 
-## 0. 현재 구조 — 두 옵시디언 플러그인 통합 모노레포
+## 0. 현재 구조 — AI 원고실 모노레포
 
 정식 소스 위치는 `/Users/futurewave/Documents/dev/obsidian-plugins/`.
-이 레포에서 두 커뮤니티 플러그인을 함께 관리한다.
+이 레포에서 AI 원고실을 관리한다.
 
 - `packages/obsidian-plugin/` — AI 원고실 (`ai-manuscript-studio`)
-- `packages/zettel-connect/` — Zettel Connect (`zettel-connect`)
 - `packages/core/` — AI 원고실 공유 비즈니스 로직
 - `apps/desktop/` — 레거시 Tauri 앱, 검증 후 폐기 예정
+
+Zettel Connect는 `/Users/dongchanyoon/Documents/Work/Projects/13.zettel-connect`가 정본이며, 이 레포에서 빌드·배포하지 않는다.
 
 v0.1 부터 작업실 UI 가 옵시디언 플러그인 안의 WorkspaceLeaf view 로 통합됐다.
 별도 Tauri 데스크톱 앱은 **검증 후 폐기 예정**. 그 전까지는 소스 보존
@@ -22,17 +23,15 @@ v0.1 부터 작업실 UI 가 옵시디언 플러그인 안의 WorkspaceLeaf view
 pnpm run deploy
 ```
 
-이 명령은 아래를 모두 수행한다.
+이 명령은 AI 원고실을 빌드한 뒤, 지정한 Vault의 실제
+`.obsidian/plugins/ai-manuscript-studio/` 안에서 `main.js`, `manifest.json`,
+`styles.css`를 이 저장소 산출물로 심볼릭 링크한다. Vault별 `data.json`과
+`cache/`는 그 자리에 보존한다. `OBSIDIAN_VAULT_PLUGINS_DIR`를 반드시 지정한다.
 
-- AI 원고실 빌드 후 `~/.local/obsidian-plugins/ai-manuscript-studio/` 로 복사
-- Zettel Connect 빌드 후 `~/.local/obsidian-plugins/zettel-connect/` 로 복사
-- 볼트의 `.obsidian/plugins/<plugin-id>` symlink를 위 공용 설치 위치로 맞춤
-
-단일 플러그인만 배포할 때:
+명시적으로 AI 원고실만 배포할 때:
 
 ```bash
 pnpm deploy:ai-manuscript
-pnpm deploy:zettel
 ```
 
 옵시디언에서 `Cmd+P → 다시 로드 (개발자용)` 또는 설정에서 플러그인 토글
@@ -80,13 +79,13 @@ studio 측만 갱신해도 됨.
 
 - 정식 위치: `/Users/futurewave/Documents/dev/obsidian-plugins/`
 - 옛 위치 (사용 금지): `/Users/futurewave/Documents/dev/ai-manuscript-studio/`
-- 옵시디언 플러그인 패키지: `packages/obsidian-plugin/` + `packages/zettel-connect/`
+- 옵시디언 플러그인 패키지: `packages/obsidian-plugin/`
 - 데스크톱 앱: `apps/desktop/` (폐기 예정, 검증 통과 후 `.archive/` 로 이동)
 
-옵시디언 볼트의 `.obsidian/plugins/ai-manuscript-studio` 와
-`.obsidian/plugins/zettel-connect` 는 각각
-`~/.local/obsidian-plugins/<plugin-id>/` 를 가리키는 symlink로 유지한다.
-소스 패키지를 직접 symlink하지 않는다.
+옵시디언 볼트의 `.obsidian/plugins/ai-manuscript-studio`는 실제 디렉터리로 유지한다.
+그 안의 bundle 3파일만 `packages/obsidian-plugin/`의 빌드 산출물을 가리키는
+심볼릭 링크로 유지한다. 이로써 source build 갱신은 즉시 링크 대상에 반영되고,
+Vault별 설정·캐시는 소스 저장소와 분리된다.
 
 ## 7. 레거시 Tauri 빌드 — 폐기 예정
 
