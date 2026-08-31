@@ -142,12 +142,30 @@ export class ManuscriptStudioView extends ItemView {
     this.releaseContext = initStudioContext(this.plugin);
     // 옵시디언 view leaf 의 content area 자체에 absolute fill 을 적용해
     // .app-shell 의 100vh/100vw 가 view 영역 안으로 가둬지도록 한다.
-    const contentEl = this.containerEl.children[1] as HTMLElement;
+    //
+    // `containerEl.children[1]` 이라는 «위치 추정» 을 쓰지 않는다. ItemView 는
+    // `contentEl` 을 공식 속성으로 노출한다. 추정이 어긋나면 작업실이 헤더처럼
+    // 높이가 거의 없는 엘리먼트 안에 그려져 «백지»로 보인다 — 오류도 안 뜬다
+    // (2026-08-31 대표 화면 실측: 파일·binder·CSS·App 렌더 모두 정상인데
+    // 화면만 비어 있었다).
+    const contentEl =
+      this.contentEl ?? (this.containerEl.children[1] as HTMLElement);
     contentEl.empty();
     contentEl.style.padding = "0";
     contentEl.style.overflow = "hidden";
     contentEl.style.position = "relative";
     const host = contentEl.createDiv({ cls: "manuscript-studio-root" });
+    // 백지 재발 시 «어디에» 그렸는지 바로 알 수 있게 남긴다.
+    // eslint-disable-next-line no-console
+    console.info(
+      "[Studio] mount",
+      JSON.stringify({
+        usedOfficialContentEl: Boolean(this.contentEl),
+        contentElClass: contentEl.className,
+        contentElHeight: contentEl.clientHeight,
+        projectFolder: this.state.projectFolder ?? null,
+      }),
+    );
     this.root = createRoot(host);
     this.render();
 
