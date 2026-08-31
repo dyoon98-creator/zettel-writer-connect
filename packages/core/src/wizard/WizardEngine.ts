@@ -6,6 +6,8 @@
 
 import type { Genre } from "../types";
 import {
+  ConceptHandoff,
+  DEFAULT_DRAFT_GENRE,
   STAGE_LABEL_KO,
   StageOutcome,
   WIZARD_STAGES,
@@ -58,6 +60,7 @@ export class WizardEngine {
       currentStage,
       stages: initial?.stages ?? emptyStages(currentStage),
       messages: initial?.messages ? [...initial.messages] : [],
+      conceptHandoff: initial?.conceptHandoff,
     };
   }
 
@@ -71,6 +74,42 @@ export class WizardEngine {
   }
   setDraftGenre(genre: Genre): void {
     this._session = { ...this._session, draftGenre: genre, updatedAt: nowIso() };
+  }
+
+  /**
+   * 컨셉 마법사에서 이어받은 결과를 세션에 싣는다.
+   * 이 값이 있으면 인터뷰는 「묻는 자리」가 아니라 「확인하는 자리」가 된다.
+   */
+  setConceptHandoff(handoff: ConceptHandoff): void {
+    this._session = { ...this._session, conceptHandoff: handoff, updatedAt: nowIso() };
+  }
+
+  /**
+   * 앞 단계 결과가 이미 답을 들고 있어 «묻지 않고» 닫는 단계.
+   *
+   * `completeStage` 와 다른 점은 `skippedReason` 하나다. 상태는 `complete` 로
+   * 두어 진행도·finalize 가 어긋나지 않게 하고(0/4 인데 3단계만 도는 일 방지),
+   * 「사용자가 답한 것이 아니다」라는 사실은 그 필드가 들고 있는다.
+   * 화면은 이 필드를 보고 「완료」가 아니라 「이어받음」으로 그린다.
+   */
+  skipStage(
+    stage: WizardStageId,
+    reason: string,
+    decisions?: Record<string, string>,
+  ): void {
+    if (!WIZARD_STAGES.includes(stage)) {
+      throw new Error(`WizardEngine.skipStage: unknown stage ${stage}`);
+    }
+    const cur = this._session.stages[stage];
+    const next: StageOutcome = {
+      stage,
+      status: "complete",
+      summary: reason,
+      decisions: decisions ? { ...decisions } : cur.decisions,
+      skippedReason: reason,
+    };
+    const stages = { ...this._session.stages, [stage]: next };
+    this._session = { ...this._session, stages, updatedAt: nowIso() };
   }
 
   /**
@@ -208,7 +247,7 @@ export class WizardEngine {
     return {
       sessionId: this._session.id,
       title: this._session.draftTitle?.trim() || "새 원고",
-      genre: this._session.draftGenre ?? "investment-strategy-memo",
+      genre: this._session.draftGenre ?? DEFAULT_DRAFT_GENRE,
       motive: motiveDecisions.motive ?? motiveDecisions.summary ?? "",
       targetReader:
         audMsgDecisions.target_reader ??
@@ -223,13 +262,36 @@ export class WizardEngine {
         toneDecisions.tone ??
         toneDecisions.summary ??
         "",
+      // 구조 제안의 우선순위는 셋이다.
+      //  1) `structure-pick` 을 «건너뛴» 경우 — 이어받은 트리트먼트가 정본이다.
+      //     사용자가 컨셉 마법사에서 직접 짠 장 구성이라, AI 가 전사만 보고
+      //     새로 지어낸 목록으로 덮으면 사용자가 만든 것을 버리는 셈이 된다.
+      //  2) 인자로 들어온 구조 (structure-pick 을 실제로 «물었을» 때의 AI 결과).
+      //  3) 아무것도 없으면 4부 안전망.
       structureProposal:
-        structureProposal && structureProposal.length > 0
+        this.carriedStructure() ??
+        (structureProposal && structureProposal.length > 0
           ? structureProposal.map((s) => ({ ...s }))
-          : this.fallbackStructure(),
+          : this.fallbackStructure()),
       transcript: [...this._session.messages],
       completedAt: nowIso(),
     };
+  }
+
+  /**
+   * `structure-pick` 을 건너뛴 경우에만, 이어받은 트리트먼트 카드를 장 목록으로 옮긴다.
+   * 건너뛰지 않았으면 `null` — 사용자가 그 자리에서 고른 구조가 우선이다.
+   */
+  private carriedStructure(): WizardSummary["structureProposal"] | null {
+    const pick = this._session.stages["structure-pick"];
+    if (!pick?.skippedReason) return null;
+    const cards = this._session.conceptHandoff?.treatment;
+    if (!cards || cards.length === 0) return null;
+    return cards.map((c, i) => ({
+      id: c.id || `chap-${i + 1}`,
+      title: c.title || `장 ${i + 1}`,
+      synopsis: c.summary ?? "",
+    }));
   }
 
   private fallbackStructure(): WizardSummary["structureProposal"] {

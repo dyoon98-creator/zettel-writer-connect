@@ -11,6 +11,7 @@ import { tauriVaultAdapter, getVaultBasePath } from "../../vaultAdapter";
 import { tauriNoticeAdapter } from "../../noticeAdapter";
 import { createFrontmatterAdapter } from "../../frontmatterAdapter";
 import { seedFromConceptDraft } from "./conceptSeed";
+import { conceptHandoffFromDraft } from "../wizardHandoff";
 import { slugify, todayDateStamp } from "@ai-manuscript-studio/core";
 import { TREATMENT_ROLE_LABELS } from "./treatmentPrompts";
 
@@ -161,6 +162,10 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
       );
 
       // v2 — 컨셉 마법사 종료 직후 기획 인터뷰로 자연스럽게 이어진다.
+      //
+      // 여기서 `conceptHandoff` 를 함께 넘기는 것이 이 화면의 핵심이다.
+      // 넘기지 않으면 인터뷰가 백지에서 다시 묻는다 — 방금 만든 컨셉·시놉시스·
+      // 트리트먼트를 «잃은» 것이 아니라 «읽는 쪽» 이 없어서 생겼던 결함이다.
       const projectFolder = useProjectStore.getState().projectFolder;
       const meta = useProjectStore.getState().meta;
       if (meta && projectFolder) {
@@ -168,6 +173,7 @@ export function Step5Commit({ onBack, onComplete }: Step5CommitProps): JSX.Eleme
           draftTitle: meta.title,
           draftGenre: meta.genre,
           targetProjectFolder: projectFolder,
+          conceptHandoff: conceptHandoffFromDraft(session),
         });
       }
 

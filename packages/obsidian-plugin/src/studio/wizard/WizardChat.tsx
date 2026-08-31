@@ -70,6 +70,21 @@ function MessageRow({ msg, showRegenerate, onRegenerate }: MessageRowProps): JSX
   );
 }
 
+/**
+ * 이 keydown 이 «Enter 물리 키» 인가.
+ *
+ * 원인 판정과 근거 전문은 `concept/Step2Concept.tsx` 의 같은 이름 함수에 있다.
+ * 요지 — 한글 IME 조합 중 macOS Chromium 은 keydown 을 `key: "Process"` ·
+ * `keyCode: 229` 로 보내므로 `e.key === "Enter"` 비교가 빗나가 처리기가 아예 돌지
+ * 않는다. `code` 는 IME 와 무관한 물리 키라 조합 중에도 "Enter" 다.
+ *
+ * 이 화면은 대표가 겪은 화면(Step2Concept)이 아니지만 **글자 그대로 같은 코드**를
+ * 갖고 있었다. 한쪽만 고치면 다른 쪽에서 같은 일이 또 난다.
+ */
+function isEnterKey(e: React.KeyboardEvent): boolean {
+  return e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter";
+}
+
 export function WizardChat(): JSX.Element {
   const engine = useWizardStore((s) => s.engineRef);
   const isStreaming = useWizardStore((s) => s.isStreaming);
@@ -104,7 +119,11 @@ export function WizardChat(): JSX.Element {
     if (!el) return;
     if (userScrolledUpRef.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, streamingBuffer, isStreaming]);
+    // selectedChoice·otherDraft 가 빠져 있었다 — 「직접 입력」을 고르면 답변칸과
+    // [답변] 버튼이 대화 흐름 «아래쪽에» 새로 펼쳐지는데, 그때 스크롤이 따라가지
+    // 않아 버튼이 화면 밖에 남았다. 사용자에게는 「버튼이 없다」로 보인다.
+    // (대표 실사용 보고 2026-08-31 — 코드에도 CSS 에도 있는데 안 보이던 이유)
+  }, [messages.length, streamingBuffer, isStreaming, selectedChoice, otherDraft]);
 
   const onScroll = (): void => {
     const el = scrollRef.current;
@@ -113,8 +132,10 @@ export function WizardChat(): JSX.Element {
     userScrolledUpRef.current = distFromBottom > 80;
   };
 
-  const handleSend = async (): Promise<void> => {
-    const text = draft.trim();
+  // liveText — 키보드로 보낼 때 «입력칸에 지금 실제로 있는 글자» 를 그대로 받는다.
+  // 한글 조합 중 React 상태(draft)가 마지막 음절만큼 뒤처질 수 있기 때문이다.
+  const handleSend = async (liveText?: string): Promise<void> => {
+    const text = (liveText ?? draft).trim();
     if (!text) return;
     setDraft("");
     userScrolledUpRef.current = false;
@@ -270,9 +291,9 @@ export function WizardChat(): JSX.Element {
               rows={3}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                if ((e.metaKey || e.ctrlKey) && isEnterKey(e)) {
                   e.preventDefault();
-                  void handleSend();
+                  void handleSend(e.currentTarget.value);
                 } else if (e.key === "Escape" && isStreaming) {
                   e.preventDefault();
                   cancelStream();

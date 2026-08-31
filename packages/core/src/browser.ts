@@ -227,6 +227,7 @@ export {
   WIZARD_STAGES,
   STAGE_LABEL_KO,
   STAGE_DESCRIPTION_KO,
+  DEFAULT_DRAFT_GENRE,
 } from "./wizard/types";
 export type {
   WizardStageId,
@@ -236,6 +237,8 @@ export type {
   WizardSummary,
   StageOutcome,
   StageStatus,
+  ConceptHandoff,
+  ConceptHandoffCard,
 } from "./wizard/types";
 export { WizardEngine } from "./wizard/WizardEngine";
 export {

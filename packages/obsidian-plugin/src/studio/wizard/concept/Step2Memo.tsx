@@ -11,6 +11,7 @@ import { useState } from "react";
 import type { MemoAnalysis } from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useStreamingChat } from "../../ai/useStreamingChat";
+import { AiStoppedNotice, AiWaitBar, isUserStopped } from "../AiWaitBar";
 import {
   MEMO_SYSTEM_PROMPT,
   buildMemoUserPrompt,
@@ -163,7 +164,7 @@ export function Step2Memo({ onAdvance, onBack }: Step2MemoProps): JSX.Element {
   const setMemoSelected = useConceptWizardStore((s) => s.setMemoSelected);
   const goStage = useConceptWizardStore((s) => s.goStage);
 
-  const { run, isStreaming, error, reset } = useStreamingChat();
+  const { run, isStreaming, error, cancel, reset } = useStreamingChat();
   const [parseError, setParseError] = useState<string | null>(null);
 
   const memo = session?.memo;
@@ -287,7 +288,9 @@ export function Step2Memo({ onAdvance, onBack }: Step2MemoProps): JSX.Element {
         생각·감정 축·숨은 주제를 찾아드립니다. 비워두고 건너뛰어도 됩니다.
       </p>
 
-      {error && (
+      {/* 사용자가 스스로 그만둔 것은 «고장» 이 아니다 — 빨간 배너로 보이지 않는다. */}
+      {isUserStopped(error) && <AiStoppedNotice />}
+      {error && !isUserStopped(error) && (
         <div style={errorBannerStyle} role="alert">
           AI 호출 오류: {error}
         </div>
@@ -335,9 +338,12 @@ export function Step2Memo({ onAdvance, onBack }: Step2MemoProps): JSX.Element {
             </div>
           )}
           {isStreaming && (
-            <div style={{ ...cardStyle, color: TEXT_MUTED, fontSize: 13 }}>
-              분석 중입니다…
-            </div>
+            <AiWaitBar
+              label="메모를 읽고 있습니다"
+              onCancel={cancel}
+              style={{ marginBottom: 10 }}
+              testId="memo-wait-bar"
+            />
           )}
           {analysis && (
             <div>

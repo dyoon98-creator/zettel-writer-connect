@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useStreamingChat } from "../../ai/useStreamingChat";
 import { fetchNotesForContext } from "../../vaultAdapter";
+import { AiStoppedNotice, AiWaitBar, isUserStopped } from "../AiWaitBar";
 import type { OutlineChapter } from "@ai-manuscript-studio/core";
 import {
   OUTLINE_SYSTEM_PROMPT,
@@ -445,6 +446,11 @@ export function Step4Outline({
   const canAdvance = outline.length >= 12;
   const isGenerating = streaming.isStreaming;
 
+  // 사용자가 스스로 그만둔 것은 «고장» 이 아니다 — 빨간 배너로 보이지 않는다.
+  const bannerMessage = streaming.error ?? parseError;
+  const userStopped = isUserStopped(bannerMessage);
+  const singleUserStopped = isUserStopped(singleRefineError);
+
   return (
     <div
       data-testid="step4-outline-root"
@@ -458,8 +464,11 @@ export function Step4Outline({
         background: BG,
       }}
     >
+      {/* 사용자가 그만둔 뒤 안내 */}
+      {userStopped && <AiStoppedNotice style={{ margin: "12px 16px 0" }} />}
+
       {/* 에러 배너 */}
-      {(streaming.error || parseError) && (
+      {bannerMessage && !userStopped && (
         <div
           data-testid="step4-error-banner"
           style={{
@@ -499,6 +508,16 @@ export function Step4Outline({
         </div>
       )}
 
+      {/* 기다리는 동안 — 무엇을 하는 중인지 + 얼마나 지났는지 + 그만두기 */}
+      {isGenerating && (
+        <AiWaitBar
+          label="목차를 짜고 있습니다"
+          onCancel={streaming.cancel}
+          style={{ margin: "12px 16px 0" }}
+          testId="outline-wait-bar"
+        />
+      )}
+
       {/* 본문 — 좌 40% + 우 60% */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* 좌측: 장 목록 */}
@@ -522,14 +541,8 @@ export function Step4Outline({
             <span style={{ fontWeight: 600, fontSize: 13 }}>
               목차 ({outline.length}장)
             </span>
-            {isGenerating && (
-              <span
-                data-testid="step4-generating-indicator"
-                style={{ marginLeft: 10, color: ACCENT, fontSize: 12 }}
-              >
-                AI 생성 중…
-              </span>
-            )}
+            {/* 대기 표시는 화면 위쪽 AiWaitBar 하나로 모았다 — 같은 사실을
+                두 곳에서 말하지 않는다. */}
           </div>
 
           {/* streaming buffer (생성 중 미리 보기) */}
@@ -759,7 +772,10 @@ export function Step4Outline({
 
               {/* 단장 재제안 */}
               <div>
-                {singleRefineError && (
+                {singleUserStopped && (
+                  <AiStoppedNotice style={{ marginBottom: 6 }} />
+                )}
+                {singleRefineError && !singleUserStopped && (
                   <div
                     style={{ color: "#c0392b", fontSize: 12, marginBottom: 6 }}
                   >
@@ -767,16 +783,12 @@ export function Step4Outline({
                   </div>
                 )}
                 {singleStreaming.isStreaming && (
-                  <div
-                    data-testid="step4-single-refine-streaming"
-                    style={{
-                      fontSize: 12,
-                      color: ACCENT,
-                      marginBottom: 6,
-                    }}
-                  >
-                    재제안 생성 중…
-                  </div>
+                  <AiWaitBar
+                    label="이 장을 다시 쓰고 있습니다"
+                    onCancel={singleStreaming.cancel}
+                    style={{ marginBottom: 6 }}
+                    testId="outline-single-wait-bar"
+                  />
                 )}
                 <button
                   type="button"

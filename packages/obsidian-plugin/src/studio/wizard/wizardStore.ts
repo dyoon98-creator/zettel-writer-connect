@@ -15,6 +15,7 @@ import {
   WIZARD_STAGES,
   WizardConductor,
   WizardEngine,
+  type ConceptHandoff,
   type Genre,
   type WizardAIBridge,
   type WizardMessage,
@@ -26,7 +27,9 @@ import {
 
 import { tauriNoticeAdapter } from "../noticeAdapter";
 import { useSettingsStore } from "../state/settingsStore";
+import { tauriVaultAdapter } from "../vaultAdapter";
 import { CLIWizardBridge } from "./CLIWizardBridge";
+import { parseConceptHandoffFromMarkdown } from "./wizardHandoff";
 
 export type WizardPhase =
   | "idle" // 마법사가 닫혀 있음
@@ -70,6 +73,12 @@ export interface WizardStoreState {
     draftTitle?: string;
     draftGenre?: Genre;
     targetProjectFolder?: string;
+    /**
+     * 컨셉 마법사에서 방금 넘어온 결과. 주면 인터뷰는 「묻는 자리」가 아니라
+     * 「확인하는 자리」가 된다. 주지 않았고 `targetProjectFolder` 가 있으면
+     * 그 폴더의 저장물(`concept-summary.md` → `planning.md`)에서 스스로 찾는다.
+     */
+    conceptHandoff?: ConceptHandoff;
   }) => void;
 
   /** start 시점에 받은 기존 프로젝트 폴더. null = 새 프로젝트. */
@@ -107,6 +116,48 @@ function newAbortController(): AbortController {
 }
 
 let activeAbortController: AbortController | null = null;
+
+// ── 「밀려난 요청」과 「사용자가 그만둔 요청」을 가른다 ──────────────────────
+//
+// 왜 필요한가 (대표 실사용 결함 2026-08-31):
+//   기획 인터뷰에서 아무것도 안 눌렀는데 「사용자가 취소했습니다」가 빨간 오류로
+//   떴다. 원인은 문면이 아니라 «소유권» 이다. 질문 요청이 겹치면 뒤 요청이
+//   activeAbortController 를 그냥 덮어썼고(앞 것을 abort 하지도, 기억하지도 않음),
+//   그 뒤 어떤 경로든 abort 를 걸면 앞 요청이 끊겼다. 끊김은 aiBridge 에서
+//   «취소» 로 표현되고, 화면은 그것을 사용자 잘못으로 오해해 오류로 띄웠다.
+//
+//   끊김에는 «세 가지 다른 일» 이 섞여 있었다.
+//     (1) 사용자가 그만뒀다        — 알려야 한다 (다만 «고장» 이 아니다)
+//     (2) 새 요청이 앞 요청을 밀어냈다 — 내부 사정이다. 감춘다
+//     (3) 진짜로 실패했다          — 오류로 보여야 한다
+//   아래 두 변수가 그 셋을 가른다.
+//
+// 왜 «전역» 을 유지하는가 (컨셉 마법사처럼 훅으로 옮기지 않는가):
+//   컨셉 마법사의 호출은 «컴포넌트» 가 소유한다(useStreamingChat 의 useRef).
+//   기획 인터뷰의 호출은 «스토어» 가 소유한다 — start() 는 Step5Commit 과 전역
+//   단축키에서, 나머지는 스토어 액션에서 시작되고, 그 어느 것도 특정 컴포넌트의
+//   수명에 매여 있지 않다. 훅으로 옮기면 컴포넌트 밖에서 시작되는 start() 가
+//   갈 곳을 잃는다. 결함은 «전역이라서» 가 아니라 «주인이 바뀔 때 앞 주인을
+//   말없이 버려서» 였다. 그래서 소유권을 명시적으로 넘기게 고친다.
+
+/** 질문 요청 일련번호. 「지금 유효한 요청」이 무엇인지 가리는 유일한 기준. */
+let askSeq = 0;
+
+/** 사용자가 직접 그만두라고 한 요청 번호. 이 번호의 끊김만 사용자에게 알린다. */
+let userStoppedTurn: number | null = null;
+
+/**
+ * 진행 중인 질문 요청을 «밀어낸다».
+ * 사용자가 그만둔 것이 아니라 우리가 대체한 것이므로 조용히 끝나야 한다.
+ * (앞 요청을 abort 하지 않고 참조만 버리면, 그 요청은 계속 살아서 늦게 도착한
+ *  답을 화면에 덧붙이거나 엉뚱한 때에 끊겨 오류로 보인다.)
+ */
+function supersedeActiveAsk(): void {
+  const prev = activeAbortController;
+  activeAbortController = null;
+  if (prev && !prev.signal.aborted) prev.abort();
+}
+
 let pendingSession: WizardSession | null = null; // 사용 안 함 — 보존만
 
 export const useWizardStore = create<WizardStoreState>((set, get) => ({
@@ -128,6 +179,7 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     const engine = new WizardEngine();
     if (opts?.draftTitle) engine.setDraftTitle(opts.draftTitle);
     if (opts?.draftGenre) engine.setDraftGenre(opts.draftGenre);
+    if (opts?.conceptHandoff) engine.setConceptHandoff(opts.conceptHandoff);
     const bridge = opts?.bridge ?? defaultBridgeFromSettings();
     const conductor = new WizardConductor(engine, bridge);
 
@@ -146,6 +198,25 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
       targetProjectFolder: opts?.targetProjectFolder ?? null,
     });
 
+    // ── 이미 있는 프로젝트에서 「이어서 하기」 ─────────────────────────────────
+    //
+    // 컨셉 마법사를 방금 거쳐 온 경우(Step5Commit)는 handoff 를 손에 들고 온다.
+    // 그러나 대표가 어제 만든 프로젝트를 오늘 다시 열어 「기획 인터뷰」를 누르는
+    // 길에는 그것이 없다 — 그때는 볼트에 남아 있는 저장물에서 되찾는다.
+    // 첫 질문을 «이어받기가 끝난 뒤» 던져야 첫 질문부터 확인 모드가 된다.
+    if (!opts?.conceptHandoff && opts?.targetProjectFolder) {
+      const folder = opts.targetProjectFolder;
+      void (async () => {
+        const carried = await readConceptHandoff(folder);
+        if (carried) {
+          engine.setConceptHandoff(carried);
+          set({ rev: get().rev + 1 });
+        }
+        await runAskAndStream(get, set);
+      })();
+      return;
+    }
+
     // 첫 질문은 AI 가 draft_genre 를 받아 장르별로 생성한다.
     // (motive.md prompt 의 stage_user_turn_count == 0 분기 + 장르별 옵션 가이드.)
     void runAskAndStream(get, set);
@@ -157,8 +228,9 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     const { engineRef, phase, isStreaming } = get();
     if (!engineRef || phase !== "interviewing") return;
     if (isStreaming) {
-      // 스트림 중이면 cancel 먼저.
-      get().cancelStream();
+      // 앞 요청을 밀어낸다 — 사용자가 그만둔 것이 아니다.
+      supersedeActiveAsk();
+      set({ isStreaming: false, streamingBuffer: "" });
     }
 
     engineRef.addMessage("user", trimmed);
@@ -215,8 +287,11 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     await runAskAndStream(get, set);
   },
 
+  // 사용자가 직접 그만두라고 한 것 (WizardChat 의 Esc). 내부 전환은 이것을 쓰지
+  // 않고 supersedeActiveAsk() 를 쓴다 — 둘은 다른 일이다.
   cancelStream() {
     if (activeAbortController) {
+      userStoppedTurn = askSeq;
       activeAbortController.abort();
       activeAbortController = null;
     }
@@ -227,9 +302,15 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     const { conductorRef, engineRef } = get();
     if (!conductorRef || !engineRef) return;
 
-    // 진행 중 스트림 중지 + 즉시 대기 상태 표시.
-    get().cancelStream();
-    set({ isAwaitingQuestion: true, currentQuestion: null });
+    // 진행 중 요청을 밀어낸다 + 즉시 대기 상태 표시.
+    // (사용자가 그만둔 것이 아니므로 오류로 보이면 안 된다.)
+    supersedeActiveAsk();
+    set({
+      isAwaitingQuestion: true,
+      currentQuestion: null,
+      isStreaming: false,
+      streamingBuffer: "",
+    });
 
     try {
       await conductorRef.completeCurrentStage();
@@ -241,8 +322,28 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
     }
 
     // 다음 단계로 진행 시도.
-    const nextStage = engineRef.advance();
+    let nextStage = engineRef.advance();
     set({ rev: get().rev + 1 });
+
+    // ── structure-pick 건너뛰기 ───────────────────────────────────────────────
+    //
+    // 트리트먼트 카드는 「글 구조」 그 자체다. 이미 사용자가 컨셉 마법사에서
+    // 손으로 짜 놓은 것을 다시 객관식으로 고르게 하는 것은 같은 일을 두 번
+    // 시키는 것이다(두 단계가 완전히 겹친다). 이어받은 카드가 있으면 묻지 않는다.
+    //
+    // 「완료」로 위장하지 않는다 — `skipStage` 가 `skippedReason` 을 남겨
+    // 사이드바가 「완료」가 아니라 「이어받음」으로 그리고, `finalize` 는 AI 가
+    // 지어낸 구조 대신 그 카드들을 구조 제안으로 쓴다.
+    const carriedCards = engineRef.session.conceptHandoff?.treatment ?? [];
+    if (nextStage === "structure-pick" && carriedCards.length > 0) {
+      engineRef.skipStage(
+        "structure-pick",
+        `컨셉 마법사의 트리트먼트 ${carriedCards.length}장을 그대로 씁니다 (다시 묻지 않았습니다).`,
+        { structure_template: `트리트먼트 ${carriedCards.length}장 — 컨셉 마법사에서 이어받음` },
+      );
+      nextStage = null;
+      set({ rev: get().rev + 1 });
+    }
 
     if (nextStage === null) {
       // 모든 단계 끝 → 최종 요약 만들기.
@@ -264,7 +365,9 @@ export const useWizardStore = create<WizardStoreState>((set, get) => ({
   revisitStage(stage) {
     const { engineRef } = get();
     if (!engineRef) return;
-    get().cancelStream();
+    // 단계 이동도 «밀어내기» 다 — 사용자가 그만둔 것이 아니다.
+    supersedeActiveAsk();
+    set({ isStreaming: false, streamingBuffer: "" });
     engineRef.revisitStage(stage);
     set({ phase: "interviewing", rev: get().rev + 1 });
     void runAskAndStream(get, set);
@@ -334,8 +437,17 @@ async function runAskAndStream(
   const { conductorRef, bridgeRef, engineRef } = get();
   if (!conductorRef || !bridgeRef || !engineRef) return;
 
+  // ── 한 번에 하나만 ──────────────────────────────────────────────────────
+  // 앞 요청이 아직 돌고 있으면 «밀어낸다». 이렇게 하지 않으면 두 요청이 나란히
+  // 끝나 같은 질문이 화면에 두 번 붙는다(대표 스크린샷의 그 증상).
+  supersedeActiveAsk();
+  const myTurn = (askSeq += 1);
+
   const ctrl = newAbortController();
   activeAbortController = ctrl;
+
+  /** 내가 도는 사이에 더 새 요청이 들어왔는가. */
+  const superseded = (): boolean => myTurn !== askSeq;
 
   // 우선 askNextQuestion 이 있으면 그걸 사용.
   if (typeof bridgeRef.askNextQuestion === "function") {
@@ -349,6 +461,8 @@ async function runAskAndStream(
       const q = await bridgeRef.askNextQuestion(engineRef.session, {
         signal: ctrl.signal,
       });
+      // 늦게 도착한 답이 새 요청의 질문 위에 덧붙지 않게 한다.
+      if (superseded()) return;
       // assistant 메시지에는 intro + question 만 누적. 옵션 목록은 ChoiceInput
       // 버튼이 단독으로 렌더하므로 본문 인라인 텍스트는 중복이 된다.
       // 사용자가 고른 답은 user 메시지로 transcript 에 들어가므로 final-summary
@@ -363,11 +477,26 @@ async function runAskAndStream(
         rev: get().rev + 1,
       });
     } catch (e) {
-      tauriNoticeAdapter.error(
-        `AI 응답 실패: ${e instanceof Error ? e.message : String(e)}`,
-      );
-      set({ isAwaitingQuestion: false });
+      // 끊김 세 갈래를 가른다. 「사용자가 취소했습니다」라는 «문면» 이 아니라
+      // 「누가 끊었는가」라는 «사실» 로 가른다 — 문면은 바뀔 수 있다.
+      const wasStoppedByUser = userStoppedTurn === myTurn;
+      const wasCut = ctrl.signal.aborted;
+
+      if (superseded() || (wasCut && !wasStoppedByUser)) {
+        // 우리가 밀어낸 것 — 내부 사정이다. 사용자에게 보이지 않는다.
+        // (다음 요청이 화면을 이어받으므로 대기 표시도 건드리지 않는다.)
+      } else if (wasCut && wasStoppedByUser) {
+        // 사용자가 그만뒀다 — 고장이 아니므로 빨간 오류로 띄우지 않는다.
+        tauriNoticeAdapter.info("질문 만들기를 그만뒀습니다.");
+        set({ isAwaitingQuestion: false });
+      } else {
+        tauriNoticeAdapter.error(
+          `AI 응답 실패: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        set({ isAwaitingQuestion: false });
+      }
     } finally {
+      if (userStoppedTurn === myTurn) userStoppedTurn = null;
       if (activeAbortController === ctrl) activeAbortController = null;
     }
     return;
@@ -383,10 +512,21 @@ async function runAskAndStream(
       },
     });
   } catch (e) {
-    tauriNoticeAdapter.error(
-      `AI 응답 실패: ${e instanceof Error ? e.message : String(e)}`,
-    );
+    // askNextQuestion 경로와 같은 잣대 — 밀려난 것과 사용자가 그만둔 것은
+    // 「고장」이 아니다.
+    const wasStoppedByUser = userStoppedTurn === myTurn;
+    const wasCut = ctrl.signal.aborted;
+    if (superseded() || (wasCut && !wasStoppedByUser)) {
+      /* 내부 사정 — 화면에 띄우지 않는다 */
+    } else if (wasCut && wasStoppedByUser) {
+      tauriNoticeAdapter.info("질문 만들기를 그만뒀습니다.");
+    } else {
+      tauriNoticeAdapter.error(
+        `AI 응답 실패: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   } finally {
+    if (userStoppedTurn === myTurn) userStoppedTurn = null;
     if (activeAbortController === ctrl) activeAbortController = null;
     set({
       isStreaming: false,
@@ -394,6 +534,52 @@ async function runAskAndStream(
       rev: get().rev + 1,
     });
   }
+}
+
+/**
+ * 이미 만들어진 프로젝트 폴더에서 컨셉 결과를 되찾는다 — 「이어서 하기」의 심장.
+ *
+ * 왜 컨셉 마법사처럼 세션 JSON 을 따로 두지 않았나 (2026-08-31 판정):
+ *   컨셉 마법사는 «프로젝트가 만들어지기 전» 에 도는 단계라 저장할 곳이 없어
+ *   `<vault>/.ai-manuscript-studio/wizard-sessions/<id>.json` 을 따로 만들었다.
+ *   기획 인터뷰는 그 반대다 — 항상 «프로젝트가 만들어진 뒤» 에 돈다. 저장처가
+ *   이미 폴더 안에 있는데 옆에 또 하나를 만들면 진실이 둘이 된다.
+ *   그래서 새 저장소를 만들지 않고 이미 있는 파일을 읽는다.
+ *
+ * 읽는 순서에 이유가 있다:
+ *   1. `concept-summary.md` — 컨셉 마법사 결과의 «영구 보관본». 인터뷰가 끝나도
+ *      덮어쓰이지 않는다(`conceptSeed.ts` 주석).
+ *   2. `planning.md` — 인터뷰 «전» 에는 컨셉 본문이지만, 인터뷰가 한 번 끝나면
+ *      인터뷰 결과로 덮어쓰인다. 그때는 앞선 인터뷰의 결정을 이어받는다.
+ *   둘을 합쳐, 컨셉도 앞선 인터뷰 결정도 함께 이어받는다.
+ *
+ * 어느 쪽도 못 읽으면 `null` — 그때는 지금까지와 똑같이 백지에서 묻는다.
+ */
+async function readConceptHandoff(
+  projectFolder: string,
+): Promise<ConceptHandoff | null> {
+  const readOrNull = async (rel: string): Promise<string | null> => {
+    try {
+      if (!(await tauriVaultAdapter.fileExists(rel))) return null;
+      return await tauriVaultAdapter.readFile(rel);
+    } catch {
+      return null;
+    }
+  };
+
+  const conceptMd = await readOrNull(`${projectFolder}/concept-summary.md`);
+  const planningMd = await readOrNull(`${projectFolder}/planning.md`);
+
+  const fromConcept = conceptMd ? parseConceptHandoffFromMarkdown(conceptMd) : null;
+  const fromPlanning = planningMd ? parseConceptHandoffFromMarkdown(planningMd) : null;
+
+  if (!fromConcept) return fromPlanning;
+  if (!fromPlanning) return fromConcept;
+  // 컨셉 본문은 concept-summary.md 가, 앞선 인터뷰 결정은 planning.md 가 정본이다.
+  return {
+    ...fromConcept,
+    priorDecisions: fromPlanning.priorDecisions ?? fromConcept.priorDecisions,
+  };
 }
 
 /** Lint: pendingSession 변수는 향후 hot-reload 보존용으로 남겨둠. */

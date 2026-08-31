@@ -113,6 +113,47 @@ export function SettingsPanel(): JSX.Element {
             <FieldRow>
               <input
                 type="checkbox"
+                id="settings-codex-ignore-user-config"
+                checked={settings.codexIgnoreUserConfig}
+                onChange={(e) =>
+                  void update({ codexIgnoreUserConfig: e.target.checked })
+                }
+                data-testid="settings-codex-ignore-user-config"
+              />
+              <label htmlFor="settings-codex-ignore-user-config">
+                AI 를 부를 때 내 Codex 개인 설정을 빼고 부르기
+              </label>
+            </FieldRow>
+            <Note>
+              켜 두면(권장) 컴퓨터에 저장된 Codex 개인 설정 파일을 이번 호출에만
+              읽지 않습니다. 매번 딸려 들어가던 설명이 빠져서 요청이 가벼워지고
+              답이 빨라집니다. 로그인은 그대로 유지되니 다시 로그인할 필요는
+              없습니다. 끄면 그 설정이 다시 함께 전달됩니다.
+            </Note>
+
+            <FieldRow>
+              <input
+                type="checkbox"
+                id="settings-codex-disable-shell-tool"
+                checked={settings.codexDisableShellTool}
+                onChange={(e) =>
+                  void update({ codexDisableShellTool: e.target.checked })
+                }
+                data-testid="settings-codex-disable-shell-tool"
+              />
+              <label htmlFor="settings-codex-disable-shell-tool">
+                글 쓸 때 AI 가 컴퓨터 명령을 실행하지 않게 하기
+              </label>
+            </FieldRow>
+            <Note>
+              켜 두면(권장) AI 가 글만 씁니다. 끄면 AI 가 글을 쓰다 말고 컴퓨터
+              명령을 실행할 수 있어 답이 느려지고 요청도 커집니다. 글쓰기에는
+              필요 없는 기능입니다.
+            </Note>
+
+            <FieldRow>
+              <input
+                type="checkbox"
                 id="settings-confirm"
                 checked={settings.confirmBeforeRun}
                 onChange={(e) => void update({ confirmBeforeRun: e.target.checked })}
@@ -188,4 +229,17 @@ function Field(props: { label: string; children: React.ReactNode }): JSX.Element
 
 function FieldRow(props: { children: React.ReactNode }): JSX.Element {
   return <div className="settings-field-row">{props.children}</div>;
+}
+
+/**
+ * 체크박스 아래 붙는 한국어 설명. 「무엇이 달라지는가」를 적는다.
+ * 스타일은 기존 `.settings-field-label`(작은 muted 캡션)을 그대로 쓴다 —
+ * `global.css` 는 이 발주의 수정 대상이 아니라 새 규칙을 만들지 않는다.
+ */
+function Note(props: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div className="settings-field-label settings-field-note">
+      {props.children}
+    </div>
+  );
 }

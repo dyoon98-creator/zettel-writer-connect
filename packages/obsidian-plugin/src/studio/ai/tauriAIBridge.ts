@@ -15,6 +15,7 @@ import {
   type LocalAIBridge,
 } from "@ai-manuscript-studio/core";
 
+import { readAiFailureKind } from "../../adapters/aiBridge";
 import { startAiInvocation } from "./streamingHandle";
 
 export interface TauriAIBridgeOptions {
@@ -89,6 +90,7 @@ export class TauriAIBridge implements LocalAIBridge {
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      const stderrTail = (e as { stderr?: string }).stderr ?? "";
       // signal에 의해 abort 된 경우 우선.
       if (ctx.signal?.aborted) {
         throw new AIBridgeInvocationError({
@@ -96,6 +98,47 @@ export class TauriAIBridge implements LocalAIBridge {
           message: msg || "사용자가 취소했습니다.",
         });
       }
+
+      // ── 1차: 종류 ─────────────────────────────────────────────────────────
+      // 종전에는 이 자리에서 한국어 «문장» 을 정규식으로 뒤져 실패 종류를
+      // 되짚는 것이 전부였다(`/시간 초과/`·`/CLI 종료 코드/`). 문면을 한 글자
+      // 고치면 분류가 조용히 어긋나고, 시간 초과가 「시작 실패」로 둔갑한다.
+      // 이제 브리지가 실패에 «종류» 를 실어 보내므로 그것을 먼저 본다.
+      //
+      // 아래 2차(문면)는 «지우지 않는다». 종류가 없는 옛 오류 객체 — 이전 판이
+      // 만든 것, 다른 층이 다시 감싼 Error — 가 흘러들 수 있고 그때는 종전
+      // 그대로 동작해야 한다.
+      const failure = readAiFailureKind(e);
+      if (failure === "canceled") {
+        throw new AIBridgeInvocationError({ kind: "aborted", message: msg });
+      }
+      if (failure === "timeout") {
+        throw new AIBridgeInvocationError({
+          kind: "timeout",
+          message: msg,
+          durationMs: 0,
+        });
+      }
+      if (failure === "exit") {
+        throw new AIBridgeInvocationError({
+          kind: "exit",
+          message: msg,
+          exitCode: -1,
+          stderrTail,
+        });
+      }
+      if (failure === "no-output") {
+        // CLI 는 «성공» 으로 끝났고(종료 코드 0) 본문만 없다. core 의 다섯 칸
+        // 중 이 사실을 담을 수 있는 것은 `exit` 뿐이라 종료 코드 0을 그대로 싣는다
+        // — 「띄우지 못했다(spawn)」로 옮기면 없는 사실을 지어내는 것이 된다.
+        throw new AIBridgeInvocationError({
+          kind: "exit",
+          message: msg,
+          exitCode: 0,
+          stderrTail,
+        });
+      }
+      // ── 2차: 문면 (종류가 없는 옛 오류 객체용 — 종전 그대로) ────────────────
       // stderr가 따라오면 exit, 아니면 spawn 등으로 분류.
       // 우리는 streamingHandle이 던지는 메시지에 "시간 초과", "프로세스 시작 실패",
       // "CLI 종료 코드" 패턴이 있으므로 분기.
@@ -111,9 +154,11 @@ export class TauriAIBridge implements LocalAIBridge {
           kind: "exit",
           message: msg,
           exitCode: -1,
-          stderrTail: (e as { stderr?: string }).stderr ?? "",
+          stderrTail,
         });
       }
+      // `process` 와 「종류도 문면도 못 읽음」은 같은 칸이다 — core 에 그 둘을
+      // 가르는 자리가 없고, 사용자에게도 같은 말을 한다.
       throw new AIBridgeInvocationError({
         kind: "spawn",
         message: msg,

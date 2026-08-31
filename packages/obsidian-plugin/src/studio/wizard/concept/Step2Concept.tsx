@@ -4,12 +4,42 @@
 // - 좌측: 메시지 thread + 스트리밍 버퍼 + 입력 textarea.
 // - 우측: conceptParagraph 미리보기 + 노트 chip + "정리해 보기" 버튼.
 // - 하단: "다음" 버튼 (conceptParagraph 비면 disabled).
+//
+// ── 판정 박제 (aiwait-mouse-7f4c1a08 · 2026-08-31) ──────────────────────────
+//
+// 물음 1. 이 화면은 «대화» 화면이라 마법사 단계와 생김새가 다르다. 공용 대기
+//         표시 AiWaitBar 를 그대로 쓰는가, 이 화면만 다르게 가는가.
+// 답    . 그대로 쓴다. 화면에 맞춰 바꾸는 것은 «자리» 뿐이다.
+//   - 그대로 두는 것 — 생김새·문면·버튼 이름(「그만두기」). 사용자는 마법사 네
+//     화면에서 이미 이 막대를 봤다. 같은 기다림에 다른 그림을 내밀면 그만두는
+//     법을 화면마다 새로 배워야 한다.
+//   - 자리만 다른 이유 — 이 화면에서는 왼쪽 대화(mainChat)와 오른쪽 정리
+//     (distillChat)가 «따로» 돈다. 그래서 막대도 둘이고, 각 막대는 제 옆에서
+//     도는 호출만 멈춘다. 하나로 합치면 「그만두기」가 무엇을 멈추는지 알 수
+//     없다.
+//
+// 왜 여기에 마우스 취소가 «아예 없던» 것과 같았나 (실측):
+//   Esc 처리기가 textarea 의 onKeyDown 에만 붙어 있는데, 그 textarea 는
+//   `disabled={isStreaming}` 이다. 브라우저는 disabled 요소에 포커스를 주지
+//   않으므로, 답을 만드는 «동안» 에는 Esc 가 그 처리기에 닿을 수 없다.
+//   → 마우스 사용자에게는 물론 키보드 사용자에게도 취소가 없었다.
+//   그래서 textarea 처리기는 그대로 두고(빼지 않는다) 창 전체 Esc 를 «더했다».
+//   창 전체 keydown 방식은 SelectionPopover.tsx 가 이미 쓴다 — 새 체계가 아니다.
+//
+// 물음 4. 타자기 커서 「▍」 를 어떻게 하는가.
+// 답    . 없앤다. codex 는 글자를 한 자씩 주지 않는다(본문은 턴이 끝난 뒤
+//         통째로 온다). 한 글자도 오지 않는 자리에서 커서만 깜빡이는 것은
+//         «지금 타자 치는 중» 이라는 거짓말이다. 그 자리에 남는 것은 대기 막대
+//         — 무슨 일 · 몇 초째 · 언제 저절로 멈추는지 · 그만두기. 말풍선 자체는
+//         진행 알림이 실제로 왔을 때만 띄운다. 빈 말풍선은 「AI 코치가 아무
+//         말도 하지 않았다」로 읽힌다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useStreamingChat } from "../../ai/useStreamingChat";
 import { fetchNotesForContext } from "../../vaultAdapter";
+import { AiStoppedNotice, AiWaitBar, isUserStopped } from "../AiWaitBar";
 import {
   buildConceptSystemPrompt,
   CONCEPT_STAGE_SYSTEM_PROMPT,
@@ -67,6 +97,40 @@ function buildFirstUserMessage(session: ConceptDraftSession): string {
     "(아래는 내 메모를 미리 정리해 둔 단서들이다 — 이 단서를 우선 반영해 컨셉을 정리해 줘.)",
     ...chosen,
   ].join("\n");
+}
+
+// ---- 키 판별 ----------------------------------------------------------------
+
+/**
+ * 이 keydown 이 «Enter 물리 키» 인가.
+ *
+ * ── 원인 판정 (2026-08-31 · 대표 실사용 결함) ──────────────────────────────
+ * 증상: 한글로 답을 쓰고 `Cmd+Enter` 를 눌러도 전송이 안 된다. [보내기] 버튼은
+ *       된다. 화면에는 「Cmd/Ctrl+Enter 로 전송」이라 적혀 있다.
+ *
+ * 원인: **한글 IME 조합 중에는 `e.key` 가 "Enter" 로 오지 않는다.** macOS
+ *       Chromium(옵시디언은 Electron=Chromium)은 조합 중 keydown 을
+ *       `key: "Process"` · `keyCode: 229` · `isComposing: true` 로 보낸다.
+ *       그래서 `e.key === "Enter"` 비교가 통째로 빗나가고 처리기가 «아예 실행되지
+ *       않는다». 한글을 쓰는 사람에게만, 마지막 음절이 조합 중일 때만 터진다 —
+ *       영문만 쓰면 평생 안 보인다.
+ *
+ * 고침: 판별 축을 `key`(IME 가 바꿔치는 «논리» 값)에서 `code`(IME 와 무관한
+ *       «물리» 키)로 옮긴다. `code` 는 조합 중에도 그대로 "Enter" 다.
+ *       `key` 비교도 남겨 둔다 — 더하되 빼지 않는다.
+ *
+ * 왜 «조합 중이면 무시» 가 아니라 «조합 중에도 보낸다» 인가:
+ *   흔한 IME 방어는 「조합 중 Enter 는 무시」다. 그것은 **맨 Enter 로 전송하는**
+ *   화면의 규칙이다 — 거기서 Enter 는 「음절 확정」과 「전송」 둘 다를 뜻해 모호하다.
+ *   여기는 `Cmd/Ctrl+Enter` 라 모호하지 않다. **한글 IME 는 Cmd+Enter 를 음절
+ *   확정에 쓰지 않는다.** 이 조합을 누른 사람의 뜻은 하나뿐이므로 그대로 보낸다.
+ *
+ * 같은 결함이 `../WizardChat.tsx` 에도 글자 그대로 있었고 함께 고쳤다. 두 곳에
+ * 같은 함수를 두는 이유는 이 발주가 새 공용 파일을 만들 수 없어서다. 둘이 갈라지지
+ * 못하도록 `tests/studio/wizard/imeSend.test.ts` 가 양쪽을 함께 못박는다.
+ */
+function isEnterKey(e: React.KeyboardEvent): boolean {
+  return e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter";
 }
 
 // ---- 서브 컴포넌트 ----------------------------------------------------------
@@ -244,9 +308,32 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
     el.scrollTop = el.scrollHeight;
   }, [conversation.length, mainChat.buffer, mainChat.isStreaming]);
 
+  // 창 전체 Esc — 답을 만드는 «동안» 실제로 닿는 유일한 키보드 경로.
+  // (아래 handleKeyDown 의 Esc 는 disabled 된 textarea 에 붙어 있어 정작 그
+  //  순간에는 닿지 않는다. 그 줄은 빼지 않고 이 경로를 더한다.)
+  useEffect(() => {
+    if (!mainChat.isStreaming && !distillChat.isStreaming) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== "Escape") return;
+      if (mainChat.isStreaming) mainChat.cancel();
+      if (distillChat.isStreaming) distillChat.cancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    mainChat.isStreaming,
+    distillChat.isStreaming,
+    mainChat.cancel,
+    distillChat.cancel,
+  ]);
+
   // 작가 메시지 전송.
-  const handleSend = async (): Promise<void> => {
-    const text = draft.trim();
+  //
+  // liveText — 키보드로 보낼 때 «입력칸에 지금 실제로 있는 글자» 를 그대로 받는다.
+  // 한글 조합 중에는 React 상태(draft)가 마지막 음절만큼 뒤처질 수 있다. 사용자가
+  // 보내려는 것은 «지금 눈에 보이는 문장» 이지 한 글자 모자란 문장이 아니다.
+  const handleSend = async (liveText?: string): Promise<void> => {
+    const text = (liveText ?? draft).trim();
     if (!text || mainChat.isStreaming) return;
     setDraft("");
 
@@ -310,9 +397,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
 
   // 키보드 핸들러.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    if ((e.metaKey || e.ctrlKey) && isEnterKey(e)) {
       e.preventDefault();
-      void handleSend();
+      void handleSend(e.currentTarget.value);
     } else if (e.key === "Escape" && mainChat.isStreaming) {
       e.preventDefault();
       mainChat.cancel();
@@ -327,7 +414,15 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
   };
 
   const isStreaming = mainChat.isStreaming;
-  const hasError = mainChat.error || distillChat.error;
+
+  // 사용자가 스스로 그만둔 것은 «고장» 이 아니다 — 빨간 배너로 보이지 않는다.
+  const stoppedByUser =
+    isUserStopped(mainChat.error) || isUserStopped(distillChat.error);
+  const failure =
+    (mainChat.error && !isUserStopped(mainChat.error) ? mainChat.error : null) ??
+    (distillChat.error && !isUserStopped(distillChat.error)
+      ? distillChat.error
+      : null);
 
   // ---- 렌더 ----------------------------------------------------------------
 
@@ -341,8 +436,20 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
         overflow: "hidden",
       }}
     >
+      {/* 그만둔 뒤 — 쓰던 내용이 그대로임을 말한다 (고장 아님) */}
+      {stoppedByUser && !failure && (
+        <AiStoppedNotice
+          style={{
+            marginTop: 8,
+            marginLeft: 16,
+            marginRight: 16,
+            marginBottom: 8,
+          }}
+        />
+      )}
+
       {/* 에러 배너 */}
-      {hasError && (
+      {failure && (
         <div
           data-testid="concept-error-banner"
           role="alert"
@@ -356,7 +463,7 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             gap: 8,
           }}
         >
-          <span>{mainChat.error ?? distillChat.error}</span>
+          <span>{failure}</span>
           <button
             type="button"
             onClick={() => {
@@ -404,8 +511,10 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
               <MessageRow key={i} role={m.role as "user" | "assistant"} content={m.content} />
             ))}
 
-            {/* 스트리밍 중인 assistant 응답 */}
-            {isStreaming && (
+            {/* AI 가 보내 온 것이 실제로 있을 때만 말풍선을 띄운다.
+                아무것도 오지 않는 동안 «살아 있음» 을 말하는 것은 아래 대기
+                막대의 몫이다 — 빈 말풍선 + 깜빡이는 커서는 거짓말이다. */}
+            {isStreaming && mainChat.buffer.length > 0 && (
               <div
                 className="wizard-msg wizard-msg--ai wizard-msg--streaming"
                 data-testid="concept-msg-streaming"
@@ -415,9 +524,6 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 </div>
                 <div className="wizard-msg-body" style={{ whiteSpace: "pre-wrap" }}>
                   {mainChat.buffer}
-                  <span className="wizard-msg-caret" aria-hidden>
-                    ▍
-                  </span>
                 </div>
               </div>
             )}
@@ -433,9 +539,19 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
               gap: 6,
             }}
           >
+            {/* 기다리는 동안 — 무엇을 하는 중인지 + 몇 초째인지 + 그만두기.
+                손이 이미 여기 있으므로 버튼도 여기 둔다. */}
+            {isStreaming && (
+              <AiWaitBar
+                label="AI 코치가 답을 쓰고 있습니다"
+                onCancel={mainChat.cancel}
+                testId="concept-wait-bar"
+              />
+            )}
+
             <textarea
               data-testid="concept-input"
-              placeholder="답변을 입력하세요. (Cmd/Ctrl+Enter 전송, Esc 중단)"
+              placeholder="답변을 입력하세요. (Cmd/Ctrl+Enter 로 전송)"
               value={draft}
               rows={3}
               disabled={isStreaming}
@@ -457,7 +573,9 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
               <span
                 style={{ fontSize: 12, color: "var(--color-text-muted, #786f63)", alignSelf: "center" }}
               >
-                {isStreaming ? "AI가 답변 중… (Esc 로 중단)" : "Cmd/Ctrl + Enter 로 전송"}
+                {isStreaming
+                  ? "Esc 를 눌러도 그만둘 수 있습니다"
+                  : "Cmd/Ctrl + Enter 로 전송"}
               </span>
               <button
                 type="button"
@@ -511,6 +629,17 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
             >
               AI 가 정리한 컨셉 단락
             </div>
+
+            {/* 정리는 대화와 «따로» 돈다 — 그래서 그만두기도 따로 있다. */}
+            {distillChat.isStreaming && (
+              <AiWaitBar
+                label="컨셉 단락을 정리하고 있습니다"
+                onCancel={distillChat.cancel}
+                style={{ marginBottom: 10, padding: "8px 10px" }}
+                testId="concept-distill-wait-bar"
+              />
+            )}
+
             <div
               data-testid="concept-paragraph-preview"
               style={{
@@ -523,11 +652,16 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 minHeight: 60,
               }}
             >
-              {conceptParagraph || '아직 정리된 컨셉이 없습니다. “정리해 보기”를 눌러주세요.'}
+              {/* 정리하는 «중» 에 「정리해 보기를 눌러주세요」라고 하면
+                  지금 무슨 일이 나는지 사용자가 다시 헷갈린다. */}
+              {conceptParagraph ||
+                (distillChat.isStreaming
+                  ? ""
+                  : "아직 정리된 컨셉이 없습니다. “정리해 보기”를 눌러주세요.")}
             </div>
 
-            {/* distill 스트리밍 중 */}
-            {distillChat.isStreaming && (
+            {/* 정리 중 도착한 것이 있을 때만 보인다 (커서만 깜빡이지 않는다) */}
+            {distillChat.isStreaming && distillChat.buffer.length > 0 && (
               <div
                 data-testid="concept-distill-streaming"
                 style={{
@@ -539,7 +673,6 @@ export function Step2Concept({ onAdvance, onBack }: Step2ConceptProps): JSX.Elem
                 }}
               >
                 {distillChat.buffer}
-                <span aria-hidden>▍</span>
               </div>
             )}
           </div>

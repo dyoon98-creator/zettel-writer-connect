@@ -9,6 +9,24 @@
 // 의도적 단순화:
 //   - 결과는 디스크에 저장하지 않음 (세션 캐시).
 //   - 인물/장소 시트 없이도 동작 — LLM 이 본문에서 직접 묘사 추출.
+//
+// ── 판정 박제 (aiwait-mouse-7f4c1a08 · 2026-08-31) ──────────────────────────
+//
+// 물음 2. 이 화면은 이미 마우스로 누를 수 있는 「취소」 버튼이 있다. 공용 대기
+//         표시로 통일하는가, 그냥 두는가. 「일관성」은 이유가 못 된다.
+// 답    . 통일한다. 사용자가 «실제로» 잃던 것이 셋이다.
+//   (1) 살아 있다는 증거 — 이 점검은 이 앱에서 가장 오래 걸린다(4분). 그 4분
+//       동안 화면은 「편집자가 본문을 읽고 있습니다…」 한 줄에서 멈춰 있었다.
+//       10초가 지났는지 3분이 지났는지 알 방법이 없었다. 멈춘 것과 일하는 중을
+//       구별할 수 없으면 사람은 앱을 끈다.
+//   (2) 끝이 있다는 사실 — 「4분이 지나면 저절로 멈춥니다」를 아무 데서도 말하지
+//       않았다. 끝을 모르는 기다림은 견딜 수 없다.
+//   (3) 그만두는 법 — 같은 일에 이름이 둘이었다(여기는 「취소」, 마법사는
+//       「그만두기」). 컴퓨터 용어를 모르는 사용자에게 낱말이 갈리면 「이 취소는
+//       아까 그 그만두기와 다른 것인가」를 매번 다시 판단해야 한다.
+//
+// 한계 시간은 CONTINUITY_TIMEOUT_SECS 하나에서만 온다 — 화면 문면과 실제 호출이
+// 따로 놀면 「4분」 이라고 써 놓고 다른 때에 멈추는 거짓말이 된다.
 
 import { useCallback, useState } from "react";
 import { marked } from "marked";
@@ -23,6 +41,7 @@ import { tauriNoticeAdapter } from "../noticeAdapter";
 import { useProjectStore } from "../state/projectStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { startAiInvocation } from "../ai/streamingHandle";
+import { AiWaitBar } from "../wizard/AiWaitBar";
 
 interface ContinuityPanelProps {
   node: BinderDocument;
@@ -74,6 +93,12 @@ async function collectOtherScenes(
 }
 
 const CURRENT_BODY_CAP = 6000;
+
+/**
+ * 이 점검이 저절로 멈추는 때(초). 실제 호출과 화면 문면이 이 하나를 함께 쓴다.
+ * 다른 AI 호출(180초)보다 긴 이유 — 장면 30개를 함께 읽는다.
+ */
+const CONTINUITY_TIMEOUT_SECS = 240;
 
 function buildPrompt(input: {
   currentTitle: string;
@@ -172,7 +197,7 @@ export function ContinuityPanel(props: ContinuityPanelProps): JSX.Element {
       binaryPath,
       extraArgs: settings.codexExtraArgs.split(/\s+/).filter((x) => x.length > 0),
       prompt,
-      timeoutSecs: 240,
+      timeoutSecs: CONTINUITY_TIMEOUT_SECS,
     });
 
     setPhase({
@@ -211,13 +236,13 @@ export function ContinuityPanel(props: ContinuityPanelProps): JSX.Element {
     if (phase.kind === "running") {
       phase.cancel();
       setPhase({ kind: "idle" });
-      tauriNoticeAdapter.info("연속성 점검을 취소했습니다.");
+      tauriNoticeAdapter.info("연속성 점검을 그만뒀습니다.");
     }
   };
 
+  // 「점검 중」은 이제 아래 AiWaitBar 가 말한다 — 결과 카드는 끝난 뒤에만.
   const showResult =
-    !dismissed &&
-    (phase.kind === "done" || phase.kind === "error" || phase.kind === "running");
+    !dismissed && (phase.kind === "done" || phase.kind === "error");
 
   return (
     <div className="section">
@@ -237,16 +262,19 @@ export function ContinuityPanel(props: ContinuityPanelProps): JSX.Element {
         >
           {phase.kind === "running" ? "점검 중…" : "지금 점검"}
         </button>
-        {phase.kind === "running" && (
-          <button
-            type="button"
-            className="continuity-take-btn"
-            onClick={handleCancel}
-          >
-            취소
-          </button>
-        )}
       </div>
+
+      {/* 기다리는 동안 — 무엇을 하는 중인지 + 몇 초째인지 + 언제 저절로
+          멈추는지 + 그만두기. 마법사 네 화면과 같은 부품·같은 문면이다. */}
+      {phase.kind === "running" && (
+        <AiWaitBar
+          label="편집자가 본문을 읽고 있습니다"
+          onCancel={handleCancel}
+          limitSecs={CONTINUITY_TIMEOUT_SECS}
+          style={{ marginTop: 8 }}
+          testId="continuity-wait-bar"
+        />
+      )}
 
       {showResult && (
         <div className="continuity-warnings">
@@ -267,17 +295,6 @@ interface ContinuityResultProps {
 
 function ContinuityResult(props: ContinuityResultProps): JSX.Element | null {
   const { phase } = props;
-
-  if (phase.kind === "running") {
-    return (
-      <div className="continuity-warning continuity-warning--info">
-        <div className="continuity-warning-head">점검 중</div>
-        <div className="continuity-warning-body">
-          편집자가 본문을 읽고 있습니다…
-        </div>
-      </div>
-    );
-  }
 
   if (phase.kind === "error") {
     return (

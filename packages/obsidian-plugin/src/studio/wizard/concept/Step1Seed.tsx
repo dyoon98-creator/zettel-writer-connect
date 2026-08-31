@@ -178,7 +178,14 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // ── local state ──
   const [seed, setSeed] = useState("");
   const [tone, setTone] = useState<ConceptTone>("decision-memo");
-  const [genre, setGenre] = useState<Genre>("investment-strategy-memo");
+  // 장르는 «미리 골라두지 않는다».
+  //
+  // 왜 (대표 실사용 결함 2026-08-31): 여기 기본값이 "investment-strategy-memo" 라
+  // 사용자가 장르를 건드리지 않으면 «무엇을 쓰든» 투자·전략 메모가 됐다. 그 값은
+  // project.json → 기획 인터뷰 → 프롬프트까지 그대로 흘러가, 연애 이야기를 쓰는
+  // 사람에게 인터뷰가 「'test' 투자·전략 메모의 출발점을 잡겠습니다」라고 말했다.
+  // 침묵을 확신으로 바꾸지 않는다 — 고르지 않으면 다음으로 넘어가지 않는다.
+  const [genre, setGenre] = useState<Genre | null>(null);
   const [attachedNotes, setAttachedNotes] = useState<string[]>([]);
   const [noteInput, setNoteInput] = useState("");
 
@@ -215,10 +222,10 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   }
 
   // ── 다음 ──
-  const isDisabled = seed.trim().length === 0;
+  const isDisabled = seed.trim().length === 0 || genre === null;
 
   function handleAdvance(): void {
-    if (isDisabled) return;
+    if (isDisabled || genre === null) return;
     useConceptWizardStore.getState().start({
       seed: seed.trim(),
       tone,
@@ -344,7 +351,11 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
       <section>
         <div role="radiogroup" aria-label="장르 선택">
           <span style={labelStyle} id="step1-genre-label">
-            장르
+            장르{genre === null && (
+              <span style={{ color: "#a04030", fontWeight: 400, marginLeft: 6 }}>
+                — 골라주세요 (고르기 전에는 다음으로 넘어가지 않습니다)
+              </span>
+            )}
           </span>
           <div style={radioGroupStyle()}>
             {GENRE_OPTIONS.map((opt) => (

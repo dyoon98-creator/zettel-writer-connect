@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import {
   type Genre,
   type WizardSummary,
+  DEFAULT_DRAFT_GENRE,
   GENRE_LABEL_KO,
 } from "@ai-manuscript-studio/core";
 
@@ -143,7 +144,7 @@ export function WizardOverlay({
   const declineSeed = useWizardStore((s) => s.declineSeed);
   const acceptSeed = useWizardStore((s) => s.acceptSeed);
   // rev 구독.
-  useWizardStore((s) => s.rev);
+  const rev = useWizardStore((s) => s.rev);
 
   const projectVaultPath = useProjectStore((s) => s.vaultPath);
   const loadProject = useProjectStore((s) => s.loadProject);
@@ -151,18 +152,22 @@ export function WizardOverlay({
   const vaultPath = vaultPathOverride ?? projectVaultPath ?? null;
 
   const [titleDraft, setTitleDraft] = useState("");
-  const [genreDraft, setGenreDraft] = useState<Genre>("investment-strategy-memo");
+  // 기본값은 여기서 «정하지» 않는다 — core 의 DEFAULT_DRAFT_GENRE 한 곳이 정본이다.
+  // (예전엔 이 화면과 컨셉 마법사 1단계가 같은 값을 두 벌 하드코딩하고 있었다.)
+  const [genreDraft, setGenreDraft] = useState<Genre>(DEFAULT_DRAFT_GENRE);
 
   // engine 이 새로 만들어졌을 때 draft 초기화.
+  // rev 를 함께 보는 이유: 세션이 이미 있는 프로젝트의 저장물에서 장르·컨셉을
+  // 늦게(비동기로) 이어받는 경우가 있어, engine 참조만으로는 다시 그리지 않는다.
   useEffect(() => {
     if (!engine) {
       setTitleDraft("");
-      setGenreDraft("investment-strategy-memo");
+      setGenreDraft(DEFAULT_DRAFT_GENRE);
       return;
     }
     setTitleDraft(engine.session.draftTitle ?? "");
-    setGenreDraft(engine.session.draftGenre ?? "investment-strategy-memo");
-  }, [engine]);
+    setGenreDraft(engine.session.draftGenre ?? DEFAULT_DRAFT_GENRE);
+  }, [engine, rev]);
 
   if (!isOpen) return null;
 
@@ -256,8 +261,18 @@ export function WizardOverlay({
               disabled={!titleEditable}
               onChange={(e) => {
                 const g = e.target.value as Genre;
+                const prev = engine?.session.draftGenre;
                 setGenreDraft(g);
                 engine?.setDraftGenre(g);
+                // 종류는 «바꿀 수» 있어야 한다 — 그러나 컨셉·시놉시스·트리트먼트는
+                // 앞 종류에 맞춰 쓰인 것이라 조용히 어긋난다. 막지 않고 알린다.
+                if (engine?.session.conceptHandoff && prev && prev !== g) {
+                  tauriNoticeAdapter.warn(
+                    `문서 종류를 ${GENRE_LABEL_KO[prev]} → ${GENRE_LABEL_KO[g]} 로 바꿨습니다. ` +
+                      `앞서 만든 컨셉·시놉시스·트리트먼트는 ${GENRE_LABEL_KO[prev]} 기준으로 쓰인 것이라 결이 어긋날 수 있습니다.`,
+                    8000,
+                  );
+                }
               }}
             >
               {GENRE_OPTIONS.map((g) => (

@@ -86,8 +86,19 @@ describe("Step1Seed — taxonomy contract (B2.6)", () => {
     it("default tone is decision-memo", () => {
       expect(src).toMatch(/useState<ConceptTone>\("decision-memo"\)/);
     });
-    it("default genre is investment-strategy-memo", () => {
-      expect(src).toMatch(/useState<Genre>\("investment-strategy-memo"\)/);
+    // 이 계약은 2026-08-31 에 «뒤집혔다» (대표 지시 — 과제 D).
+    //
+    // 예전 계약: 장르 기본값이 "investment-strategy-memo" 여야 한다.
+    // 그 기본값 때문에 사용자가 장르를 안 고르면 «무엇을 쓰든» 투자·전략 메모가
+    // 됐고, 그 값이 project.json → 기획 인터뷰 → 프롬프트까지 그대로 흘러가
+    // 연애 이야기를 쓰는 대표에게 인터뷰가 「'test' 투자·전략 메모의 출발점을
+    // 잡겠습니다」라고 말했다(실사용 실측).
+    //
+    // 새 계약: 기본값을 «두지 않는다». 침묵을 확신으로 바꾸지 않는다.
+    it("장르 기본값을 하드코딩하지 않는다 — 고르기 전에는 진행 불가", () => {
+      expect(src).not.toMatch(/useState<Genre>\("investment-strategy-memo"\)/);
+      expect(src).toMatch(/useState<Genre \| null>\(null\)/);
+      expect(src).toMatch(/genre === null/);
     });
   });
 

@@ -16,6 +16,7 @@ import { useState } from "react";
 import type { TreatmentCard, TreatmentCardRole } from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useStreamingChat } from "../../ai/useStreamingChat";
+import { AiStoppedNotice, AiWaitBar, isUserStopped } from "../AiWaitBar";
 import {
   TREATMENT_FROM_SYNOPSIS_SYSTEM,
   TREATMENT_ROLE_LABELS,
@@ -346,7 +347,7 @@ export function Step5Treatment({
   const reorderTreatmentCards = useConceptWizardStore((s) => s.reorderTreatmentCards);
   const goStage = useConceptWizardStore((s) => s.goStage);
 
-  const { run, isStreaming, error, reset } = useStreamingChat();
+  const { run, isStreaming, error, cancel, reset } = useStreamingChat();
   const [parseError, setParseError] = useState<string | null>(null);
   const [refineHint, setRefineHint] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -440,7 +441,9 @@ export function Step5Treatment({
         넘어가세요.
       </p>
 
-      {error && (
+      {/* 사용자가 스스로 그만둔 것은 «고장» 이 아니다 — 빨간 배너로 보이지 않는다. */}
+      {isUserStopped(error) && <AiStoppedNotice />}
+      {error && !isUserStopped(error) && (
         <div style={errorBannerStyle} role="alert">
           AI 호출 오류: {error}
         </div>
@@ -480,6 +483,16 @@ export function Step5Treatment({
               : "AI 로 다시 채우기"}
         </button>
       </div>
+
+      {/* 기다리는 동안 — 무엇을 하는 중인지 + 얼마나 지났는지 + 그만두기 */}
+      {isStreaming && (
+        <AiWaitBar
+          label="카드를 만들고 있습니다"
+          onCancel={cancel}
+          style={{ marginBottom: 12 }}
+          testId="treatment-wait-bar"
+        />
+      )}
 
       {cards.length === 0 && !isStreaming && (
         <div

@@ -15,6 +15,12 @@ import type {
 import { tauriNoticeAdapter } from "../noticeAdapter";
 
 import { startAiInvocation, type AiInvocationResult } from "../ai/streamingHandle";
+// 실패 «종류» 체계는 adapters/aiBridge 가 정본이다(읽기 전용으로 가져다 쓴다).
+// 문면("사용자가 취소했습니다")으로 갈래를 판단하면 문면이 바뀌는 날 조용히 깨진다.
+import { readAiFailureKind } from "../../adapters/aiBridge";
+// 이어받기 문자열은 순수 계산이라 별도 모듈이 정본이다.
+// (이 파일은 `?raw` import 때문에 jest 가 못 읽는다 — 그래서 못 박을 수가 없다.)
+import { buildStructuredHandoff } from "./wizardHandoff";
 
 // 빌드 시 raw import — vite의 ?raw suffix 사용.
 import motivePrompt from "./prompts/motive.md?raw";
@@ -66,46 +72,6 @@ function transcriptText(session: WizardSession): string {
   return session.messages
     .map((m) => `[${m.stage}/${m.role}] ${m.content}`)
     .join("\n");
-}
-
-/**
- * Pivotrix 의 formatHandoffForPrompt 패턴 — 누적 결정사항을 구조화해 prompt 에 넣는다.
- * 모델이 "이미 정해진 정보는 다시 묻지 마세요" 규칙을 지키기 쉽게 한다.
- */
-function buildStructuredHandoff(session: WizardSession): string {
-  const lines: string[] = [];
-  lines.push(`session_id: ${session.id}`);
-  if (session.draftTitle) lines.push(`draft_title: ${session.draftTitle}`);
-  if (session.draftGenre) lines.push(`draft_genre: ${session.draftGenre}`);
-  lines.push(`current_stage: ${session.currentStage}`);
-
-  // 단계별 결정사항.
-  const stages: WizardStageId[] = ["motive", "audience-message", "tone"];
-  for (const s of stages) {
-    const outcome = session.stages[s];
-    if (!outcome || outcome.status === "pending") continue;
-    lines.push(`stage[${s}].status: ${outcome.status}`);
-    if (outcome.summary) lines.push(`stage[${s}].summary: ${outcome.summary}`);
-    if (outcome.decisions) {
-      for (const [k, v] of Object.entries(outcome.decisions)) {
-        if (typeof v === "string" && v.trim()) {
-          lines.push(`stage[${s}].decision.${k}: ${v.slice(0, 240)}`);
-        }
-      }
-    }
-  }
-
-  // 현재 단계의 사용자 답변들 (가장 최근).
-  const stage = session.currentStage;
-  const userAnswersThisStage = session.messages
-    .filter((m) => m.role === "user" && m.stage === stage)
-    .map((m, i) => `  ${i + 1}. ${m.content.trim().slice(0, 240)}`);
-  if (userAnswersThisStage.length > 0) {
-    lines.push(`current_stage_user_answers:`);
-    lines.push(...userAnswersThisStage);
-  }
-
-  return lines.join("\n");
 }
 
 function userTurnCount(session: WizardSession, stage: WizardStageId): number {
@@ -208,6 +174,25 @@ export class CLIWizardBridge implements WizardAIBridge {
    * 빈 응답 발생 시 1회 자동 재시도 (Pivotrix 패턴).
    * 실패 시 명확한 에러 + 사용자 안내.
    */
+  /**
+   * 실패 «종류» 에 맞는 다음 행동 한 마디.
+   * 종류를 모르면 아무 말도 덧붙이지 않는다 — 틀린 안내는 없느니만 못하다.
+   */
+  private static hintFor(e: unknown): string {
+    switch (readAiFailureKind(e)) {
+      case "timeout":
+        return " 답이 제한 시간 안에 오지 않았습니다. 잠시 뒤 다시 시도해 주세요.";
+      case "no-output":
+        return " AI 가 아무 내용도 보내지 않았습니다. 잠시 뒤 다시 시도해 주세요.";
+      case "process":
+        return " AI 프로그램을 실행하지 못했습니다. 설정 → AI 호출에서 CLI 경로를 확인해 주세요.";
+      case "exit":
+        return " 설정 → AI 호출의 추가 인자를 확인해 주세요.";
+      default:
+        return "";
+    }
+  }
+
   async askNextQuestion(
     session: WizardSession,
     opts?: { signal?: AbortSignal },
@@ -252,6 +237,20 @@ export class CLIWizardBridge implements WizardAIBridge {
       } catch (e) {
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
+
+        // ── 끊긴 호출은 재시도 대상이 아니다 ─────────────────────────────
+        // (대표 실사용 결함 2026-08-31) 앞선 호출이 끊기면 여기서 「첫 시도 실패
+        // — 재시도합니다」를 띄우고 «같은 signal» 로 다시 걸었다. 이미 끊긴
+        // signal 이라 두 번째도 즉시 실패하고, 그 결과 아무것도 안 누른 사용자
+        // 화면에 「사용자가 취소했습니다」가 세 줄로 쌓였다.
+        //
+        // 끊김은 실패가 아니라 «중단» 이다. 여기서는 아무 말 없이 그대로
+        // 올려 보내고, 그것을 보여줄지 말지는 그 끊김의 이유를 아는 쪽
+        // (wizardStore)이 정한다.
+        if (readAiFailureKind(e) === "canceled" || opts?.signal?.aborted) {
+          throw e;
+        }
+
         // OAuth/인증/네트워크 종류 에러는 retry 가 오히려 토큰을 무효화시킨다
         // (refresh token rotation 시 first-use 가 invalidate 됨). 한 번만
         // 시도하고 사용자에게 명확히 알린다.
@@ -273,8 +272,10 @@ export class CLIWizardBridge implements WizardAIBridge {
           );
           throw new Error(`CLI 인증 만료 — ${msg}`);
         }
+        // 원인별로 다른 안내를 낸다 — 원인이 무엇이든 「다른 모델을 써 보세요」
+        // 라고 하면 사용자를 엉뚱한 곳으로 보낸다.
         tauriNoticeAdapter.error(
-          `Codex CLI 호출 실패: ${msg}. 설정 → 추가 인자에 다른 모델(예: \`-m gpt-5-codex\`) 지정을 시도해보세요.`,
+          `AI 질문 만들기에 실패했습니다: ${msg}${CLIWizardBridge.hintFor(e)}`,
           10000,
         );
         throw new Error(`CLI 호출 실패 — ${msg}`);
@@ -285,7 +286,7 @@ export class CLIWizardBridge implements WizardAIBridge {
       const reason =
         lastErr instanceof Error ? lastErr.message : "두 번의 시도 모두 빈 응답";
       tauriNoticeAdapter.error(
-        `Codex 가 두 번 모두 빈 응답을 반환했습니다 (${reason}). 설정 → CLI 추가 인자에 다른 모델(예: \`-m gpt-5-codex\`)을 지정해보세요.`,
+        `AI 가 두 번 모두 빈 답을 보냈습니다 (${reason}). 잠시 뒤 다시 시도해 주세요. 계속되면 설정 → AI 호출에서 추가 인자를 확인해 주세요.`,
         10000,
       );
       throw new Error("Codex 빈 응답");
@@ -414,5 +415,8 @@ export function buildMotivePrompt(session: WizardSession): string {
     stage_user_turn_count: String(userTurnCount(session, stage)),
     stage_id: stage,
     stage_label: STAGE_LABEL[stage],
+    // 실제 호출(askNext / askNextQuestion)과 같은 값을 넣는다. 빠져 있으면
+    // 이 디버깅용 출력만 «다시 묻지 말 것» 블록이 비어 실제와 달라 보인다.
+    structured_handoff: buildStructuredHandoff(session),
   });
 }
