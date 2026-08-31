@@ -26,22 +26,16 @@
    배경·색·폰트 사이즈를 옵시디언이 override 해 글자가 거의 안 보이는 회귀가
    생긴다. .manuscript-studio-root 스코프 안의 모든 button 에 reset 을 적용해
    studio 자체 class style 만 살아남게 한다. */
-/* `:where(button)` 로 구체성을 (0,1,1) → (0,1,0) 으로 낮춘다. 이유:
-   (0,1,1) 이면 `.wizard-send-btn` 같은 «한 개짜리 class» 규칙(0,1,0)을 모두
-   이겨서, 작업실이 스스로 정한 배경·패딩이 전부 지워졌다. 그걸 되살리려고
-   아래에 `.manuscript-studio-root .foo` allow-list 를 두었는데, 목록에 없는
-   버튼은 계속 깎였다 — 2026-08-31 전수 조사에서 51개 중 41개가 그 상태였고,
-   기획 인터뷰의 「답변」 버튼은 배경이 지워진 채 `color:#fff` 만 남아 흰
-   바탕에 흰 글씨가 되어 아예 안 보였다.
+/* 리셋은 (0,1,1) 을 유지한다 — 옵시디언 app.css 의 실측 규칙이
+   `button:not(.clickable-icon) { background-color: var(--interactive-normal) }` 이고
+   그 구체성이 (0,1,1) 이기 때문이다. 리셋을 이보다 낮추면 옵시디언 기본 버튼
+   모양이 작업실 전체에 새어 나온다 (2026-08-31 실측 — `:where(button)` 로
+   낮췄더니 「취소」·「재생성」이 회색 알약으로 바뀌었다).
 
-   (0,1,0) 이면 이렇게 갈린다.
-     · 옵시디언 기본 `button`(0,0,1) → 리셋이 이긴다 (원래 목적 유지)
-     · 작업실 class 규칙(0,1,0)     → 같은 구체성이라 «뒤에 오는 쪽»이 이기고,
-                                      global.css 가 이 파일 뒤에 합쳐지므로
-                                      작업실 규칙이 이긴다 (의도대로)
-     · class 없는 버튼               → 리셋이 그대로 적용된다
-   합치는 순서는 esbuild.config.mjs 가 정한다 — 순서가 바뀌면 이 전제가 깨진다. */
-.manuscript-studio-root :where(button) {
+   대신 작업실 자신의 버튼 class 규칙은 global.css 에서 `:root` 를 앞에 붙여
+   (0,2,0) 이상으로 올린다. 그래야 옵시디언(0,1,1)과 이 리셋(0,1,1) 을 «둘 다»
+   이긴다. 구체성만으로 이기므로 파일 합치는 순서에 기대지 않는다. */
+.manuscript-studio-root button {
   background: transparent;
   color: inherit;
   font: inherit;
@@ -52,7 +46,7 @@
   text-align: inherit;
   box-shadow: none;
 }
-.manuscript-studio-root :where(button:hover) {
+.manuscript-studio-root button:hover {
   /* 옵시디언 default hover 도 무력화. studio 측 :hover 만 활성화. */
   background: transparent;
 }
@@ -128,13 +122,12 @@
   background: var(--color-row-hover, #f4f1ec);
   color: var(--color-text, #2b2620);
 }
-
 /* ────────────────────────────────────────────────────────────────────────
    Selection popover (에디터 텍스트 선택 → AI 액션) — 옵시디언 button reset
    이 trigger/메뉴 항목의 배경/패딩/flex 를 깎아 계층이 깨지던 문제 복원.
    position:fixed 라 .manuscript-studio-root 스코프 밖이라도 styles.css 가
    옵시디언 plugin css 로 inject 되므로 root prefix 없이 직접 강화. */
-.selection-popover-trigger {
+:root .selection-popover-trigger {
   background: var(--color-accent-soft, #d9c69a) !important;
   border: 1px solid var(--color-accent, #8a6f3a) !important;
   border-radius: 999px !important;
@@ -150,7 +143,7 @@
   justify-content: center;
   gap: 4px;
 }
-.selection-popover-trigger:hover {
+:root .selection-popover-trigger:hover {
   background: var(--color-accent, #8a6f3a) !important;
   color: #fff !important;
 }
@@ -162,8 +155,7 @@
   border-radius: 10px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
 }
-
-.selection-popover-btn {
+:root .selection-popover-btn {
   display: flex !important;
   align-items: flex-start !important;
   gap: 10px !important;
@@ -182,10 +174,10 @@
   /* row 간 시각 분리 — hover 시 다음 row 와 겹쳐 보이지 않게 약한 separator */
   position: relative;
 }
-.selection-popover-btn + .selection-popover-btn {
+:root .selection-popover-btn + .selection-popover-btn {
   border-top: 1px solid var(--color-border, #e0dcd4) !important;
 }
-.selection-popover-btn:hover {
+:root .selection-popover-btn:hover {
   background: var(--color-row-hover, #f4f1ec) !important;
   color: var(--color-text, #2b2620) !important;
 }
@@ -261,8 +253,8 @@
   gap: 6px !important;
   margin-top: 4px;
 }
-.snippet-card-btn,
-.snippet-card-btn:hover {
+:root .snippet-card-btn,
+:root .snippet-card-btn:hover {
   font-size: 11px !important;
   padding: 4px 10px !important;
   border: 1px solid var(--color-border, #e0dcd4) !important;
@@ -271,17 +263,17 @@
   border-radius: 999px !important;
   cursor: pointer;
 }
-.snippet-card-btn:hover {
+:root .snippet-card-btn:hover {
   background: var(--color-row-hover, #f4f1ec) !important;
 }
-.snippet-card-btn--primary,
-.snippet-card-btn--primary:hover {
+:root .snippet-card-btn--primary,
+:root .snippet-card-btn--primary:hover {
   background: var(--color-accent, #8a6f3a) !important;
   border-color: var(--color-accent, #8a6f3a) !important;
   color: #fff !important;
   font-weight: 600 !important;
 }
-.snippet-card-btn--primary:hover {
+:root .snippet-card-btn--primary:hover {
   filter: brightness(1.08);
 }
 

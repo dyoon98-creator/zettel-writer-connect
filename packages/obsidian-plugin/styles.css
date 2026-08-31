@@ -28,22 +28,16 @@
    배경·색·폰트 사이즈를 옵시디언이 override 해 글자가 거의 안 보이는 회귀가
    생긴다. .manuscript-studio-root 스코프 안의 모든 button 에 reset 을 적용해
    studio 자체 class style 만 살아남게 한다. */
-/* `:where(button)` 로 구체성을 (0,1,1) → (0,1,0) 으로 낮춘다. 이유:
-   (0,1,1) 이면 `.wizard-send-btn` 같은 «한 개짜리 class» 규칙(0,1,0)을 모두
-   이겨서, 작업실이 스스로 정한 배경·패딩이 전부 지워졌다. 그걸 되살리려고
-   아래에 `.manuscript-studio-root .foo` allow-list 를 두었는데, 목록에 없는
-   버튼은 계속 깎였다 — 2026-08-31 전수 조사에서 51개 중 41개가 그 상태였고,
-   기획 인터뷰의 「답변」 버튼은 배경이 지워진 채 `color:#fff` 만 남아 흰
-   바탕에 흰 글씨가 되어 아예 안 보였다.
+/* 리셋은 (0,1,1) 을 유지한다 — 옵시디언 app.css 의 실측 규칙이
+   `button:not(.clickable-icon) { background-color: var(--interactive-normal) }` 이고
+   그 구체성이 (0,1,1) 이기 때문이다. 리셋을 이보다 낮추면 옵시디언 기본 버튼
+   모양이 작업실 전체에 새어 나온다 (2026-08-31 실측 — `:where(button)` 로
+   낮췄더니 「취소」·「재생성」이 회색 알약으로 바뀌었다).
 
-   (0,1,0) 이면 이렇게 갈린다.
-     · 옵시디언 기본 `button`(0,0,1) → 리셋이 이긴다 (원래 목적 유지)
-     · 작업실 class 규칙(0,1,0)     → 같은 구체성이라 «뒤에 오는 쪽»이 이기고,
-                                      global.css 가 이 파일 뒤에 합쳐지므로
-                                      작업실 규칙이 이긴다 (의도대로)
-     · class 없는 버튼               → 리셋이 그대로 적용된다
-   합치는 순서는 esbuild.config.mjs 가 정한다 — 순서가 바뀌면 이 전제가 깨진다. */
-.manuscript-studio-root :where(button) {
+   대신 작업실 자신의 버튼 class 규칙은 global.css 에서 `:root` 를 앞에 붙여
+   (0,2,0) 이상으로 올린다. 그래야 옵시디언(0,1,1)과 이 리셋(0,1,1) 을 «둘 다»
+   이긴다. 구체성만으로 이기므로 파일 합치는 순서에 기대지 않는다. */
+.manuscript-studio-root button {
   background: transparent;
   color: inherit;
   font: inherit;
@@ -54,7 +48,7 @@
   text-align: inherit;
   box-shadow: none;
 }
-.manuscript-studio-root :where(button:hover) {
+.manuscript-studio-root button:hover {
   /* 옵시디언 default hover 도 무력화. studio 측 :hover 만 활성화. */
   background: transparent;
 }
@@ -130,13 +124,12 @@
   background: var(--color-row-hover, #f4f1ec);
   color: var(--color-text, #2b2620);
 }
-
 /* ────────────────────────────────────────────────────────────────────────
    Selection popover (에디터 텍스트 선택 → AI 액션) — 옵시디언 button reset
    이 trigger/메뉴 항목의 배경/패딩/flex 를 깎아 계층이 깨지던 문제 복원.
    position:fixed 라 .manuscript-studio-root 스코프 밖이라도 styles.css 가
    옵시디언 plugin css 로 inject 되므로 root prefix 없이 직접 강화. */
-.selection-popover-trigger {
+:root .selection-popover-trigger {
   background: var(--color-accent-soft, #d9c69a) !important;
   border: 1px solid var(--color-accent, #8a6f3a) !important;
   border-radius: 999px !important;
@@ -152,7 +145,7 @@
   justify-content: center;
   gap: 4px;
 }
-.selection-popover-trigger:hover {
+:root .selection-popover-trigger:hover {
   background: var(--color-accent, #8a6f3a) !important;
   color: #fff !important;
 }
@@ -164,8 +157,7 @@
   border-radius: 10px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
 }
-
-.selection-popover-btn {
+:root .selection-popover-btn {
   display: flex !important;
   align-items: flex-start !important;
   gap: 10px !important;
@@ -184,10 +176,10 @@
   /* row 간 시각 분리 — hover 시 다음 row 와 겹쳐 보이지 않게 약한 separator */
   position: relative;
 }
-.selection-popover-btn + .selection-popover-btn {
+:root .selection-popover-btn + .selection-popover-btn {
   border-top: 1px solid var(--color-border, #e0dcd4) !important;
 }
-.selection-popover-btn:hover {
+:root .selection-popover-btn:hover {
   background: var(--color-row-hover, #f4f1ec) !important;
   color: var(--color-text, #2b2620) !important;
 }
@@ -263,8 +255,8 @@
   gap: 6px !important;
   margin-top: 4px;
 }
-.snippet-card-btn,
-.snippet-card-btn:hover {
+:root .snippet-card-btn,
+:root .snippet-card-btn:hover {
   font-size: 11px !important;
   padding: 4px 10px !important;
   border: 1px solid var(--color-border, #e0dcd4) !important;
@@ -273,17 +265,17 @@
   border-radius: 999px !important;
   cursor: pointer;
 }
-.snippet-card-btn:hover {
+:root .snippet-card-btn:hover {
   background: var(--color-row-hover, #f4f1ec) !important;
 }
-.snippet-card-btn--primary,
-.snippet-card-btn--primary:hover {
+:root .snippet-card-btn--primary,
+:root .snippet-card-btn--primary:hover {
   background: var(--color-accent, #8a6f3a) !important;
   border-color: var(--color-accent, #8a6f3a) !important;
   color: #fff !important;
   font-weight: 600 !important;
 }
-.snippet-card-btn--primary:hover {
+:root .snippet-card-btn--primary:hover {
   filter: brightness(1.08);
 }
 
@@ -704,14 +696,16 @@ select:focus {
 .header-status-anchor {
   position: relative;
 }
-.header-status {
+
+:root .header-status {
   padding: 2px 10px;
   background: var(--color-status-bg);
   border-radius: 999px;
   color: var(--color-text);
   font-size: 12px;
 }
-.header-status-btn:hover {
+
+:root .header-status-btn:hover {
   background: var(--color-accent-soft);
 }
 .header-status-menu {
@@ -789,14 +783,15 @@ select:focus {
   color: #fff !important;
 }
 
-.header-icon-btn {
+:root .header-icon-btn {
   width: 28px;
   height: 28px;
   border-radius: 999px;
   font-size: 16px;
   color: var(--color-text-muted);
 }
-.header-icon-btn:hover {
+
+:root .header-icon-btn:hover {
   background: var(--color-row-hover);
   color: var(--color-text);
 }
@@ -888,7 +883,8 @@ select:focus {
   padding: 6px 12px;
   border-bottom: 1px solid var(--color-border);
 }
-.research-pane-collapse-btn {
+
+:root .research-pane-collapse-btn {
   font-size: 11px;
   padding: 2px 8px;
   background: transparent;
@@ -897,7 +893,8 @@ select:focus {
   cursor: pointer;
   color: var(--color-text-muted);
 }
-.research-pane-collapse-btn:hover {
+
+:root .research-pane-collapse-btn:hover {
   background: var(--color-bg-pane-alt);
 }
 .research-pane-input {
@@ -931,7 +928,8 @@ select:focus {
   border-radius: var(--radius);
   background: var(--color-bg-input, var(--color-bg-pane-alt));
 }
-.research-pane-run {
+
+:root .research-pane-run {
   padding: 4px 12px;
   font-size: 12px;
   background: var(--color-accent, #c9a861);
@@ -941,7 +939,8 @@ select:focus {
   cursor: pointer;
   white-space: nowrap;
 }
-.research-pane-run:disabled {
+
+:root .research-pane-run:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -957,7 +956,8 @@ select:focus {
   border-radius: var(--radius);
   background: var(--color-bg-input, var(--color-bg-pane-alt));
 }
-.research-pane-link-add {
+
+:root .research-pane-link-add {
   width: 28px;
   font-size: 12px;
   padding: 0;
@@ -1038,7 +1038,8 @@ select:focus {
   color: var(--color-text-muted);
   margin-top: 2px;
 }
-.research-pane-list-item-delete {
+
+:root .research-pane-list-item-delete {
   margin-left: auto;
   background: transparent;
   border: none;
@@ -1048,7 +1049,8 @@ select:focus {
   padding: 0 4px;
   visibility: hidden;
 }
-.research-pane-list-item:hover .research-pane-list-item-delete {
+
+:root .research-pane-list-item:hover .research-pane-list-item-delete {
   visibility: visible;
 }
 .research-pane-detail {
@@ -1226,7 +1228,8 @@ select:focus {
   background: rgba(74, 143, 231, 0.18) !important;
   box-shadow: inset 0 0 0 2px var(--color-accent, #4a8fe7);
 }
-.binder-caret {
+
+:root .binder-caret {
   width: 14px;
   height: 14px;
   font-size: 9px;
@@ -1236,7 +1239,8 @@ select:focus {
   justify-content: center;
   flex-shrink: 0;
 }
-.binder-caret:hover {
+
+:root .binder-caret:hover {
   color: var(--color-text);
 }
 .binder-caret--leaf {
@@ -1321,7 +1325,8 @@ select:focus {
   z-index: 200;
   font-size: 13px;
 }
-.ctx-item {
+
+:root .ctx-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1331,10 +1336,12 @@ select:focus {
   border-radius: 4px;
   position: relative;
 }
-.ctx-item:hover {
+
+:root .ctx-item:hover {
   background: var(--color-row-hover);
 }
-.ctx-item-danger {
+
+:root .ctx-item-danger {
   color: var(--color-danger);
 }
 .ctx-divider {
@@ -1378,7 +1385,8 @@ select:focus {
   flex-shrink: 0;
   font-size: 12px;
 }
-.editor-tab {
+
+:root .editor-tab {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1389,7 +1397,8 @@ select:focus {
   max-width: 200px;
   white-space: nowrap;
 }
-.editor-tab:hover {
+
+:root .editor-tab:hover {
   background: var(--color-row-hover);
 }
 .editor-tab-icon {
@@ -1449,7 +1458,8 @@ select:focus {
 .doc-viewer-spacer {
   flex: 1;
 }
-.doc-viewer-action {
+
+:root .doc-viewer-action {
   padding: 3px 10px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -1458,10 +1468,12 @@ select:focus {
   cursor: pointer;
   color: var(--color-text);
 }
-.doc-viewer-action:hover {
+
+:root .doc-viewer-action:hover {
   background: var(--color-bg-pane);
 }
-.doc-viewer-action--danger {
+
+:root .doc-viewer-action--danger {
   color: #a23341;
 }
 .doc-viewer-body {
@@ -1660,7 +1672,8 @@ select:focus {
   line-height: 1;
 }
 .selection-popover-close:hover { color: var(--color-text); }
-/* 작은 트리거 버튼 — selection 직후 떠올라 충돌 없이 AI 도움을 호출 */
+
+:root /* 작은 트리거 버튼 — selection 직후 떠올라 충돌 없이 AI 도움을 호출 */
 .selection-popover-trigger {
   background: var(--color-accent-soft);
   border: 1px solid var(--color-accent);
@@ -1674,11 +1687,13 @@ select:focus {
   user-select: none;
   white-space: nowrap;
 }
-.selection-popover-trigger:hover {
+
+:root .selection-popover-trigger:hover {
   background: var(--color-accent);
   color: #fff;
 }
-.selection-popover-btn {
+
+:root .selection-popover-btn {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -1693,7 +1708,8 @@ select:focus {
   line-height: 1.4;
   transition: background 0.12s ease;
 }
-.selection-popover-btn:hover {
+
+:root .selection-popover-btn:hover {
   background: var(--color-row-hover);
 }
 .selection-popover-icon {
@@ -1933,14 +1949,16 @@ select:focus {
   color: var(--color-text);
   word-break: break-all;
 }
-.ins-copy-btn {
+
+:root .ins-copy-btn {
   font-size: 11px;
   padding: 2px 6px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
   color: var(--color-text-muted);
 }
-.ins-copy-btn:hover {
+
+:root .ins-copy-btn:hover {
   background: var(--color-row-hover);
 }
 .ins-kv-row {
@@ -1963,25 +1981,29 @@ select:focus {
 .ins-kv-val {
   font-size: 12px;
 }
-.ins-kv-rm {
+
+:root .ins-kv-rm {
   width: 24px;
   height: 24px;
   border-radius: 999px;
   font-size: 14px;
   color: var(--color-text-muted);
 }
-.ins-kv-rm:hover {
+
+:root .ins-kv-rm:hover {
   color: var(--color-danger);
   background: var(--color-row-hover);
 }
-.ins-kv-add {
+
+:root .ins-kv-add {
   width: 24px;
   height: 24px;
   border-radius: 999px;
   font-size: 14px;
   color: var(--color-accent);
 }
-.ins-kv-add:hover {
+
+:root .ins-kv-add:hover {
   background: var(--color-accent-soft);
 }
 
@@ -2105,7 +2127,8 @@ select:focus {
   flex-direction: column;
   gap: 2px;
 }
-.source-note-link {
+
+:root .source-note-link {
   font-size: 12px;
   color: var(--color-accent);
   padding: 3px 4px;
@@ -2114,7 +2137,8 @@ select:focus {
   width: 100%;
   word-break: break-all;
 }
-.source-note-link:hover {
+
+:root .source-note-link:hover {
   background: var(--color-row-hover);
   text-decoration: underline;
 }
@@ -2148,7 +2172,8 @@ select:focus {
   font-size: 11px;
   margin-right: 2px;
 }
-.corkboard-flip-btn {
+
+:root .corkboard-flip-btn {
   background: var(--color-bg-elev);
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -2157,7 +2182,8 @@ select:focus {
   cursor: pointer;
   color: var(--color-text);
 }
-.corkboard-flip-btn:hover {
+
+:root .corkboard-flip-btn:hover {
   background: var(--color-bg-hover, var(--color-bg-pane));
 }
 .corkboard-chip {
@@ -2190,7 +2216,8 @@ select:focus {
   font-size: 10px;
   margin-left: 2px;
 }
-.corkboard-filter-clear {
+
+:root .corkboard-filter-clear {
   margin-left: auto;
   background: transparent;
   border: 1px solid var(--color-border);
@@ -2200,7 +2227,8 @@ select:focus {
   cursor: pointer;
   color: var(--color-text-muted);
 }
-.corkboard-filter-clear:hover {
+
+:root .corkboard-filter-clear:hover {
   color: var(--color-text);
 }
 
@@ -2262,7 +2290,8 @@ select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cork-card-flip {
+
+:root .cork-card-flip {
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -2272,7 +2301,8 @@ select:focus {
   line-height: 1;
   border-radius: 3px;
 }
-.cork-card-flip:hover {
+
+:root .cork-card-flip:hover {
   color: var(--color-text);
   background: var(--color-bg-pane);
 }
@@ -2334,7 +2364,8 @@ select:focus {
   background: var(--color-bg-pane-alt);
   color: var(--color-text);
 }
-.snapshots-take-btn {
+
+:root .snapshots-take-btn {
   padding: 4px 10px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -2343,7 +2374,8 @@ select:focus {
   cursor: pointer;
   white-space: nowrap;
 }
-.snapshots-take-btn:hover:not(:disabled) {
+
+:root .snapshots-take-btn:hover:not(:disabled) {
   background: var(--color-accent-soft, var(--color-bg-pane));
 }
 .snapshots-list {
@@ -2415,7 +2447,8 @@ select:focus {
 .snapshots-row-actions button:hover {
   background: var(--color-bg-pane);
 }
-.snapshots-row-delete {
+
+:root .snapshots-row-delete {
   color: var(--color-text-muted) !important;
   font-size: 13px !important;
   padding: 0 8px !important;
@@ -2456,7 +2489,8 @@ select:focus {
   font-size: 12px;
   color: var(--color-text-muted);
 }
-.snapshots-diff-close {
+
+:root .snapshots-diff-close {
   margin-left: auto;
   background: transparent;
   border: none;
@@ -2510,7 +2544,8 @@ select:focus {
   gap: 6px;
   margin-bottom: 8px;
 }
-.continuity-take-btn {
+
+:root .continuity-take-btn {
   padding: 4px 10px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -2519,10 +2554,12 @@ select:focus {
   cursor: pointer;
   white-space: nowrap;
 }
-.continuity-take-btn:hover:not(:disabled) {
+
+:root .continuity-take-btn:hover:not(:disabled) {
   background: var(--color-accent-soft, var(--color-bg-pane));
 }
-.continuity-take-btn:disabled {
+
+:root .continuity-take-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -2553,7 +2590,8 @@ select:focus {
   color: var(--color-text);
   white-space: pre-wrap;
 }
-.continuity-warning-dismiss {
+
+:root .continuity-warning-dismiss {
   float: right;
   background: transparent;
   border: none;
@@ -2617,10 +2655,10 @@ select:focus {
   color: #fff !important;
 }
 
-/* 마법사 (Phase E) ------------------------------------------------------ */
+:root /* 마법사 (Phase E) ------------------------------------------------------ */
 
 .app-empty-cta,
-.header-new-manuscript-btn {
+:root .header-new-manuscript-btn {
   background: var(--color-accent);
   color: #fff !important;
   border-radius: 999px;
@@ -2630,13 +2668,15 @@ select:focus {
   border: 1px solid transparent;
   cursor: pointer;
 }
-.app-empty-cta {
+
+:root .app-empty-cta {
   margin-top: 14px;
   padding: 8px 22px;
   font-size: 14px;
 }
-.app-empty-cta:hover,
-.header-new-manuscript-btn:hover {
+
+:root .app-empty-cta:hover,
+:root .header-new-manuscript-btn:hover {
   filter: brightness(1.05);
 }
 
@@ -2696,7 +2736,8 @@ select:focus {
 .wizard-overlay-spacer {
   flex: 1;
 }
-.wizard-overlay-cancel {
+
+:root .wizard-overlay-cancel {
   padding: 4px 12px;
   border: 1px solid var(--color-border-strong);
   border-radius: 999px;
@@ -2705,7 +2746,8 @@ select:focus {
   font-size: 12px;
   cursor: pointer;
 }
-.wizard-overlay-cancel:hover {
+
+:root .wizard-overlay-cancel:hover {
   background: var(--color-row-hover);
 }
 
@@ -2771,7 +2813,8 @@ select:focus {
   display: flex;
   flex-direction: column;
 }
-.wizard-stage-btn {
+
+:root .wizard-stage-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2783,10 +2826,12 @@ select:focus {
   text-align: left;
   width: 100%;
 }
-.wizard-stage-btn:hover {
+
+:root .wizard-stage-btn:hover {
   background: var(--color-row-hover);
 }
-.wizard-stage--active .wizard-stage-btn {
+
+:root .wizard-stage--active .wizard-stage-btn {
   background: var(--color-row-selected);
   border-color: var(--color-accent-soft);
 }
@@ -2941,7 +2986,8 @@ select:focus {
   display: flex;
   justify-content: flex-end;
 }
-.wizard-msg-action-btn {
+
+:root .wizard-msg-action-btn {
   font-size: 11px;
   padding: 2px 8px;
   border: 1px solid var(--color-border);
@@ -2949,7 +2995,8 @@ select:focus {
   background: transparent;
   cursor: pointer;
 }
-.wizard-msg-action-btn:hover {
+
+:root .wizard-msg-action-btn:hover {
   background: var(--color-row-hover);
 }
 .wizard-msg-caret {
@@ -2993,7 +3040,8 @@ select:focus {
   font-size: 11px;
   color: var(--color-text-muted);
 }
-.wizard-send-btn {
+
+:root .wizard-send-btn {
   background: var(--color-accent);
   color: #fff !important;
   border: 1px solid transparent;
@@ -3002,7 +3050,8 @@ select:focus {
   font-size: 13px;
   cursor: pointer;
 }
-.wizard-send-btn:disabled {
+
+:root .wizard-send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -3096,7 +3145,8 @@ select:focus {
   gap: 8px;
   justify-content: flex-end;
 }
-.wizard-seed-decline {
+
+:root .wizard-seed-decline {
   padding: 6px 14px;
   border: 1px solid var(--color-border-strong);
   border-radius: 999px;
@@ -3104,7 +3154,8 @@ select:focus {
   font-size: 12px;
   cursor: pointer;
 }
-.wizard-seed-accept {
+
+:root .wizard-seed-accept {
   padding: 6px 18px;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -3113,7 +3164,8 @@ select:focus {
   font-size: 12px;
   cursor: pointer;
 }
-.wizard-seed-accept:disabled {
+
+:root .wizard-seed-accept:disabled {
   opacity: 0.5;
 }
 
@@ -3133,7 +3185,8 @@ select:focus {
 .app-topbar > * {
   -webkit-app-region: no-drag;
 }
-.app-topbar-btn {
+
+:root .app-topbar-btn {
   height: 32px;
   padding: 0 14px;
   border-radius: 999px;
@@ -3143,8 +3196,10 @@ select:focus {
   color: var(--color-text);
   cursor: pointer;
 }
-.app-topbar-btn:hover { background: var(--color-row-hover); }
-.settings-toggle {
+
+:root .app-topbar-btn:hover { background: var(--color-row-hover); }
+
+:root .settings-toggle {
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -3153,7 +3208,8 @@ select:focus {
   font-size: 16px;
   cursor: pointer;
 }
-.settings-toggle:hover {
+
+:root .settings-toggle:hover {
   background: var(--color-row-hover);
 }
 .settings-popover {
@@ -3174,7 +3230,8 @@ select:focus {
   align-items: center;
   margin-bottom: 8px;
 }
-.settings-popover-close {
+
+:root .settings-popover-close {
   border: none;
   background: transparent;
   font-size: 18px;
@@ -3210,7 +3267,8 @@ select:focus {
   padding-top: 8px;
   border-top: 1px solid var(--color-border);
 }
-.settings-action {
+
+:root .settings-action {
   padding: 4px 10px;
   font-size: 12px;
   border: 1px solid var(--color-border);
@@ -3259,18 +3317,21 @@ select:focus {
   display: flex;
   gap: 8px;
 }
-.confirm-modal-cancel,
-.confirm-modal-confirm {
+
+:root .confirm-modal-cancel,
+:root .confirm-modal-confirm {
   padding: 6px 14px;
   border-radius: 999px;
   font-size: 12px;
   cursor: pointer;
 }
-.confirm-modal-cancel {
+
+:root .confirm-modal-cancel {
   border: 1px solid var(--color-border-strong);
   background: transparent;
 }
-.confirm-modal-confirm {
+
+:root .confirm-modal-confirm {
   border: 1px solid transparent;
   background: var(--color-accent);
   color: #fff;
@@ -3396,7 +3457,8 @@ select:focus {
   gap: 6px;
   margin-top: 4px;
 }
-.snippet-card-btn {
+
+:root .snippet-card-btn {
   font-size: 11px;
   padding: 3px 8px;
   border: 1px solid var(--color-border);
@@ -3405,10 +3467,12 @@ select:focus {
   border-radius: 4px;
   cursor: pointer;
 }
-.snippet-card-btn:hover {
+
+:root .snippet-card-btn:hover {
   background: var(--color-row-hover);
 }
-.snippet-card-btn--primary {
+
+:root .snippet-card-btn--primary {
   background: var(--color-accent-soft);
   border-color: var(--color-accent);
   color: var(--color-text);
@@ -3438,8 +3502,9 @@ select:focus {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-.stream-view-cancel,
-.stream-view-action {
+
+:root .stream-view-cancel,
+:root .stream-view-action {
   padding: 6px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -3447,7 +3512,8 @@ select:focus {
   border: 1px solid var(--color-border-strong);
   background: transparent;
 }
-.stream-view-action--secondary {
+
+:root .stream-view-action--secondary {
   color: var(--color-text-muted);
 }
 .stream-view-error {
@@ -3500,7 +3566,8 @@ select:focus {
   color: var(--color-text);
 }
 .voice-overlay-spacer { flex: 1; }
-.voice-overlay-cancel {
+
+:root .voice-overlay-cancel {
   padding: 4px 12px;
   border: 1px solid var(--color-border-strong);
   border-radius: 999px;
@@ -3509,7 +3576,8 @@ select:focus {
   font-size: 12px;
   cursor: pointer;
 }
-.voice-overlay-cancel:hover { background: var(--color-row-hover); }
+
+:root .voice-overlay-cancel:hover { background: var(--color-row-hover); }
 .voice-overlay-body {
   flex: 1;
   min-height: 0;
@@ -3561,7 +3629,8 @@ select:focus {
   color: white;
   letter-spacing: 0.04em;
 }
-.voice-btn {
+
+:root .voice-btn {
   font-size: 12px;
   padding: 6px 12px;
   border: 1px solid var(--color-border);
@@ -3570,9 +3639,12 @@ select:focus {
   color: var(--color-text);
   cursor: pointer;
 }
-.voice-btn:hover { filter: brightness(1.05); }
-.voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.voice-btn--primary {
+
+:root .voice-btn:hover { filter: brightness(1.05); }
+
+:root .voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+:root .voice-btn--primary {
   background: var(--color-accent);
   color: white;
   border-color: var(--color-accent);
@@ -3625,7 +3697,8 @@ select:focus {
   font-size: 11px;
   color: var(--color-text-muted);
 }
-.voice-file-del {
+
+:root .voice-file-del {
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -3633,7 +3706,8 @@ select:focus {
   padding: 2px 6px;
   font-size: 12px;
 }
-.voice-file-del:hover { color: #c33; }
+
+:root .voice-file-del:hover { color: #c33; }
 .voice-guide-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3798,4 +3872,32 @@ select:focus {
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 1.2em 0;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   비활성 버튼 — «읽히되 눌리지 않아 보이게»
+
+   전에는 각 버튼이 `opacity: 0.5` 로 통째로 흐려졌다. 그러면 배경과 글씨가
+   같이 흐려져 라벨 대비가 1.45 까지 떨어진다 — 대표가 「답변 색이 너무
+   흐리다」고 지적한 상태다 (2026-08-31 headless Chromium 실측, 25개 버튼이
+   3:1 미만이었다).
+
+   대신 중립 배경 + 흐린 글자로 바꾼다. 눌리지 않는다는 것은 «색이 죽은 것»
+   으로 보이고, 라벨은 그대로 읽힌다.
+
+   구체성 (0,3,1) — 각 버튼의 `:root .foo:disabled` (0,3,0) 보다 한 단계 높아
+   개별 규칙의 opacity 를 덮는다. 아이콘 전용 버튼 셋은 원래 배경이 없으므로
+   제외한다(중립 배경을 넣으면 난데없는 알약이 생긴다).
+   ──────────────────────────────────────────────────────────────────────── */
+:root .manuscript-studio-root button:disabled:not(.header-icon-btn):not(.settings-toggle):not(.binder-caret),
+:root .manuscript-studio-root button[aria-disabled="true"]:not(.header-icon-btn):not(.settings-toggle):not(.binder-caret) {
+  /* 배경도 !important — 일부 primary 버튼이 강조색 배경을 !important 로
+     못박아 두어, 글자만 흐려지고 배경은 강조색으로 남는 조합이 났다
+     (snippet-card-btn--primary 대비 1.04, 2026-08-31 실측). */
+  background: var(--color-status-bg, #efeae0) !important;
+  color: var(--color-text-muted, #786f63) !important;
+  border-color: var(--color-border, #e0dcd4);
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
 }

@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import type { ConceptDraftSession } from "@ai-manuscript-studio/core";
 import { useProjectStore } from "../../state/projectStore";
+import { getVaultBasePath } from "../../vaultAdapter";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { listSessions, archiveSession } from "./conceptSessionPersist";
 
@@ -126,7 +127,14 @@ function SessionToast({ session, onResume, onDismiss }: SessionToastProps): JSX.
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
 
 export function ConceptResumeToast(): JSX.Element | null {
-  const vaultPath = useProjectStore((s) => s.vaultPath);
+// 옵시디언에서는 vault 루트를 «언제나» 알 수 있다 — plugin 이 마운트될 때
+// 정해진다(`getVaultBasePath()`). 반면 projectStore.vaultPath 는 Tauri 시절의
+// 값이라 `loadProject()` 를 한 번도 거치지 않으면 비어 있다. 그 상태에서
+// 마법사를 끝내면 「vault 경로를 알 수 없어 프로젝트를 만들 수 없습니다」로
+// 막혔다 — 인터뷰를 4/4 로 다 끝내고 장 9개까지 뽑아 놓은 뒤였다
+// (2026-08-31 대표 보고). 스토어가 비면 plugin 에게 직접 묻는다.
+  const storeVaultPath = useProjectStore((s) => s.vaultPath);
+  const vaultPath = storeVaultPath ?? getVaultBasePath();
   const loadFromSession = useConceptWizardStore((s) => s.loadFromSession);
 
   const [pendingSessions, setPendingSessions] = useState<ConceptDraftSession[]>([]);
