@@ -24,7 +24,7 @@ import {
 } from "@ai-manuscript-studio/core";
 
 export interface WizardSeedDeps extends ProjectV2ManagerDeps {
-  /** 원고 폴더 (예: "3 Writing"). vault root 기준 상대 경로. */
+  /** 원고 폴더 (예: "4.Writing"). vault root 기준 상대 경로. */
   writingRoot?: string;
   /** vault 의 절대 경로. 결과에 그대로 반환. */
   vaultPath: string;
@@ -36,7 +36,10 @@ export interface WizardSeedResult {
   projectSlug: string; // 폴더명 (= ProjectMeta.id)
 }
 
-const DEFAULT_WRITING_ROOT = "3 Writing";
+// 인덱서 설정(`settings.ts` OBSIDIAN_SETTINGS_DEFAULTS.writingFolder)과 같은 값이어야
+// 한다. 갈리면 «만드는 곳»과 «목록에 뜨는 곳»이 달라져 만든 원고가 사라진 것처럼
+// 보인다 (2026-08-31 실측 — 대표가 만든 프로젝트가 사이드바에 안 떴다).
+const DEFAULT_WRITING_ROOT = "4.Writing";
 
 function makeProjectSlug(title: string, dateStamp: string = todayDateStamp()): string {
   const base = slugify(title);

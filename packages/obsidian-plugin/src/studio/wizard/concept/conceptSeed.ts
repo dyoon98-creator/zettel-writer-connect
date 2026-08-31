@@ -34,7 +34,7 @@ const TREATMENT_ROLE_KO: Record<TreatmentCardRole, string> = {
 
 export interface ConceptSeedDeps extends ProjectV2ManagerDeps {
   vaultPath: string;
-  writingRoot?: string; // 기본 "3 Writing"
+  writingRoot?: string; // 기본 "4.Writing"
   /** 작가가 5단계 화면에서 입력한 제목. 비어있으면 synopsis 첫 문장. */
   title: string;
 }
@@ -45,7 +45,9 @@ export interface ConceptSeedResult {
   projectSlug: string;
 }
 
-const DEFAULT_WRITING_ROOT = "3 Writing";
+// 인덱서 설정(`settings.ts` OBSIDIAN_SETTINGS_DEFAULTS.writingFolder)과 같은 값이어야
+// 한다. 갈리면 «만드는 곳»과 «목록에 뜨는 곳»이 달라진다 (2026-08-31 실측).
+const DEFAULT_WRITING_ROOT = "4.Writing";
 
 function makeProjectSlug(title: string, dateStamp: string = todayDateStamp()): string {
   const base = slugify(title) || "untitled";
