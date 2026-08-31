@@ -25,6 +25,8 @@ interface DraftTarget {
   chapterTitle: string;
   chapterSynopsis: string;
   sceneTitle: string;
+  /** 프로젝트 폴더 기준 상대 경로. «본문이 이미 있나» 를 디스크에서 본다. */
+  sceneFile: string;
 }
 
 export interface DraftProgress {
@@ -40,8 +42,14 @@ export interface DraftDeps {
   /** 장면 본문을 store 에 넣고 저장한다. projectStore 의 두 함수를 그대로 받는다. */
   setSceneDraft: (id: string, body: string) => void;
   saveScene: (id: string) => Promise<void>;
-  /** 장면 현재 본문 — 비어 있을 때만 쓴다. */
-  readSceneBody: (id: string) => string | null;
+  /**
+   * 본문이 이미 있는지 판정하는 방식.
+   *
+   * «열린 장면 캐시» 로 판정하면 안 된다. 캐시는 사용자가 «연» 장면만 담기
+   * 때문에, 안 열어 본 장면이 전부 「비었다」로 보여 이미 쓴 원고를 덮어쓴다.
+   * 기본은 디스크에서 직접 읽는 것이다 (2026-08-31 설계 수정).
+   */
+  hasBody?: (sceneFile: string) => Promise<boolean>;
   onProgress?: (p: DraftProgress) => void;
   signal?: AbortSignal;
   /** 한 장당 상한. 장문이라 기본을 넉넉히 준다. */
@@ -102,6 +110,7 @@ export function collectDraftTargets(binder: BinderTree | null): DraftTarget[] {
       chapterTitle: chap.title,
       chapterSynopsis: (chap as { synopsis?: string }).synopsis ?? "",
       sceneTitle: scene.title,
+      sceneFile: (scene as { file?: string }).file ?? "",
     });
   }
   return out;
@@ -203,8 +212,10 @@ export async function draftChapters(
       current: t.chapterTitle,
     });
 
-    const existing = deps.readSceneBody(t.sceneId);
-    if (existing && existing.trim().length > 0) {
+    const already = deps.hasBody
+      ? await deps.hasBody(t.sceneFile)
+      : await sceneHasBody(projectFolder, t.sceneFile);
+    if (already) {
       result.skipped += 1;
       continue;
     }
@@ -253,6 +264,32 @@ export async function draftChapters(
   return result;
 }
 
+/**
+ * 장면 파일에 «본문» 이 있나 — frontmatter 를 걷어낸 뒤 판정한다.
+ *
+ * 읽지 못하면 «있다» 로 본다. 못 읽는 파일을 덮어쓰는 것보다 건너뛰는 쪽이
+ * 안전하다 — 지워진 글은 되돌릴 수 없다.
+ */
+export async function sceneHasBody(
+  projectFolder: string,
+  sceneFile: string,
+): Promise<boolean> {
+  if (!sceneFile) return true;
+  let raw: string;
+  try {
+    raw = await tauriVaultAdapter.readFile(`${projectFolder}/${sceneFile}`);
+  } catch {
+    return true;
+  }
+  return stripFrontmatter(raw).trim().length > 0;
+}
+
+/** 앞쪽 `---` 블록을 걷어낸다. */
+export function stripFrontmatter(raw: string): string {
+  const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(raw);
+  return m ? raw.slice(m[0].length) : raw;
+}
+
 async function readOrEmpty(path: string): Promise<string> {
   try {
     return await tauriVaultAdapter.readFile(path);
@@ -264,4 +301,87 @@ async function readOrEmpty(path: string): Promise<string> {
 /** CLIWizardBridge 와 같은 규칙 — 공백으로 자르되 빈 토큰은 버린다. */
 function splitArgs(raw?: string): string[] {
   return (raw ?? "").split(/\s+/).filter(Boolean);
+}
+
+/* ------------------------------------------------------------------ */
+/* 설정에서 provider·경로를 읽어 그대로 실행하는 얇은 진입점             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 마법사와 헤더 버튼이 «같은» 초고 실행기를 쓰게 하는 진입점.
+ *
+ * 두 곳에 같은 배선을 복사해 두면 한쪽만 고쳐져 갈린다. 실제로 마법사가
+ * 끝난 뒤에는 실패한 장을 다시 쓸 방법이 아예 없었다 — 9장 중 1장이
+ * 비어 있어도 되돌릴 길이 없었다 (2026-08-31 대표 볼트 실측).
+ */
+export interface RunDraftEnv {
+  settings: {
+    aiProvider: string;
+    codexPath: string;
+    claudeCodePath: string;
+    codexExtraArgs?: string;
+  };
+  store: {
+    binder: BinderTree | null;
+    setSceneDraft: (id: string, body: string) => void;
+    saveScene: (id: string) => Promise<void>;
+  };
+  notice: {
+    info: (msg: string, ms?: number) => void;
+    warn: (msg: string, ms?: number) => void;
+    error: (msg: string, ms?: number) => void;
+  };
+  onProgress?: (p: DraftProgress) => void;
+  signal?: AbortSignal;
+}
+
+export async function runDraftWithSettings(
+  projectFolder: string,
+  env: RunDraftEnv,
+): Promise<DraftResult | null> {
+  const { settings } = env;
+  const binaryPath =
+    settings.aiProvider === "claude-code"
+      ? settings.claudeCodePath
+      : settings.codexPath;
+
+  if (settings.aiProvider === "mock" || !binaryPath.trim()) {
+    env.notice.error(
+      "AI 실행 경로가 없어 초고를 쓸 수 없습니다. 설정 → AI 호출 에서 경로를 넣어 주십시오.",
+      9000,
+    );
+    return null;
+  }
+
+  const targets = collectDraftTargets(env.store.binder);
+  const flags = await Promise.all(
+    targets.map((t) => sceneHasBody(projectFolder, t.sceneFile)),
+  );
+  const empty = targets.filter((_, i) => !flags[i]);
+  if (empty.length === 0) {
+    env.notice.info("빈 장이 없습니다 — 모든 장에 이미 본문이 있습니다.", 5000);
+    return null;
+  }
+
+  env.notice.info(
+    `빈 장 ${empty.length}개의 초고를 씁니다. 장마다 몇 분씩 걸립니다.`,
+    6000,
+  );
+
+  const r = await draftChapters(projectFolder, env.store.binder, {
+    provider: settings.aiProvider === "claude-code" ? "claude-code" : "codex",
+    binaryPath,
+    extraArgs: settings.codexExtraArgs,
+    setSceneDraft: env.store.setSceneDraft,
+    saveScene: env.store.saveScene,
+    signal: env.signal,
+    onProgress: env.onProgress,
+  });
+
+  const parts = [`초고 ${r.written}장 작성`];
+  if (r.skipped > 0) parts.push(`${r.skipped}장은 이미 본문이 있어 건너뜀`);
+  if (r.failed > 0) parts.push(`${r.failed}장 실패 (${r.failedTitles.join(", ")})`);
+  if (r.aborted) parts.push("중간에 취소됨");
+  (r.failed > 0 ? env.notice.warn : env.notice.info)(parts.join(" · "), 9000);
+  return r;
 }

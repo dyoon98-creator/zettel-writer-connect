@@ -20,6 +20,9 @@ import { InspectorPane } from "../inspector/InspectorPane";
 import { SettingsPopover } from "../theme/SettingsPopover";
 import { useWizardStore } from "../wizard/wizardStore";
 import { PlanningResultModal } from "../wizard/PlanningResultModal";
+import { runDraftWithSettings } from "../wizard/wizardDraft";
+import { useSettingsStore } from "../state/settingsStore";
+import { tauriNoticeAdapter } from "../noticeAdapter";
 
 const ALL_STATUSES: ProjectStatus[] = [
   "idea",
@@ -46,6 +49,38 @@ export function ScrivenerLayout(): JSX.Element {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta?.title ?? "");
   const [planningOpen, setPlanningOpen] = useState(false);
+  const [drafting, setDrafting] = useState<AbortController | null>(null);
+  const [draftProgress, setDraftProgress] = useState<string | null>(null);
+
+  /**
+   * 본문이 «비어 있는» 장에만 초고를 쓴다.
+   *
+   * 마법사가 한 번에 다 쓰다 실패한 장을 되살릴 길이 여기 말고는 없었다 —
+   * 창을 닫으면 방법이 없어서 9장 중 1장이 빈 채로 남았다 (2026-08-31 실측).
+   */
+  const handleDraftEmpty = async (): Promise<void> => {
+    const folder = useProjectStore.getState().projectFolder;
+    if (!folder) return;
+    const controller = new AbortController();
+    setDrafting(controller);
+    try {
+      await runDraftWithSettings(folder, {
+        settings: useSettingsStore.getState().settings,
+        store: {
+          binder: useProjectStore.getState().binder,
+          setSceneDraft: (id, body) => useProjectStore.getState().setSceneDraft(id, body),
+          saveScene: (id) => useProjectStore.getState().saveScene(id),
+        },
+        notice: tauriNoticeAdapter,
+        signal: controller.signal,
+        onProgress: (pr) =>
+          setDraftProgress(pr.total ? `${pr.done}/${pr.total} — ${pr.current}` : null),
+      });
+    } finally {
+      setDrafting(null);
+      setDraftProgress(null);
+    }
+  };
   useEffect(() => {
     if (meta && !editingTitle) setTitleDraft(meta.title);
   }, [meta, editingTitle]);
@@ -200,6 +235,22 @@ export function ScrivenerLayout(): JSX.Element {
           style={{ marginRight: 8 }}
         >
           기획 결과 보기
+        </button>
+
+        <button
+          type="button"
+          className="header-interview-btn"
+          data-testid="header-draft-empty"
+          onClick={() => void handleDraftEmpty()}
+          title="본문이 비어 있는 장에만 AI 로 초고를 씁니다. 이미 쓴 글은 건드리지 않습니다"
+          disabled={!meta || drafting !== null}
+          style={{ marginRight: 8 }}
+        >
+          {drafting
+            ? draftProgress
+              ? `초고 ${draftProgress}`
+              : "초고 쓰는 중…"
+            : "빈 장 초고 쓰기"}
         </button>
 
         <button

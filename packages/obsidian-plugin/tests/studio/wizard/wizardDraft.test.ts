@@ -12,10 +12,25 @@
 //   ③ 한 장이 실패해도 나머지를 계속 쓴다 — 아홉 중 하나로 전부 잃지 않는다.
 //   ④ 모델이 붙이는 껍데기(``` 블록, 장 제목 헤딩)를 걷어낸다.
 
+const vaultFiles = new Map<string, string>();
+jest.mock("../../../src/studio/vaultAdapter", () => ({
+  tauriVaultAdapter: {
+    readFile: async (p: string): Promise<string> => {
+      const v = vaultFiles.get(p);
+      if (v === undefined) throw new Error(`ENOENT ${p}`);
+      return v;
+    },
+  },
+  setVaultBasePath: (): void => undefined,
+  getVaultBasePath: (): string | null => "/fake",
+}));
+
 import {
   collectDraftTargets,
   buildChapterPrompt,
   stripWrapper,
+  sceneHasBody,
+  stripFrontmatter,
 } from "../../../src/studio/wizard/wizardDraft";
 
 /** binder 트리 최소 형태 — 이 테스트가 쓰는 필드만 채운다. */
@@ -154,5 +169,48 @@ describe("stripWrapper — 모델이 붙이는 껍데기 제거", () => {
 
   it("평범한 본문은 그대로 둔다", () => {
     expect(stripWrapper("  첫 문장이다.  ")).toBe("첫 문장이다.");
+  });
+});
+
+describe("sceneHasBody — 이미 쓴 원고를 덮지 않는다", () => {
+  const FM = "---\ntype: writing-scene\nword_count: 0\n---\n";
+
+  beforeEach(() => vaultFiles.clear());
+
+  it("본문이 있으면 «있다» — 건너뛴다", async () => {
+    vaultFiles.set("p/ch1/s.md", FM + "이미 써 둔 문장이다.");
+    await expect(sceneHasBody("p", "ch1/s.md")).resolves.toBe(true);
+  });
+
+  it("frontmatter 만 있고 본문이 비면 «없다» — 쓴다", async () => {
+    vaultFiles.set("p/ch1/s.md", FM);
+    await expect(sceneHasBody("p", "ch1/s.md")).resolves.toBe(false);
+  });
+
+  it("공백만 있어도 «없다»", async () => {
+    vaultFiles.set("p/ch1/s.md", FM + "   \n\n  ");
+    await expect(sceneHasBody("p", "ch1/s.md")).resolves.toBe(false);
+  });
+
+  it("파일을 못 읽으면 «있다» 로 본다 — 지워진 글은 못 되돌린다", async () => {
+    await expect(sceneHasBody("p", "없는/파일.md")).resolves.toBe(true);
+  });
+
+  it("file 이 비어 있으면 «있다» 로 본다", async () => {
+    await expect(sceneHasBody("p", "")).resolves.toBe(true);
+  });
+});
+
+describe("stripFrontmatter", () => {
+  it("앞쪽 --- 블록만 걷어낸다", () => {
+    expect(stripFrontmatter("---\na: 1\n---\n본문")).toBe("본문");
+  });
+
+  it("본문 안의 --- 는 건드리지 않는다", () => {
+    expect(stripFrontmatter("---\na: 1\n---\n앞\n---\n뒤")).toBe("앞\n---\n뒤");
+  });
+
+  it("frontmatter 가 없으면 그대로", () => {
+    expect(stripFrontmatter("그냥 본문")).toBe("그냥 본문");
   });
 });

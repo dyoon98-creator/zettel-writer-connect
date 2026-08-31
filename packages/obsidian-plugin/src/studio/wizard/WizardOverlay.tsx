@@ -311,7 +311,6 @@ export function WizardOverlay({
         extraArgs: settings.codexExtraArgs,
         setSceneDraft: (id, body) => useProjectStore.getState().setSceneDraft(id, body),
         saveScene: (id) => useProjectStore.getState().saveScene(id),
-        readSceneBody: (id) => useProjectStore.getState().sceneCache?.[id]?.body ?? null,
         signal: controller.signal,
         onProgress: (pr) => setDraftProgress(pr.total ? `${pr.done}/${pr.total} — ${pr.current}` : null),
       });
