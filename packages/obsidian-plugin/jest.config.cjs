@@ -14,6 +14,10 @@ module.exports = {
   testMatch: ["**/*.test.ts"],
   moduleNameMapper: {
     "^obsidian$": "<rootDir>/tests/__mocks__/obsidian.ts",
+    // esbuild 가 번들에서 하는 alias 와 «같은» 매핑. 없으면 테스트에서만
+    // `@tauri-apps/*` 를 못 찾아, 실제로는 잘 도는 모듈이 테스트에서 죽는다.
+    "^@tauri-apps/api/(.*)$": "<rootDir>/src/studio/tauriShims/$1.ts",
+    "^@tauri-apps/plugin-(.*)$": "<rootDir>/src/studio/tauriShims/plugin-$1.ts",
     "^@ai-manuscript-studio/core/browser$":
       "<rootDir>/../core/src/browser.ts",
     "^@ai-manuscript-studio/core/adapters$":

@@ -28,6 +28,8 @@ import {
 } from "../vaultAdapter";
 import { createFrontmatterAdapter } from "../frontmatterAdapter";
 import { seedProjectFromSummary, applySummaryToExistingProject } from "./wizardSeed";
+import { draftChapters } from "./wizardDraft";
+import { useSettingsStore } from "../state/settingsStore";
 import { WizardChat } from "./WizardChat";
 import { WizardSidebar } from "./WizardSidebar";
 import { useWizardStore, getActiveBridgeInfo } from "./wizardStore";
@@ -74,12 +76,26 @@ const GENRE_OPTIONS: { id: Genre; label: string }[] = (
 
 interface SeedPromptProps {
   summary: WizardSummary;
-  onAccept: () => Promise<void>;
+  onAccept: () => void;
   onDecline: () => void;
   isSeeding: boolean;
+  /** 「초고까지」 — 시드 후 장마다 AI 로 본문을 쓴다. */
+  onAcceptWithDraft: () => void;
+  isDrafting: boolean;
+  draftProgress: string | null;
+  onCancelDraft: () => void;
 }
 
-function SeedPrompt({ summary, onAccept, onDecline, isSeeding }: SeedPromptProps): JSX.Element {
+function SeedPrompt({
+  summary,
+  onAccept,
+  onDecline,
+  isSeeding,
+  onAcceptWithDraft,
+  isDrafting,
+  draftProgress,
+  onCancelDraft,
+}: SeedPromptProps): JSX.Element {
   return (
     <div className="wizard-seed-prompt" data-testid="wizard-seed-prompt">
       <h3>모든 단계가 끝났습니다</h3>
@@ -95,21 +111,47 @@ function SeedPrompt({ summary, onAccept, onDecline, isSeeding }: SeedPromptProps
           </li>
         ))}
       </ul>
+      {isDrafting && (
+        <div className="wizard-seed-drafting" data-testid="wizard-seed-drafting">
+          <span>초고를 쓰는 중입니다{draftProgress ? ` — ${draftProgress}` : "…"}</span>
+          <button
+            type="button"
+            className="wizard-seed-cancel"
+            onClick={onCancelDraft}
+            data-testid="wizard-seed-draft-cancel"
+          >
+            중단
+          </button>
+        </div>
+      )}
       <div className="wizard-seed-actions">
         <button
           type="button"
           className="wizard-seed-accept"
+          onClick={() => void onAcceptWithDraft()}
+          disabled={isSeeding || isDrafting}
+          data-testid="wizard-seed-accept-draft"
+        >
+          {isSeeding
+            ? "프로젝트 생성 중…"
+            : isDrafting
+              ? "초고 쓰는 중…"
+              : "binder 만들고 초고까지 쓰기 (장마다 몇 분)"}
+        </button>
+        <button
+          type="button"
+          className="wizard-seed-decline"
           onClick={() => void onAccept()}
-          disabled={isSeeding}
+          disabled={isSeeding || isDrafting}
           data-testid="wizard-seed-accept"
         >
-          {isSeeding ? "프로젝트 생성 중…" : "지금 binder 만들고 원고실 열기"}
+          {isSeeding ? "프로젝트 생성 중…" : "구조만 만들기"}
         </button>
         <button
           type="button"
           className="wizard-seed-decline"
           onClick={onDecline}
-          disabled={isSeeding}
+          disabled={isSeeding || isDrafting}
           data-testid="wizard-seed-decline"
         >
           건너뛰기 — 파일 만들지 않음
@@ -156,8 +198,14 @@ export function WizardOverlay({
 // 마법사를 끝내면 「vault 경로를 알 수 없어 프로젝트를 만들 수 없습니다」로
 // 막혔다 — 인터뷰를 4/4 로 다 끝내고 장 9개까지 뽑아 놓은 뒤였다
 // (2026-08-31 대표 보고). 스토어가 비면 plugin 에게 직접 묻는다.
-  const vaultPath = vaultPathOverride ?? projectVaultPath ?? getVaultBasePath();
+  // vaultPath 는 옵시디언에서 «라벨»일 뿐이다 — 파일 입출력은 전부 vault
+  // 상대경로로 가고 setVaultBasePath() 는 no-op 이다. 그러니 못 구해도 막지
+  // 않는다. 빈 문자열로 진행한다.
+  const vaultPath =
+    vaultPathOverride ?? projectVaultPath ?? getVaultBasePath() ?? "";
 
+  const [drafting, setDrafting] = useState<AbortController | null>(null);
+  const [draftProgress, setDraftProgress] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
   // 기본값은 여기서 «정하지» 않는다 — core 의 DEFAULT_DRAFT_GENRE 한 곳이 정본이다.
   // (예전엔 이 화면과 컨셉 마법사 1단계가 같은 값을 두 벌 하드코딩하고 있었다.)
@@ -178,14 +226,8 @@ export function WizardOverlay({
 
   if (!isOpen) return null;
 
-  const handleAccept = async (): Promise<void> => {
+  const handleAccept = async (withDraft = false): Promise<void> => {
     if (!summary) return;
-    if (!vaultPath) {
-      tauriNoticeAdapter.error(
-        "vault 경로를 알 수 없어 프로젝트를 만들 수 없습니다. 옵시디언에서 한 번 열고 다시 시도해주세요.",
-      );
-      return;
-    }
     setVaultBasePath(vaultPath);
 
     // start({ targetProjectFolder }) 였으면 기존 프로젝트에 시드. 아니면 새 프로젝트.
@@ -232,6 +274,63 @@ export function WizardOverlay({
           `프로젝트를 열 수 없습니다: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
+    }
+
+    // 「초고까지」를 고르셨으면 이어서 장마다 본문을 쓴다. 여기서 멈추면
+    // 빈 파일만 남는데, 그건 글이 아니다 (2026-08-31 대표 지시).
+    if (result && withDraft) {
+      await runDraft(result.projectFolder);
+    }
+  };
+
+  /** 시드된 장들에 AI 로 본문을 채운다. 진행률은 notice 로 알린다. */
+  const runDraft = async (projectFolder: string): Promise<void> => {
+    const settings = useSettingsStore.getState().settings;
+    const binaryPath =
+      settings.aiProvider === "claude-code"
+        ? settings.claudeCodePath
+        : settings.codexPath;
+
+    if (settings.aiProvider === "mock" || !binaryPath.trim()) {
+      tauriNoticeAdapter.error(
+        "AI 실행 경로가 없어 초고를 쓸 수 없습니다. 설정 → AI 호출 에서 경로를 넣으신 뒤, 헤더의 「기획 결과 보기」로 다시 시도하십시오.",
+        9000,
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    setDrafting(controller);
+    tauriNoticeAdapter.info("초고를 쓰기 시작합니다. 장마다 몇 분씩 걸립니다.", 6000);
+
+    try {
+      const store = useProjectStore.getState();
+      const r = await draftChapters(projectFolder, store.binder, {
+        provider: settings.aiProvider === "claude-code" ? "claude-code" : "codex",
+        binaryPath,
+        extraArgs: settings.codexExtraArgs,
+        setSceneDraft: (id, body) => useProjectStore.getState().setSceneDraft(id, body),
+        saveScene: (id) => useProjectStore.getState().saveScene(id),
+        readSceneBody: (id) => useProjectStore.getState().sceneCache?.[id]?.body ?? null,
+        signal: controller.signal,
+        onProgress: (pr) => setDraftProgress(pr.total ? `${pr.done}/${pr.total} — ${pr.current}` : null),
+      });
+
+      const parts = [`초고 ${r.written}장 작성`];
+      if (r.skipped > 0) parts.push(`${r.skipped}장은 이미 본문이 있어 건너뜀`);
+      if (r.failed > 0) parts.push(`${r.failed}장 실패 (${r.failedTitles.join(", ")})`);
+      if (r.aborted) parts.push("중간에 취소됨");
+      (r.failed > 0 ? tauriNoticeAdapter.warn : tauriNoticeAdapter.info)(
+        parts.join(" · "),
+        9000,
+      );
+    } catch (e) {
+      tauriNoticeAdapter.error(
+        `초고 쓰기 실패: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setDrafting(null);
+      setDraftProgress(null);
     }
   };
 
@@ -310,7 +409,11 @@ export function WizardOverlay({
           <SeedPrompt
             summary={summary}
             isSeeding={isSeeding}
-            onAccept={handleAccept}
+            onAccept={() => void handleAccept(false)}
+            onAcceptWithDraft={() => void handleAccept(true)}
+            isDrafting={drafting !== null}
+            draftProgress={draftProgress}
+            onCancelDraft={() => drafting?.abort()}
             onDecline={declineSeed}
           />
         )}

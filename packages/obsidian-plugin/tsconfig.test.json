@@ -19,6 +19,18 @@
       "@ai-manuscript-studio/core/browser": ["../core/src/browser.ts"],
       "@ai-manuscript-studio/core/adapters": [
         "../core/src/adapters/index.ts"
+      ],
+      "@tauri-apps/api/core": ["./src/studio/tauriShims/core.ts"],
+      "@tauri-apps/api/event": ["./src/studio/tauriShims/event.ts"],
+      "@tauri-apps/api/webviewWindow": [
+        "./src/studio/tauriShims/webviewWindow.ts"
+      ],
+      "@tauri-apps/plugin-fs": ["./src/studio/tauriShims/plugin-fs.ts"],
+      "@tauri-apps/plugin-dialog": [
+        "./src/studio/tauriShims/plugin-dialog.ts"
+      ],
+      "@tauri-apps/plugin-deep-link": [
+        "./src/studio/tauriShims/plugin-deep-link.ts"
       ]
     }
   },

@@ -49,6 +49,13 @@ export interface AddSceneInput {
   body?: string;
   /** 명시적 파일 경로(프로젝트 폴더 기준). 없으면 부모 폴더 + slug.md. */
   file?: string;
+  /**
+   * `file` 이 이미 존재해도 «그 파일 그대로» 쓴다(번호를 붙이지 않는다).
+   *
+   * 기본은 false — 같은 제목의 장면을 둘 만들면 서로 다른 파일이어야 한다.
+   * 이미 있는 문서를 binder 에 «노출»시키는 경우에만 true 로 쓴다.
+   */
+  reuseExistingFile?: boolean;
   customMetadata?: Record<string, string>;
 }
 
@@ -218,10 +225,18 @@ export class ProjectV2Manager {
       relFile = folderPath ? `${folderPath}/${slug}.md` : `${slug}.md`;
     }
 
-    // 충돌 회피
+    // 충돌 회피 — 기본은 «회피»다. 같은 제목의 장면을 둘 만들면 서로 다른
+    // 파일이어야 하기 때문이다.
+    //
+    // 다만 호출자가 `reuseExistingFile` 로 「이 파일 그 자체를 쓰겠다」고
+    // 밝히면 회피하지 않는다. 마법사가 `planning.md` 를 binder 에 노출시킬
+    // 때가 그 경우다 — 회피가 걸려 `planning-1.md` 라는 빈 껍데기가 생기고,
+    // binder 노드는 그 껍데기를 가리킨 채 실제 기획 본문은 `planning.md` 에
+    // 쓰여 볼트에 planning 이 둘 보였다 (2026-08-31 실측).
     let attempt = 0;
     let candidate = relFile;
     while (
+      !scene.reuseExistingFile &&
       await this.deps.vault.fileExists(`${projectFolder}/${candidate}`)
     ) {
       attempt += 1;

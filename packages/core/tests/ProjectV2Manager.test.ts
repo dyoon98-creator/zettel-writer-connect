@@ -122,6 +122,37 @@ describe("ProjectV2Manager binder operations", () => {
     expect(vault.hasFile(`3 Writing/p/${b.file}`)).toBe(true);
   });
 
+  it("reuseExistingFile 이면 이미 있는 파일을 «그대로» 쓴다", async () => {
+    // 왜 필요한가 (2026-08-31 실측). 마법사가 `planning.md` 를 binder 에
+    // 노출시킬 때 충돌 회피가 걸려 `planning-1.md` 라는 빈 껍데기가 생겼고,
+    // binder 노드는 그 껍데기를 가리킨 채 실제 기획 본문은 planning.md 에
+    // 쓰였다. 볼트에 planning 이 둘 보이고, 「기획 결과 보기」가 껍데기를 읽어
+    // 「파싱하지 못했습니다」로 떴다.
+    const { mgr } = makeManager();
+    await mgr.createProject("3 Writing", {
+      id: "p",
+      title: "P",
+      genre: "investment-strategy-memo",
+    });
+    await mgr.addFolder("3 Writing/p", null, { id: "ch1", title: "장1" });
+
+    const first = await mgr.addScene("3 Writing/p", "ch1", {
+      title: "기획 인터뷰",
+      file: "planning.md",
+    });
+    const second = await mgr.addScene("3 Writing/p", "ch1", {
+      title: "기획 인터뷰",
+      file: "planning.md",
+      reuseExistingFile: true,
+    });
+
+    // createProject 가 planning.md 를 이미 만들어 둔다 — 실제 마법사 상황과 같다.
+    // 플래그 없이 부르면 회피가 걸려 껍데기(planning-1.md)가 생긴다.
+    expect(first.file).toBe("planning-1.md");
+    // 플래그를 주면 있는 파일 그대로 — 이것이 마법사가 원하는 동작이다.
+    expect(second.file).toBe("planning.md");
+  });
+
   it("moveNode 로 노드 위치 이동", async () => {
     const { mgr, vault } = makeManager();
     await mgr.createProject("3 Writing", { id: "p", title: "P", genre: "investment-strategy-memo" });

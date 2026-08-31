@@ -134,7 +134,7 @@ export function ConceptResumeToast(): JSX.Element | null {
 // 막혔다 — 인터뷰를 4/4 로 다 끝내고 장 9개까지 뽑아 놓은 뒤였다
 // (2026-08-31 대표 보고). 스토어가 비면 plugin 에게 직접 묻는다.
   const storeVaultPath = useProjectStore((s) => s.vaultPath);
-  const vaultPath = storeVaultPath ?? getVaultBasePath();
+  const vaultPath = storeVaultPath ?? getVaultBasePath() ?? "";
   const loadFromSession = useConceptWizardStore((s) => s.loadFromSession);
 
   const [pendingSessions, setPendingSessions] = useState<ConceptDraftSession[]>([]);

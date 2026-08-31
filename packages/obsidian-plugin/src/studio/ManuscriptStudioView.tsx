@@ -32,8 +32,66 @@ function lazyLoadStudioRoot(): React.ComponentType<{ projectFolder?: string }> {
       // 만들어지므로 정상 동작.
       void loadProject("", projectFolder);
     }, [projectFolder, loadProject]);
-    return <App />;
+    return (
+      <StudioErrorBoundary>
+        <App />
+      </StudioErrorBoundary>
+    );
   };
+}
+
+/**
+ * 작업실 트리에 ErrorBoundary 가 «없어서» 생기던 일 — React 어딘가가 던지면
+ * 화면이 통째로 백지가 됐다. 오류 메시지도, 폴백도 없어서 원인을 볼 방법이
+ * 없었다 (2026-08-31 대표 화면 실측 — 파일·binder·CSS 는 전부 정상인데
+ * 아무것도 안 그려졌고, 개발자도구를 열기 전에는 아무 단서도 없었다).
+ *
+ * 백지 대신 «무엇이 어디서 터졌는지»를 화면에 띄운다. 다시 시도 버튼도 둔다.
+ */
+class StudioErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null; info: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null, info: "" };
+  }
+
+  static getDerivedStateFromError(error: Error): { error: Error; info: string } {
+    return { error, info: "" };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    // 콘솔에도 남긴다 — 개발자도구를 여는 사람에겐 이쪽이 더 자세하다.
+    // eslint-disable-next-line no-console
+    console.error("[Studio] 작업실 렌더 실패", error, info.componentStack);
+    this.setState({ error, info: info.componentStack ?? "" });
+  }
+
+  render(): React.ReactNode {
+    const { error, info } = this.state;
+    if (!error) return this.props.children;
+    return (
+      <div className="studio-error-screen" data-testid="studio-error-screen">
+        <h2>작업실을 그리지 못했습니다</h2>
+        <p>
+          아래 내용을 그대로 알려 주시면 원인을 잡을 수 있습니다. 옵시디언
+          개발자도구(Cmd+Opt+I)의 Console 에도 같은 내용이 있습니다.
+        </p>
+        <pre className="studio-error-detail">
+          {error.message}
+          {info ? `\n${info.split("\n").slice(0, 12).join("\n")}` : ""}
+        </pre>
+        <button
+          type="button"
+          className="app-empty-cta"
+          onClick={() => this.setState({ error: null, info: "" })}
+        >
+          다시 그리기
+        </button>
+      </div>
+    );
+  }
 }
 
 export const MANUSCRIPT_STUDIO_VIEW_TYPE = "manuscript-studio-view";

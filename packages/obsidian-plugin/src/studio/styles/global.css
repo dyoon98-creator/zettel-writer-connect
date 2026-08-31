@@ -3384,3 +3384,54 @@ select:focus {
   filter: none;
   cursor: not-allowed;
 }
+
+/* 초고 쓰는 중 표시 — 아홉 장이면 몇 분이 걸린다. 「멈춘 것 아님」을
+   화면에 계속 보여 주지 않으면 사용자가 창을 닫아 버린다. */
+:root .wizard-seed-cancel {
+  background: var(--color-bg-pane, #fff);
+  color: var(--color-text, #2b2620);
+  border: 1px solid var(--color-border, #e0dcd4);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 12px;
+}
+
+:root .wizard-seed-drafting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-status-bg, #efeae0);
+  color: var(--color-text, #2b2620);
+  font-size: 13px;
+}
+
+/* 작업실 렌더 실패 화면 — 백지 대신 원인을 보여 준다. */
+:root .studio-error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 24px;
+  height: 100%;
+  overflow: auto;
+  background: var(--color-bg, #fbfaf7);
+  color: var(--color-text, #2b2620);
+}
+:root .studio-error-screen h2 { margin: 0; font-size: 18px; }
+:root .studio-error-screen p { margin: 0; color: var(--color-text-muted, #786f63); font-size: 13px; }
+:root .studio-error-detail {
+  margin: 0;
+  max-width: 100%;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fee;
+  color: #a33;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

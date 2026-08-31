@@ -30,7 +30,7 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
 // 막혔다 — 인터뷰를 4/4 로 다 끝내고 장 9개까지 뽑아 놓은 뒤였다
 // (2026-08-31 대표 보고). 스토어가 비면 plugin 에게 직접 묻는다.
   const storeVaultPath = useProjectStore((s) => s.vaultPath);
-  const vaultPath = storeVaultPath ?? getVaultBasePath();
+  const vaultPath = storeVaultPath ?? getVaultBasePath() ?? "";
   const loadProject = useProjectStore((s) => s.loadProject);
 
   const [body, setBody] = useState<string | null>(null);
@@ -76,7 +76,7 @@ export function PlanningResultModal({ onClose }: Props): JSX.Element {
   }, [projectFolder]);
 
   const handleSeed = async (): Promise<void> => {
-    if (!parsed || !projectFolder || !vaultPath) {
+    if (!parsed || !projectFolder) {
       tauriNoticeAdapter.error(
         "마법사 결과가 파싱되지 않아 시드할 수 없습니다.",
       );

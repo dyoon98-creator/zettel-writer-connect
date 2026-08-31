@@ -240,6 +240,9 @@ export async function applySummaryToExistingProject(
           title: "기획 인터뷰",
           synopsis: "마법사가 작성한 기획 결과 (planning.md)",
           file: "planning.md",
+          // 이미 있는 planning.md 를 binder 에 «노출»시키는 것이다. 번호를
+          // 붙이면 빈 껍데기(planning-1.md)가 생기고 노드가 그것을 가리킨다.
+          reuseExistingFile: true,
           body: "(아래에서 PlanningMdWriter 가 덮어씀)",
         });
         planningHasBinderEntry = true;
