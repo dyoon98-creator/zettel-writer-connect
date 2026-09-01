@@ -75,6 +75,17 @@ studio 측만 갱신해도 됨.
 - console 의 `[Studio]` / `[App]` / `[notice:error]` 로그 확인
 - `data.json` (plugin 폴더의) 가 손상됐는지 의심 → 백업 후 삭제
 
+## 5.1 이 저장소는 «포크»다 — push 대상 주의 (HARD)
+
+| remote | 저장소 | 정체 | push |
+|---|---|---|---|
+| `origin` | `vibelabs-web/zettel-writer-connect` | **원본(upstream).** 유료 구독자 배포용 고정 스냅샷 | **절대 X** |
+| `fork` | `dyoon98-creator/zettel-writer-connect` | 대표님 포크. 우리 작업물 | 여기로만 |
+
+`git push`를 인자 없이 치지 않는다. 항상 `git push fork main`으로 remote를 명시한다.
+원본에 커밋이 없는 것은 정상이며, 원본 대조는 `git diff origin/main`으로 한다.
+상세는 [운영가이드.d/상세운영규칙.md](운영가이드.d/상세운영규칙.md) §9.1.
+
 ## 6. 모노레포 위치
 
 - 정식 위치: `/Users/futurewave/Documents/dev/obsidian-plugins/`
