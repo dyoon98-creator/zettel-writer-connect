@@ -2,7 +2,12 @@
 // 시드 텍스트 + 노트 첨부 + 톤/장르 선택 → store.start() → onAdvance()
 
 import { useRef, useState } from "react";
-import { type ConceptTone, type Genre, GENRE_LABEL_KO } from "@ai-manuscript-studio/core";
+import {
+  type ConceptTone,
+  type Genre,
+  GENRE_LABEL_KO,
+  suggestGenreForTone,
+} from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
@@ -177,7 +182,15 @@ const nextBtnStyle = (disabled: boolean): React.CSSProperties => ({
 export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // ── local state ──
   const [seed, setSeed] = useState("");
-  const [tone, setTone] = useState<ConceptTone>("decision-memo");
+  // 톤도 «미리 고르지 않는다».
+  //
+  // 톤에 기본값이 있으면 장르 추천이 그 기본값을 따라가고, 결국 사용자가
+  // 아무것도 안 골라도 장르가 정해진다 — 오늘 낮에 고친 사고(연애 이야기를
+  // 쓰는데 「투자·전략 메모」로 잡히던 것)가 한 칸 뒤로 옮겨진 것뿐이다.
+  //
+  // 대신 흐름은 끊지 않는다. 톤을 «한 번» 고르면 장르가 따라 채워지므로,
+  // 클릭 한 번으로 둘이 함께 정해진다.
+  const [tone, setTone] = useState<ConceptTone | null>(null);
   // 장르는 «미리 골라두지 않는다».
   //
   // 왜 (대표 실사용 결함 2026-08-31): 여기 기본값이 "investment-strategy-memo" 라
@@ -185,7 +198,14 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // project.json → 기획 인터뷰 → 프롬프트까지 그대로 흘러가, 연애 이야기를 쓰는
   // 사람에게 인터뷰가 「'test' 투자·전략 메모의 출발점을 잡겠습니다」라고 말했다.
   // 침묵을 확신으로 바꾸지 않는다 — 고르지 않으면 다음으로 넘어가지 않는다.
+  // 장르는 «미리 고르지 않는다». 톤을 고르면 그때 추천으로 채워진다.
+  //
+  // 침묵을 확신으로 바꾸지 않는다 — 사용자가 아무것도 안 만졌는데 문서
+  // 종류가 정해져 있으면, 그 값이 project.json → 기획 인터뷰 → 초고
+  // 프롬프트까지 그대로 흘러간다 (2026-08-31 대표 실사용 사고).
   const [genre, setGenre] = useState<Genre | null>(null);
+  // 사용자가 장르를 «직접» 만졌나. 만진 뒤에는 톤을 바꿔도 추천이 덮지 않는다.
+  const [genreChosenByUser, setGenreChosenByUser] = useState(false);
   const [attachedNotes, setAttachedNotes] = useState<string[]>([]);
   const [noteInput, setNoteInput] = useState("");
 
@@ -194,9 +214,21 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // 옵시디언 vault 의 노트 제목 자동완성.
   const { notes: vaultNotes } = useVaultNoteSuggestions();
 
-  // ── 톤 변경 ──
+  // ── 톤 변경 → 장르 «추천» ──
+  //
+  // 원본에 있던 편의를 되살린 것이다. 톤만 고르면 장르가 따라 채워지고,
+  // 사용자가 장르를 직접 만진 뒤로는 덮지 않는다. 단 이것은 «추천»일 뿐이라,
+  // 장르를 고르기 전에는 다음으로 못 넘어가는 규칙은 그대로 살아 있다 —
+  // 침묵이 기본값이 되는 함정은 여전히 막는다.
   function handleToneChange(t: ConceptTone): void {
     setTone(t);
+    if (!genreChosenByUser) setGenre(suggestGenreForTone(t));
+  }
+
+  // ── 장르 직접 선택 ──
+  function handleGenreChange(g: Genre): void {
+    setGenre(g);
+    setGenreChosenByUser(true);
   }
 
   // ── 노트 첨부 ──
@@ -222,10 +254,11 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   }
 
   // ── 다음 ──
-  const isDisabled = seed.trim().length === 0 || genre === null;
+  // 셋이 다 있어야 넘어간다 — 씨앗 문장, 문체, 문서 종류.
+  const isDisabled = seed.trim().length === 0 || tone === null || genre === null;
 
   function handleAdvance(): void {
-    if (isDisabled || genre === null) return;
+    if (isDisabled || tone === null || genre === null) return;
     useConceptWizardStore.getState().start({
       seed: seed.trim(),
       tone,
@@ -351,11 +384,16 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
       <section>
         <div role="radiogroup" aria-label="장르 선택">
           <span style={labelStyle} id="step1-genre-label">
-            장르{genre === null && (
+            장르
+            {genre === null ? (
               <span style={{ color: "#a04030", fontWeight: 400, marginLeft: 6 }}>
-                — 골라주세요 (고르기 전에는 다음으로 넘어가지 않습니다)
+                — 위에서 문체를 고르면 여기가 자동으로 채워집니다
               </span>
-            )}
+            ) : !genreChosenByUser ? (
+              <span style={{ color: "#786f63", fontWeight: 400, marginLeft: 6 }}>
+                — 톤에 맞춰 추천했습니다. 바꾸셔도 됩니다
+              </span>
+            ) : null}
           </span>
           <div style={radioGroupStyle()}>
             {GENRE_OPTIONS.map((opt) => (
@@ -369,7 +407,7 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
                   name="step1-genre"
                   value={opt.id}
                   checked={genre === opt.id}
-                  onChange={() => setGenre(opt.id)}
+                  onChange={() => handleGenreChange(opt.id)}
                   style={{ display: "none" }}
                   aria-label={opt.label}
                 />

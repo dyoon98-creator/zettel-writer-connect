@@ -20,6 +20,7 @@ import {
   type Genre,
   type ProjectV2ManagerDeps,
   type TreatmentCardRole,
+  DEFAULT_DRAFT_GENRE,
 } from "@ai-manuscript-studio/core";
 
 /** 트리트먼트 카드 role 의 한국어 라벨. planning.md / binder 폴더명에 사용. */
@@ -176,7 +177,7 @@ export async function seedFromConceptDraft(
   const finalSlug = finalFolder.slice(writingRoot.length + 1);
 
   // 1) 새 프로젝트 생성 (project.json + 빈 binder.json + planning.md placeholder).
-  const genre: Genre = session.genre ?? "investment-strategy-memo";
+  const genre: Genre = session.genre ?? DEFAULT_DRAFT_GENRE;
   await manager.createProject(writingRoot, {
     id: finalSlug,
     title: deps.title,

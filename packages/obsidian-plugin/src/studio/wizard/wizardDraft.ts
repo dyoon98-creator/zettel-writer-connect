@@ -16,6 +16,7 @@
 //   ③ 중간에 취소할 수 있다(AbortSignal) — 아홉 번 호출은 몇 분이 걸린다.
 
 import type { BinderTree, BinderNode } from "@ai-manuscript-studio/core";
+import { GENRE_LABEL_KO } from "@ai-manuscript-studio/core";
 import { startAiInvocation } from "../ai/streamingHandle";
 import { tauriVaultAdapter } from "../vaultAdapter";
 
@@ -127,8 +128,11 @@ export function buildChapterPrompt(input: {
   chapterSynopsis: string;
   index: number;
   total: number;
+  /** 「무슨 문서인가」. 컨셉 마법사 1단계에서 정해 project.json 에 박힌 값. */
+  genreLabel?: string;
 }): string {
-  return `당신은 이 원고의 대필 작가입니다. 아래 기획을 읽고 **${input.index}장 본문만** 씁니다.
+  const kind = input.genreLabel ? `「${input.genreLabel}」` : "이 원고";
+  return `당신은 ${kind}의 대필 작가입니다. 아래 기획을 읽고 **${input.index}장 본문만** 씁니다.
 
 # 이 글의 기획
 
@@ -140,7 +144,7 @@ ${input.concept.trim()}
 
 # 지금 쓸 장
 
-- 전체 ${input.total}장 중 **${input.index}장**
+${input.genreLabel ? `- 문서 종류: **${input.genreLabel}** — 이 종류의 글이 지켜야 할 형식과 밀도를 따릅니다.\n` : ""}- 전체 ${input.total}장 중 **${input.index}장**
 - 제목: ${input.chapterTitle}
 - 이 장이 맡은 것: ${input.chapterSynopsis || "(기획의 해당 대목을 따르십시오)"}
 
@@ -197,6 +201,10 @@ export async function draftChapters(
   // 재료는 한 번만 읽는다 — 장마다 다시 읽으면 아홉 번 읽는다.
   const concept = await readOrEmpty(`${projectFolder}/concept-summary.md`);
   const planning = await readOrEmpty(`${projectFolder}/planning.md`);
+  // 「무슨 문서인가」는 project.json 이 정본이다. 컨셉 마법사 1단계에서 정한
+  // 장르가 여기까지 와야 초고가 그 종류의 글로 써진다 — 안 그러면 투자보고서를
+  // 쓰기로 해 놓고 소설처럼 써진다 (2026-09-01 원본 대조에서 드러난 끊긴 이음매).
+  const genreLabel = await readGenreLabel(projectFolder);
 
   let index = 0;
   for (const t of targets) {
@@ -232,6 +240,7 @@ export async function draftChapters(
           chapterSynopsis: t.chapterSynopsis,
           index,
           total: targets.length,
+          genreLabel,
         }),
         timeoutSecs: deps.timeoutSecs ?? 300,
         signal: deps.signal,
@@ -288,6 +297,20 @@ export async function sceneHasBody(
 export function stripFrontmatter(raw: string): string {
   const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(raw);
   return m ? raw.slice(m[0].length) : raw;
+}
+
+/** project.json 의 genre 를 한국어 라벨로. 못 읽으면 undefined — 프롬프트가 그 줄을 뺀다. */
+export async function readGenreLabel(
+  projectFolder: string,
+): Promise<string | undefined> {
+  try {
+    const raw = await tauriVaultAdapter.readFile(`${projectFolder}/project.json`);
+    const genre = (JSON.parse(raw) as { genre?: string }).genre;
+    if (!genre) return undefined;
+    return (GENRE_LABEL_KO as Record<string, string>)[genre] ?? genre;
+  } catch {
+    return undefined;
+  }
 }
 
 async function readOrEmpty(path: string): Promise<string> {

@@ -83,8 +83,26 @@ describe("Step1Seed — taxonomy contract (B2.6)", () => {
     it("tone section label is 문체·논조", () => {
       expect(src).toContain("문체·논조");
     });
-    it("default tone is decision-memo", () => {
-      expect(src).toMatch(/useState<ConceptTone>\("decision-memo"\)/);
+    // 2026-09-01 — 이 계약도 «뒤집혔다».
+    //
+    // 톤에 기본값이 있으면, 톤→장르 추천이 그 기본값을 따라가 결국 사용자가
+    // 아무것도 안 골라도 장르가 정해진다. 아래 장르 계약이 막으려던 사고가
+    // 한 칸 뒤로 옮겨질 뿐이다. 그래서 톤도 미선택으로 시작한다.
+    it("톤도 기본값 없이 시작한다 — 침묵이 문서 종류를 정하지 못하게", () => {
+      expect(src).toMatch(/useState<ConceptTone \| null>\(null\)/);
+      expect(src).not.toMatch(/useState<ConceptTone>\("[a-z-]+"\)/);
+    });
+
+    it("셋(씨앗·문체·장르)이 다 있어야 다음으로 넘어간다", () => {
+      expect(src).toMatch(/tone === null/);
+      expect(src).toMatch(/genre === null/);
+    });
+
+    it("톤을 고르면 장르가 «따라온다» — 흐름이 한 칸에서 멈추지 않게", () => {
+      // 원본(vibelabs-web)에 있던 편의. 우리는 장르 체계를 갈아엎으며 잃었다가
+      // 되살렸다. 단 사용자가 장르를 직접 만진 뒤에는 덮지 않는다.
+      expect(src).toMatch(/suggestGenreForTone/);
+      expect(src).toMatch(/genreChosenByUser/);
     });
     // 이 계약은 2026-08-31 에 «뒤집혔다» (대표 지시 — 과제 D).
     //
@@ -99,6 +117,8 @@ describe("Step1Seed — taxonomy contract (B2.6)", () => {
       expect(src).not.toMatch(/useState<Genre>\("investment-strategy-memo"\)/);
       expect(src).toMatch(/useState<Genre \| null>\(null\)/);
       expect(src).toMatch(/genre === null/);
+      // 추천으로 «미리» 채우는 것도 금지 — 그것도 침묵이 값을 정하는 것이다.
+      expect(src).not.toMatch(/useState<Genre \| null>\(\s*suggestGenreForTone/);
     });
   });
 

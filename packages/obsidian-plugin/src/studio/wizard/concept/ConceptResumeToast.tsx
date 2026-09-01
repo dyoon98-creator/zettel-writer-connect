@@ -138,6 +138,8 @@ export function ConceptResumeToast(): JSX.Element | null {
   const loadFromSession = useConceptWizardStore((s) => s.loadFromSession);
 
   const [pendingSessions, setPendingSessions] = useState<ConceptDraftSession[]>([]);
+  // 나머지를 펼쳐 볼지. 기본은 접어 둔다 — 아래 주석 참고.
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!vaultPath) {
@@ -165,16 +167,43 @@ export function ConceptResumeToast(): JSX.Element | null {
     setPendingSessions((prev) => prev.filter((x) => x.id !== s.id));
   }
 
+  // 미완 세션을 «전부» 띄우지 않는다.
+  //
+  // 전에는 남아 있는 세션 수만큼 알림이 쌓였다. 실제로 다섯 개가 겹쳐 컨셉
+  // 마법사 화면 절반을 가렸고, 정작 눌러야 할 「다음」이 그 뒤에 숨었다
+  // (2026-09-01 실측 화면). 이어서 할 것은 보통 «마지막에 하던 것» 하나다.
+  // 하나만 띄우고 나머지는 접는다 — 필요하면 펼칠 수 있게 남겨 둔다.
+  const [latest, ...rest] = pendingSessions;
+
   return (
     <div style={CONTAINER_STYLE} aria-label="재진입 가능한 마법사 세션">
-      {pendingSessions.map((s) => (
-        <SessionToast
-          key={s.id}
-          session={s}
-          onResume={() => handleResume(s)}
-          onDismiss={() => handleDismiss(s)}
-        />
-      ))}
+      <SessionToast
+        key={latest.id}
+        session={latest}
+        onResume={() => handleResume(latest)}
+        onDismiss={() => handleDismiss(latest)}
+      />
+
+      {rest.length > 0 && !expanded && (
+        <button
+          type="button"
+          className="wizard-resume-more"
+          data-testid="concept-resume-more"
+          onClick={() => setExpanded(true)}
+        >
+          이어서 할 것이 {rest.length}개 더 있습니다 — 보기
+        </button>
+      )}
+
+      {expanded &&
+        rest.map((s) => (
+          <SessionToast
+            key={s.id}
+            session={s}
+            onResume={() => handleResume(s)}
+            onDismiss={() => handleDismiss(s)}
+          />
+        ))}
     </div>
   );
 }

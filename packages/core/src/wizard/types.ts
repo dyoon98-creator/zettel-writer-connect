@@ -5,6 +5,7 @@
 // 실제 AI 호출 / 파일 저장 / UI 렌더는 모두 외부 책임이다.
 
 import type { Genre } from "../types";
+import type { ConceptTone } from "../project/schema";
 
 /** 압축 인터뷰의 4단계 식별자. 순서가 있는 배열은 `WIZARD_STAGES` 참고. */
 export type WizardStageId =
@@ -26,6 +27,40 @@ export type WizardStageId =
  * 이 값이 쓰이는 곳은 컨셉을 거치지 않고 인터뷰로 바로 들어온 경우의 «표시» 뿐이다.
  */
 export const DEFAULT_DRAFT_GENRE: Genre = "investment-strategy-memo";
+
+/**
+ * 톤을 고르면 장르를 «미리 채워» 준다.
+ *
+ * 왜 있나. 원본(vibelabs-web/zettel-writer-connect)에는 이 자동 추천이 있었다.
+ * 톤만 고르면 장르가 따라 정해지고, 사용자가 장르를 직접 만지면 그때부터
+ * 추천을 멈췄다. 우리는 장르 체계를 창작용(에세이·유튜브·세계관)에서 업무용
+ * (투자·법률·강의)으로 갈아엎으면서 그 연결을 통째로 잃었다 — 원본 매핑이
+ * 가리키던 장르가 하나도 남지 않았기 때문이다 (2026-09-01 원본 대조).
+ *
+ * 그래서 매핑을 «새로» 짠다. 톤 8개는 대부분 장르 6개와 이름이 겹치므로
+ * 대응이 자연스럽다. 겹치지 않는 둘만 판단이 필요했다.
+ *   · customer-report(고객 보고체) → 투자보고서. 고객에게 내는 보고서다.
+ *   · explanatory(친절한 설명체)   → 강의·발표안. 설명이 목적인 문서다.
+ *
+ * 이것은 «추천»이지 «결정»이 아니다. 컨셉 마법사 1단계는 장르를 고르기 전에는
+ * 다음으로 넘어가지 못하게 막는다 — 침묵이 기본값이 되는 함정을 막는 장치이고,
+ * 그 장치는 이 추천이 생겨도 그대로 둔다. 추천은 라디오를 «미리 눌러» 둘 뿐이다.
+ */
+export const GENRE_SUGGESTED_FOR_TONE: Record<ConceptTone, Genre> = {
+  "decision-memo": "investment-strategy-memo",
+  "analytical-report": "investment-report",
+  "customer-report": "investment-report",
+  "legal-accounting-review": "legal-accounting-review",
+  "column-narrative": "column-essay",
+  "long-form-reasoning": "long-form-manuscript",
+  "lecture-presentation": "lecture-presentation",
+  explanatory: "lecture-presentation",
+};
+
+/** 톤에 어울리는 장르. 모르는 톤이면 기본값. */
+export function suggestGenreForTone(tone: ConceptTone): Genre {
+  return GENRE_SUGGESTED_FOR_TONE[tone] ?? DEFAULT_DRAFT_GENRE;
+}
 
 /** UI 가 순서대로 렌더할 때 사용하는 정해진 시퀀스. */
 export const WIZARD_STAGES: WizardStageId[] = [

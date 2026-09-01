@@ -190,8 +190,16 @@ describe("conceptSeed.ts — genre fallback 계약", () => {
     expect(src).not.toContain('?? "essay"');
   });
 
-  it('?? "investment-strategy-memo" fallback 이 있다', () => {
-    expect(src).toContain('?? "investment-strategy-memo"');
+  // 2026-09-01 — 계약을 «문자열» 에서 «단일 출처» 로 올렸다.
+  //
+  // 전에는 파일 안에 `?? "investment-strategy-memo"` 라는 리터럴이 «있어야»
+  // 통과했다. 그런데 같은 문자열이 7곳에 흩어져 있어서, 기본값을 바꾸려면
+  // 일곱 군데를 찾아 고쳐야 했다. core 의 DEFAULT_DRAFT_GENRE 하나로 모으고
+  // 계약도 그것을 쓰는지로 바꾼다. 검사가 막으려던 위험(기본값이 조용히
+  // 옛 장르로 남는 것)은 그대로 막힌다 — 오히려 한 곳만 보면 된다.
+  it("기본 장르를 리터럴이 아니라 DEFAULT_DRAFT_GENRE 로 쓴다", () => {
+    expect(src).toContain("DEFAULT_DRAFT_GENRE");
+    expect(src).not.toMatch(/\?\?\s*"[a-z-]+"\s*;?\s*\/\/.*genre/i);
   });
 });
 
@@ -208,7 +216,15 @@ describe("wizardSeed.ts — genre fallback 계약", () => {
     expect(src).not.toContain('?? "essay"');
   });
 
-  it('?? "investment-strategy-memo" fallback 이 있다', () => {
-    expect(src).toContain('?? "investment-strategy-memo"');
+  // 2026-09-01 — 계약을 «문자열» 에서 «단일 출처» 로 올렸다.
+  //
+  // 전에는 파일 안에 `?? "investment-strategy-memo"` 라는 리터럴이 «있어야»
+  // 통과했다. 그런데 같은 문자열이 7곳에 흩어져 있어서, 기본값을 바꾸려면
+  // 일곱 군데를 찾아 고쳐야 했다. core 의 DEFAULT_DRAFT_GENRE 하나로 모으고
+  // 계약도 그것을 쓰는지로 바꾼다. 검사가 막으려던 위험(기본값이 조용히
+  // 옛 장르로 남는 것)은 그대로 막힌다 — 오히려 한 곳만 보면 된다.
+  it("기본 장르를 리터럴이 아니라 DEFAULT_DRAFT_GENRE 로 쓴다", () => {
+    expect(src).toContain("DEFAULT_DRAFT_GENRE");
+    expect(src).not.toMatch(/\?\?\s*"[a-z-]+"\s*;?\s*\/\/.*genre/i);
   });
 });

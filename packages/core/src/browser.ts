@@ -228,6 +228,8 @@ export {
   STAGE_LABEL_KO,
   STAGE_DESCRIPTION_KO,
   DEFAULT_DRAFT_GENRE,
+  GENRE_SUGGESTED_FOR_TONE,
+  suggestGenreForTone,
 } from "./wizard/types";
 export type {
   WizardStageId,

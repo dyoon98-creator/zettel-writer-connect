@@ -31,6 +31,7 @@ import {
   stripWrapper,
   sceneHasBody,
   stripFrontmatter,
+  readGenreLabel,
 } from "../../../src/studio/wizard/wizardDraft";
 
 /** binder 트리 최소 형태 — 이 테스트가 쓰는 필드만 채운다. */
@@ -212,5 +213,61 @@ describe("stripFrontmatter", () => {
 
   it("frontmatter 가 없으면 그대로", () => {
     expect(stripFrontmatter("그냥 본문")).toBe("그냥 본문");
+  });
+});
+
+describe("장르가 «초고 프롬프트까지» 도달한다", () => {
+  // 왜 (2026-09-01 원본 대조에서 드러난 끊긴 이음매).
+  //
+  // 컨셉 마법사 1단계에서 문서 종류를 정하고, 그 값이 project.json → 기획
+  // 인터뷰까지 흘러간다. 그런데 정작 «글을 쓸 때» 는 아무도 그 값을 보지
+  // 않았다. 투자보고서를 쓰기로 해 놓고 소설처럼 써질 수 있었다.
+
+  beforeEach(() => vaultFiles.clear());
+
+  it("project.json 의 장르를 한국어 라벨로 읽는다", async () => {
+    vaultFiles.set("p/project.json", JSON.stringify({ genre: "investment-report" }));
+    await expect(readGenreLabel("p")).resolves.toBe("투자보고서");
+  });
+
+  it("모르는 장르면 값 그대로 — 화면이 비지 않게 한다", async () => {
+    vaultFiles.set("p/project.json", JSON.stringify({ genre: "새-장르" }));
+    await expect(readGenreLabel("p")).resolves.toBe("새-장르");
+  });
+
+  it("project.json 이 없거나 깨졌으면 undefined — 던지지 않는다", async () => {
+    await expect(readGenreLabel("p")).resolves.toBeUndefined();
+    vaultFiles.set("p/project.json", "{ 깨진 json");
+    await expect(readGenreLabel("p")).resolves.toBeUndefined();
+  });
+
+  it("장르가 있으면 프롬프트가 «무슨 문서인지» 말한다", () => {
+    const prompt = buildChapterPrompt({
+      concept: "c",
+      planning: "p",
+      chapterTitle: "1장",
+      chapterSynopsis: "s",
+      index: 1,
+      total: 3,
+      genreLabel: "투자보고서",
+    });
+
+    expect(prompt).toContain("「투자보고서」의 대필 작가");
+    expect(prompt).toContain("문서 종류: **투자보고서**");
+  });
+
+  it("장르를 모르면 그 줄을 빼고도 멀쩡한 프롬프트가 된다", () => {
+    const prompt = buildChapterPrompt({
+      concept: "c",
+      planning: "p",
+      chapterTitle: "1장",
+      chapterSynopsis: "s",
+      index: 1,
+      total: 3,
+    });
+
+    expect(prompt).toContain("이 원고의 대필 작가");
+    expect(prompt).not.toContain("문서 종류");
+    expect(prompt).toContain("본문만 출력");
   });
 });

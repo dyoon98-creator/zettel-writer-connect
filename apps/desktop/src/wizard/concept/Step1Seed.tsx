@@ -2,7 +2,13 @@
 // 시드 텍스트 + 노트 첨부 + 톤/장르 선택 → store.start() → onAdvance()
 
 import { useRef, useState } from "react";
-import { type ConceptTone, type Genre, GENRE_LABEL_KO } from "@ai-manuscript-studio/core";
+import {
+  type ConceptTone,
+  type Genre,
+  GENRE_LABEL_KO,
+  DEFAULT_DRAFT_GENRE,
+  suggestGenreForTone,
+} from "@ai-manuscript-studio/core";
 import { useConceptWizardStore } from "../../state/conceptWizardStore";
 import { useVaultNoteSuggestions } from "./useVaultNoteSuggestions";
 
@@ -177,8 +183,11 @@ const nextBtnStyle = (disabled: boolean): React.CSSProperties => ({
 export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   // ── local state ──
   const [seed, setSeed] = useState("");
-  const [tone, setTone] = useState<ConceptTone>("decision-memo");
-  const [genre, setGenre] = useState<Genre>("investment-strategy-memo");
+  // 옵시디언 쪽과 같은 설계 — 아무것도 미리 고르지 않고, 톤을 고르면 장르가 따라온다.
+  const [tone, setTone] = useState<ConceptTone | null>(null);
+  const [genre, setGenre] = useState<Genre | null>(null);
+  // 사용자가 장르를 «직접» 만졌나. 만진 뒤에는 톤을 바꿔도 추천이 덮지 않는다.
+  const [genreChosenByUser, setGenreChosenByUser] = useState(false);
   const [attachedNotes, setAttachedNotes] = useState<string[]>([]);
   const [noteInput, setNoteInput] = useState("");
 
@@ -188,8 +197,16 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   const { notes: vaultNotes } = useVaultNoteSuggestions();
 
   // ── 톤 변경 ──
+  // ── 톤 변경 → 장르 «추천» (원본에 있던 편의를 되살림) ──
   function handleToneChange(t: ConceptTone): void {
     setTone(t);
+    if (!genreChosenByUser) setGenre(suggestGenreForTone(t));
+  }
+
+  // ── 장르 직접 선택 ──
+  function handleGenreChange(g: Genre): void {
+    setGenre(g);
+    setGenreChosenByUser(true);
   }
 
   // ── 노트 첨부 ──
@@ -215,10 +232,11 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
   }
 
   // ── 다음 ──
-  const isDisabled = seed.trim().length === 0;
+  // 셋이 다 있어야 넘어간다 — 씨앗 문장, 문체, 문서 종류.
+  const isDisabled = seed.trim().length === 0 || tone === null || genre === null;
 
   function handleAdvance(): void {
-    if (isDisabled) return;
+    if (isDisabled || tone === null || genre === null) return;
     useConceptWizardStore.getState().start({
       seed: seed.trim(),
       tone,
@@ -358,7 +376,7 @@ export function Step1Seed({ onAdvance }: Step1SeedProps): JSX.Element {
                   name="step1-genre"
                   value={opt.id}
                   checked={genre === opt.id}
-                  onChange={() => setGenre(opt.id)}
+                  onChange={() => handleGenreChange(opt.id)}
                   style={{ display: "none" }}
                   aria-label={opt.label}
                 />

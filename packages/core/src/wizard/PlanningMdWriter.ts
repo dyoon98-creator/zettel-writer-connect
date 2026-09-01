@@ -44,6 +44,7 @@ import {
   WizardMessage,
   WizardStageId,
   WizardSummary,
+  DEFAULT_DRAFT_GENRE,
 } from "./types";
 
 const FRONTMATTER_DELIM = "---";
@@ -190,7 +191,7 @@ export const PlanningMdWriter = {
 
     const sessionId = fm.values.sessionid ?? fm.values.sessionId ?? "";
     const title = fm.values.title ?? "";
-    const genre = (fm.values.genre as Genre) ?? "investment-strategy-memo";
+    const genre = (fm.values.genre as Genre) ?? DEFAULT_DRAFT_GENRE;
     const completedAt = fm.values.completedat ?? fm.values.completedAt ?? "";
 
     const body = content.slice(fm.endIndex);

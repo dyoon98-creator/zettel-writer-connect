@@ -21,6 +21,7 @@ import {
   type Genre,
   type ProjectV2ManagerDeps,
   type WizardSummary,
+  DEFAULT_DRAFT_GENRE,
 } from "@ai-manuscript-studio/core";
 
 export interface WizardSeedDeps extends ProjectV2ManagerDeps {
@@ -71,7 +72,7 @@ export async function seedProjectFromSummary(
   const finalSlug = finalFolder.slice(writingRoot.length + 1);
 
   // 1) 새 프로젝트 (project.json + 빈 binder.json + planning.md placeholder).
-  const genre: Genre = summary.genre ?? "investment-strategy-memo";
+  const genre: Genre = summary.genre ?? DEFAULT_DRAFT_GENRE;
   await manager.createProject(writingRoot, {
     id: finalSlug,
     title: summary.title,
